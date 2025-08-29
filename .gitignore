@@ -55,7 +55,3 @@ Thumbs.db
 *.dll
 *.so
 *.dylib
-
-# --- Package manager cache ---
-[Pp]ackages/manifest.json
-[Pp]ackages/packages-lock.json
