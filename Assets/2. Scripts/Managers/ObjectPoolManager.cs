@@ -9,7 +9,7 @@ public class ObjectPoolManager : BaseManager
     protected override void OnInitialize()
     {
         SetupBulletPool();
-        ServiceLocator.Register<ObjectPoolManager>(this);
+        ServiceLocator.Register(this);
     }
     
     private void SetupBulletPool()
@@ -18,7 +18,7 @@ public class ObjectPoolManager : BaseManager
         bulletPoolObject.transform.SetParent(transform);
         bulletPool = bulletPoolObject.AddComponent<BulletPool>();
         
-        Debug.Log("Object pools initialized successfully");
+        Logger.LogInfo("Object pools initialized successfully");
     }
     
     public GameObject GetBullet(Vector3 position, Vector3 direction, float damage = 25f, bool isEnemyBullet = false)
@@ -28,7 +28,7 @@ public class ObjectPoolManager : BaseManager
             return bulletPool.GetBullet(position, direction, damage, isEnemyBullet);
         }
         
-        Debug.LogError("BulletPool is not initialized!");
+        Logger.LogError("BulletPool is not initialized!");
         return null;
     }
     

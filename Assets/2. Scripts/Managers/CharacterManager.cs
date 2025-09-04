@@ -34,14 +34,14 @@ public class CharacterManager : BaseManager
     {
         if (mainCharacter != null)
         {
-            Debug.LogWarning("Main character already spawned!");
+            Logger.LogWarning("Main character already spawned!");
             return;
         }
         
         mainCharacter = mainCharacterFactory.CreateCharacter(playerSpawnPosition, Quaternion.identity);
         allCharacters.Add(mainCharacter);
         
-        Debug.Log("Main character spawned successfully");
+        Logger.LogInfo("Main character spawned successfully");
     }
     
     public ICharacter SpawnEnemy(Vector3 position, Quaternion rotation)
@@ -50,7 +50,7 @@ public class CharacterManager : BaseManager
         enemies.Add(enemy);
         allCharacters.Add(enemy);
         
-        Debug.Log($"Enemy spawned at position {position}");
+        Logger.LogInfo($"Enemy spawned at position {position}");
         return enemy;
     }
     

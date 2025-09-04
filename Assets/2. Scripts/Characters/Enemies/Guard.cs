@@ -1,6 +1,9 @@
 using UnityEngine;
+using Scripts.FSM.Models;
+using Scripts.FSM.Base.StateMachine;
+using System.Collections.Generic;
 
-public class Guard : BaseCharacter, IUpdatable
+public class Guard : BaseCharacter, IUpdatable, IUseFsm
 {
     [Header("Guard Settings")]
     [SerializeField] private float detectionRange = 8f;
@@ -12,7 +15,10 @@ public class Guard : BaseCharacter, IUpdatable
     [SerializeField] private float searchTime = 5f;
     [SerializeField] private Transform[] patrolPoints;
     
-    private StateMachine stateMachine;
+    [Header("FSM Configuration")]
+    [SerializeField] private List<StateData> statesData = new List<StateData>();
+    
+    private Scripts.FSM.Base.StateMachine.StateMachine stateMachine;
     private Transform player;
     private Vector3 lastKnownPlayerPosition;
     private int currentPatrolIndex = 0;
@@ -70,13 +76,13 @@ public class Guard : BaseCharacter, IUpdatable
             FindPlayer();
         }
         
-        stateMachine.StartState<IdleState>();
     }
     
     public void OnUpdate(float deltaTime)
     {
         if (!isAlive) return;
-        stateMachine.Update();
+        UpdateFsm();
+        stateTimer += deltaTime; // Keep timer for conditions that need it
     }
     
     protected override void OnDeath()
@@ -88,24 +94,13 @@ public class Guard : BaseCharacter, IUpdatable
     
     private void InitializeStateMachine()
     {
-        stateMachine = new StateMachine();
+        if (statesData == null || statesData.Count == 0)
+        {
+            Logger.LogError($"Guard {gameObject.name}: No StateData configured! Please assign StateData in the inspector.");
+            return;
+        }
         
-        stateMachine.AddState(new IdleState(this));
-        stateMachine.AddState(new PatrollingState(this));
-        stateMachine.AddState(new ChasingState(this));
-        stateMachine.AddState(new SearchingState(this));
-        stateMachine.AddState(new AttackingState(this));
-        
-        stateMachine.AddTransition<IdleState, PatrollingState>(() => stateTimer >= idleTime);
-        stateMachine.AddTransition<PatrollingState, IdleState>(() => ReachedPatrolPoint());
-        stateMachine.AddTransition<IdleState, ChasingState>(() => CanSeePlayer());
-        stateMachine.AddTransition<PatrollingState, ChasingState>(() => CanSeePlayer());
-        stateMachine.AddTransition<ChasingState, AttackingState>(() => IsPlayerInAttackRange());
-        stateMachine.AddTransition<ChasingState, SearchingState>(() => !CanSeePlayer());
-        stateMachine.AddTransition<AttackingState, ChasingState>(() => !IsPlayerInAttackRange() && CanSeePlayer());
-        stateMachine.AddTransition<AttackingState, SearchingState>(() => !CanSeePlayer());
-        stateMachine.AddTransition<SearchingState, ChasingState>(() => CanSeePlayer());
-        stateMachine.AddTransition<SearchingState, IdleState>(() => stateTimer >= searchTime);
+        stateMachine = new Scripts.FSM.Base.StateMachine.StateMachine(statesData, this);
     }
     
     private void FindPlayer()
@@ -117,7 +112,7 @@ public class Guard : BaseCharacter, IUpdatable
         }
         else
         {
-            Debug.LogWarning("Guard: CharacterManager not found or MainCharacter not spawned yet!");
+            Logger.LogWarning("Guard: CharacterManager not found or MainCharacter not spawned yet!");
         }
     }
     
@@ -137,45 +132,12 @@ public class Guard : BaseCharacter, IUpdatable
         }
     }
     
-    public bool CanSeePlayer()
-    {
-        if (player == null) return false;
-        
-        Vector3 directionToPlayer = (player.position - transform.position);
-        float distanceToPlayer = directionToPlayer.magnitude;
-        
-        if (distanceToPlayer > detectionRange) return false;
-        
-        directionToPlayer.Normalize();
-        float angle = Vector3.Angle(transform.forward, directionToPlayer);
-        
-        if (angle > fieldOfView / 2f) return false;
-        
-        if (Physics.Raycast(transform.position + Vector3.up * 0.5f, directionToPlayer, out RaycastHit hit, distanceToPlayer))
-        {
-            return hit.collider.GetComponent<MainCharacter>() != null;
-        }
-        
-        return true;
-    }
-    
-    public bool IsPlayerInAttackRange()
-    {
-        if (player == null) return false;
-        return Vector3.Distance(transform.position, player.position) <= attackRange;
-    }
-    
-    public bool ReachedPatrolPoint()
-    {
-        if (patrolPoints == null || currentPatrolIndex >= patrolPoints.Length) return true;
-        return Vector3.Distance(transform.position, patrolPoints[currentPatrolIndex].position) < 1f;
-    }
     
     public override void Move(Vector3 direction)
     {
         if (!isAlive) return;
         
-        Vector3 movement = direction * moveSpeed * Time.deltaTime;
+        Vector3 movement = direction * MoveSpeed * Time.deltaTime;
         transform.position += movement;
         
         if (direction.magnitude > 0.1f)
@@ -225,4 +187,28 @@ public class Guard : BaseCharacter, IUpdatable
             bulletObject.InitializeBullet(direction, 15f, null, true);
         }
     }
+    
+    #region IUseFsm Implementation
+    
+    public Transform GetModelTransform()
+    {
+        return transform;
+    }
+    
+    public void UpdateFsm()
+    {
+        stateMachine?.RunStateMachine();
+    }
+    
+    public void SetTargetTransform(Transform p_target)
+    {
+        player = p_target;
+    }
+    
+    public Transform GetTargetTransform()
+    {
+        return player;
+    }
+    
+    #endregion
 }

@@ -26,7 +26,7 @@ public class InputManager : BaseManager
             cameraObject.transform.position = new Vector3(0f, 10f, -10f);
             cameraObject.transform.rotation = Quaternion.Euler(45f, 0f, 0f);
             
-            Debug.Log("Main camera created successfully");
+            Logger.LogInfo("Main camera created successfully");
         }
     }
     
@@ -35,7 +35,7 @@ public class InputManager : BaseManager
         inputLogic = new InputLogic(mainCamera);
         inputLogic.Initialize();
         
-        Debug.Log("Input logic setup complete");
+        Logger.LogInfo("New Input System setup complete");
     }
     
     public InputLogic GetInputLogic()
