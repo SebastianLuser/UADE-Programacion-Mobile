@@ -95,7 +95,7 @@ public class BulletPool : MonoBehaviour
             return CreateNewBullet();
         }
         
-        Debug.LogWarning("BulletPool: No bullets available and pool at max capacity!");
+        Logger.LogWarning("BulletPool: No bullets available and pool at max capacity!");
         return CreateNewBullet();
     }
     

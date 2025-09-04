@@ -37,7 +37,7 @@ public class GameStateManager : BaseManager, IUpdatable
         OnEnterState(newState);
         
         OnStateChanged?.Invoke(previousState, newState);
-        Debug.Log($"Game state changed from {previousState} to {newState}");
+        Logger.LogInfo($"Game state changed from {previousState} to {newState}");
     }
     
     private void OnEnterState(GameState state)
@@ -118,12 +118,12 @@ public class GameStateManager : BaseManager, IUpdatable
     
     private void HandleGameOver()
     {
-        Debug.Log("Game Over!");
+        Logger.LogInfo("Game Over!");
     }
     
     private void HandleVictory()
     {
-        Debug.Log("Victory!");
+        Logger.LogInfo("Victory!");
     }
     
     public void OnUpdate(float deltaTime)

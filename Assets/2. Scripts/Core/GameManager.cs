@@ -2,15 +2,17 @@ using UnityEngine;
 
 public class GameManager : BaseManager
 {
-    [Header("Manager Initialization Order")]
+    [Header("Manager Configuration")]
     [SerializeField] private bool autoInitialize = true;
+    [SerializeField] private GameObject[] managerPrefabs;
     
-    private UpdateManager updateManager;
-    private CharacterManager characterManager;
-    private InputManager inputManager;
-    private LevelManager levelManager;
-    private ObjectPoolManager objectPoolManager;
-    private GameStateManager gameStateManager;
+    [Header("Manager References")]
+    [SerializeField] private UpdateManager updateManager;
+    [SerializeField] private CharacterManager characterManager;
+    [SerializeField] private InputManager inputManager;
+    [SerializeField] private LevelManager levelManager;
+    [SerializeField] private ObjectPoolManager objectPoolManager;
+    [SerializeField] private GameStateManager gameStateManager;
     
     private void Start()
     {
@@ -22,39 +24,107 @@ public class GameManager : BaseManager
     
     protected override void OnInitialize()
     {
-        Debug.Log("GameManager: Starting initialization...");
+        Logger.LogInfo("GameManager: Starting initialization...");
         
-        InitializeServiceLocator();
         InitializeManagers();
+        RegisterServices();
         StartGame();
         
-        ServiceLocator.Register<GameManager>(this);
-        Debug.Log("GameManager: Initialization completed!");
-    }
-    
-    private void InitializeServiceLocator()
-    {
-        var serviceLocator = ServiceLocator.Instance;
-        Debug.Log("ServiceLocator initialized");
+        Logger.LogInfo("GameManager: Initialization completed!");
     }
     
     private void InitializeManagers()
     {
-        CreateManager(ref updateManager, "UpdateManager");
-        CreateManager(ref objectPoolManager, "ObjectPoolManager");
-        CreateManager(ref levelManager, "LevelManager");
-        CreateManager(ref characterManager, "CharacterManager");
-        CreateManager(ref inputManager, "InputManager");
-        CreateManager(ref gameStateManager, "GameStateManager");
+        if (managerPrefabs != null && managerPrefabs.Length > 0)
+        {
+            InitializeManagersFromPrefabs();
+        }
+        else
+        {
+            InitializeManagersFromReferences();
+        }
     }
     
-    private void CreateManager<T>(ref T manager, string name) where T : BaseManager
+    private void InitializeManagersFromPrefabs()
     {
-        GameObject managerObject = new GameObject($"[{name}]");
-        managerObject.transform.SetParent(transform);
-        manager = managerObject.AddComponent<T>();
-        manager.Initialize();
-        Debug.Log($"{name} created and initialized");
+        foreach (var prefab in managerPrefabs)
+        {
+            if (prefab == null) continue;
+            
+            var managerInstance = Instantiate(prefab, transform);
+            var manager = managerInstance.GetComponent<BaseManager>();
+            
+            if (manager != null)
+            {
+                manager.Initialize();
+                AssignManagerReference(manager);
+                Logger.LogInfo($"Manager {manager.GetType().Name} instantiated and initialized from prefab");
+            }
+            else
+            {
+                Logger.LogWarning($"Prefab {prefab.name} does not contain a BaseManager component");
+            }
+        }
+    }
+    
+    private void InitializeManagersFromReferences()
+    {
+        InitializeManager(updateManager, "UpdateManager");
+        InitializeManager(objectPoolManager, "ObjectPoolManager");
+        InitializeManager(levelManager, "LevelManager");
+        InitializeManager(characterManager, "CharacterManager");
+        InitializeManager(inputManager, "InputManager");
+        InitializeManager(gameStateManager, "GameStateManager");
+    }
+    
+    private void InitializeManager(BaseManager manager, string name)
+    {
+        if (manager != null)
+        {
+            manager.Initialize();
+            Logger.LogInfo($"{name} initialized from reference");
+        }
+        else
+        {
+            Logger.LogWarning($"{name} reference is not assigned");
+        }
+    }
+    
+    private void AssignManagerReference(BaseManager manager)
+    {
+        switch (manager)
+        {
+            case UpdateManager um:
+                updateManager = um;
+                break;
+            case CharacterManager cm:
+                characterManager = cm;
+                break;
+            case InputManager im:
+                inputManager = im;
+                break;
+            case LevelManager lm:
+                levelManager = lm;
+                break;
+            case ObjectPoolManager opm:
+                objectPoolManager = opm;
+                break;
+            case GameStateManager gsm:
+                gameStateManager = gsm;
+                break;
+        }
+    }
+    
+    private void RegisterServices()
+    {
+        ServiceLocator.Register<GameManager>(this);
+        
+        if (updateManager != null) ServiceLocator.Register<UpdateManager>(updateManager);
+        if (characterManager != null) ServiceLocator.Register<CharacterManager>(characterManager);
+        if (inputManager != null) ServiceLocator.Register<InputManager>(inputManager);
+        if (levelManager != null) ServiceLocator.Register<LevelManager>(levelManager);
+        if (objectPoolManager != null) ServiceLocator.Register<ObjectPoolManager>(objectPoolManager);
+        if (gameStateManager != null) ServiceLocator.Register<GameStateManager>(gameStateManager);
     }
     
     private void StartGame()
@@ -90,7 +160,7 @@ public class GameManager : BaseManager
             gameStateManager.StartGame();
         }
         
-        Debug.Log("Game restarted");
+        Logger.LogInfo("Game restarted");
     }
     
     protected override void OnShutdown()
@@ -103,6 +173,13 @@ public class GameManager : BaseManager
         if (updateManager != null) updateManager.Shutdown();
         
         ServiceLocator.Unregister<GameManager>();
-        Debug.Log("GameManager shutdown completed");
+        ServiceLocator.Unregister<UpdateManager>();
+        ServiceLocator.Unregister<CharacterManager>();
+        ServiceLocator.Unregister<InputManager>();
+        ServiceLocator.Unregister<LevelManager>();
+        ServiceLocator.Unregister<ObjectPoolManager>();
+        ServiceLocator.Unregister<GameStateManager>();
+        
+        Logger.LogInfo("GameManager shutdown completed");
     }
 }

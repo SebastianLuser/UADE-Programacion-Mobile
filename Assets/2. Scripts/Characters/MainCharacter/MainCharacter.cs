@@ -2,7 +2,10 @@ using UnityEngine;
 
 public class MainCharacter : BaseCharacter
 {
-    [SerializeField] private float rotationSpeed = 10f;
+    [SerializeField] private MainCharacterDataSO mainCharacterData;
+    
+    private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData?.rotationSpeed ?? 10f;
+    private BulletDataSO BulletData => mainCharacterData?.bulletData;
     
     private Rigidbody rb;
     private Camera mainCamera;
@@ -28,7 +31,7 @@ public class MainCharacter : BaseCharacter
     {
         if (!isAlive) return;
         
-        Vector3 movement = direction * moveSpeed * Time.deltaTime;
+        Vector3 movement = direction * MoveSpeed * Time.deltaTime;
         rb.MovePosition(transform.position + movement);
         
         if (direction.magnitude > 0.1f)
@@ -47,32 +50,34 @@ public class MainCharacter : BaseCharacter
     
     private void CreateBullet(Vector3 direction)
     {
+        float bulletSpeed = BulletData?.speed ?? 25f;
+        
         var poolManager = ServiceLocator.Get<ObjectPoolManager>();
         if (poolManager != null)
         {
             Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            poolManager.GetBullet(spawnPosition, direction, 25f, false);
+            poolManager.GetBullet(spawnPosition, direction, bulletSpeed, false);
         }
         else if (BulletPool.Instance != null)
         {
             Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            BulletPool.Instance.GetBullet(spawnPosition, direction, 25f, false);
+            BulletPool.Instance.GetBullet(spawnPosition, direction, bulletSpeed, false);
         }
         else
         {
             GameObject bulletObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bulletObj.name = "Bullet";
             bulletObj.transform.position = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            bulletObj.transform.localScale = Vector3.one * 0.2f;
+            bulletObj.transform.localScale = BulletData?.scale ?? Vector3.one * 0.2f;
             
             var bulletRb = bulletObj.AddComponent<Rigidbody>();
-            bulletRb.useGravity = false;
+            bulletRb.useGravity = BulletData?.useGravity ?? false;
             
             var bulletCollider = bulletObj.GetComponent<Collider>();
-            bulletCollider.isTrigger = true;
+            bulletCollider.isTrigger = BulletData?.isTrigger ?? true;
             
             var bulletObject = bulletObj.AddComponent<BulletObject>();
-            bulletObject.InitializeBullet(direction, 25f, null);
+            bulletObject.InitializeBullet(direction, bulletSpeed, null);
         }
     }
     
@@ -93,7 +98,7 @@ public class MainCharacter : BaseCharacter
         if (direction.magnitude > 0.1f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, RotationSpeed * Time.deltaTime);
         }
     }
 }
