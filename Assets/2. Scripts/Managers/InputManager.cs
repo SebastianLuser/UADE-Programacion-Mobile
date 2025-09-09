@@ -26,7 +26,19 @@ public class InputManager : BaseManager
             cameraObject.transform.position = new Vector3(0f, 10f, -10f);
             cameraObject.transform.rotation = Quaternion.Euler(45f, 0f, 0f);
             
-            Debug.Log("Main camera created successfully");
+            // Add camera follow script
+            var cameraFollow = cameraObject.AddComponent<CameraFollow>();
+            
+            Debug.Log("Main camera created successfully with follow script");
+        }
+        else
+        {
+            // Add camera follow script to existing camera if it doesn't have one
+            if (mainCamera.GetComponent<CameraFollow>() == null)
+            {
+                mainCamera.gameObject.AddComponent<CameraFollow>();
+                Debug.Log("Camera follow script added to existing camera");
+            }
         }
     }
     

@@ -2,25 +2,32 @@ using UnityEngine;
 
 public class MainCharacter : BaseCharacter
 {
-    [SerializeField] private float rotationSpeed = 10f;
+    [SerializeField] protected float rotationSpeed = 10f;
     
-    private Rigidbody rb;
+    protected Rigidbody rb;
     private Camera mainCamera;
-    private Vector3 lastMoveDirection;
+    protected Vector3 lastMoveDirection;
     
     protected override void Awake()
     {
         base.Awake();
         rb = GetComponent<Rigidbody>();
         
-        var inputManager = ServiceLocator.Get<InputManager>();
-        if (inputManager != null)
+        // Try to get InputManager, but don't error if not available yet
+        if (ServiceLocator.TryGet<InputManager>(out var inputManager))
         {
             mainCamera = inputManager.MainCamera;
         }
         else
         {
+            // Fallback to Camera.main if InputManager not ready yet
             mainCamera = Camera.main;
+            
+            // If no main camera exists, we'll set it up later when InputManager initializes
+            if (mainCamera == null)
+            {
+                Debug.LogWarning("No main camera found. Will be set up when InputManager initializes.");
+            }
         }
     }
     
@@ -78,6 +85,12 @@ public class MainCharacter : BaseCharacter
     
     public void HandleInput(Vector2 movementInput, Vector3 shootDirection)
     {
+        // Ensure we have a camera reference
+        if (mainCamera == null && ServiceLocator.TryGet<InputManager>(out var inputManager))
+        {
+            mainCamera = inputManager.MainCamera;
+        }
+        
         Vector3 movement = new Vector3(movementInput.x, 0, movementInput.y);
         Move(movement);
         

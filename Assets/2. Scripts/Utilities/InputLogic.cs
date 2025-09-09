@@ -29,8 +29,12 @@ public class InputLogic : IUpdatable
         Vector2 movementInput = GetMovementInput();
         Vector3 shootDirection = GetShootDirection();
         
+        // Call HandleInput on the MainCharacter (works for both MainCharacter and PlayerController)
         var mainCharacter = characterManager.MainCharacter as MainCharacter;
-        mainCharacter?.HandleInput(movementInput, shootDirection);
+        if (mainCharacter != null)
+        {
+            mainCharacter.HandleInput(movementInput, shootDirection);
+        }
     }
     
     private Vector2 GetMovementInput()

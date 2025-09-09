@@ -16,7 +16,7 @@ public class LevelManager : BaseManager
     
     private void SetupScene()
     {
-        CreateGround();
+        // CreateGround(); // DISABLED - no automatic ground creation
         Debug.Log("Scene setup completed");
     }
     
