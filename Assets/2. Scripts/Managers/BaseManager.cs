@@ -10,7 +10,7 @@ public abstract class BaseManager : MonoBehaviour, IManager
     {
         if (isInitialized)
         {
-            Debug.LogWarning($"{GetType().Name} is already initialized!");
+            Logger.LogWarning($"{GetType().Name} is already initialized!");
             return;
         }
         

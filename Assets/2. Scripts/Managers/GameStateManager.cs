@@ -10,6 +10,7 @@ public enum GameState
     Victory
 }
 
+//todo para que quiero este manager? Necesito saber el  estado del juego en alugn momento?  
 public class GameStateManager : BaseManager, IUpdatable
 {
     private GameState currentState = GameState.Menu;
@@ -37,7 +38,7 @@ public class GameStateManager : BaseManager, IUpdatable
         OnEnterState(newState);
         
         OnStateChanged?.Invoke(previousState, newState);
-        Debug.Log($"Game state changed from {previousState} to {newState}");
+        Logger.LogInfo($"Game state changed from {previousState} to {newState}");
     }
     
     private void OnEnterState(GameState state)
@@ -118,12 +119,12 @@ public class GameStateManager : BaseManager, IUpdatable
     
     private void HandleGameOver()
     {
-        Debug.Log("Game Over!");
+        Logger.LogInfo("Game Over!");
     }
     
     private void HandleVictory()
     {
-        Debug.Log("Victory!");
+        Logger.LogInfo("Victory!");
     }
     
     public void OnUpdate(float deltaTime)
@@ -145,19 +146,7 @@ public class GameStateManager : BaseManager, IUpdatable
     
     private void CheckGameConditions()
     {
-        if (currentState != GameState.Playing) return;
-        
-        var characterManager = ServiceLocator.Get<CharacterManager>();
-        if (characterManager == null) return;
-        
-        if (!characterManager.IsMainCharacterAlive())
-        {
-            GameOver();
-        }
-        else if (characterManager.GetAliveEnemiesCount() == 0)
-        {
-            Victory();
-        }
+        if (currentState != GameState.Playing);
     }
     
     protected override void OnShutdown()

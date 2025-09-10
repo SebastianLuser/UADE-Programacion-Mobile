@@ -17,14 +17,14 @@ public class LevelManager : BaseManager
     private void SetupScene()
     {
         CreateGround();
-        Debug.Log("Scene setup completed");
+        Logger.LogInfo("Scene setup completed");
     }
     
     private void CreateGround()
     {
         if (ground != null)
         {
-            Debug.LogWarning("Ground already exists!");
+            Logger.LogWarning("Ground already exists!");
             return;
         }
         

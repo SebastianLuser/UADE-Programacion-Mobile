@@ -11,7 +11,7 @@ public class BulletLogic : IUpdatable
     private bool isActive;
     
     private BulletObject bulletObject;
-    private BulletPool pool;
+    private string poolName = "default";
     
     public bool IsActive => isActive;
     public float Damage => damage;
@@ -22,11 +22,11 @@ public class BulletLogic : IUpdatable
         isActive = false;
     }
     
-    public void Initialize(Vector3 shootDirection, float bulletDamage, BulletPool bulletPool, bool isEnemyBullet = false)
+    public void Initialize(Vector3 shootDirection, float bulletDamage, object bulletPool = null, bool isEnemyBullet = false, string bulletPoolName = "default")
     {
         direction = shootDirection.normalized;
         damage = bulletDamage;
-        pool = bulletPool;
+        poolName = bulletPoolName;
         timer = 0f;
         isActive = true;
         
@@ -72,9 +72,10 @@ public class BulletLogic : IUpdatable
         var updateManager = ServiceLocator.Get<UpdateManager>();
         updateManager?.UnregisterUpdatable(this);
         
-        if (pool != null && bulletObject != null)
+        var poolService = ServiceLocator.Get<ObjectPoolService>();
+        if (poolService != null && bulletObject != null)
         {
-            pool.ReturnBullet(bulletObject.gameObject);
+            poolService.ReturnBullet(bulletObject.gameObject, poolName);
         }
     }
     

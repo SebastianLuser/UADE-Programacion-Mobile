@@ -1,11 +1,12 @@
 using UnityEngine;
+using UnityEngine.Assertions;
 
+//todo delete private 
 public abstract class BaseCharacter : MonoBehaviour, ICharacter
 {
-    [SerializeField] protected float health = 100f;
-    [SerializeField] protected float moveSpeed = 5f;
-    [SerializeField] protected float shootCooldown = 0.5f;
+    [SerializeField] protected CharacterDataSO characterData;
     
+    protected float currentHealth;
     protected float lastShootTime;
     protected bool isAlive = true;
     
@@ -15,11 +16,22 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     
     protected virtual void Awake()
     {
+        Assert.IsNotNull(characterData);
         Initialize();
     }
     
     public virtual void Initialize()
     {
+        if (characterData != null)
+        {
+            currentHealth = characterData.maxHealth;
+        }
+        else
+        {
+            currentHealth = 100f;
+            Logger.LogWarning($"{gameObject.name}: No CharacterDataSO assigned, using default values");
+        }
+        
         isAlive = true;
         lastShootTime = 0f;
     }
@@ -31,8 +43,8 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     {
         if (!isAlive) return;
         
-        health -= damage;
-        if (health <= 0f)
+        currentHealth -= damage;
+        if (currentHealth <= 0f)
         {
             isAlive = false;
             OnDeath();
@@ -46,6 +58,6 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     
     protected bool CanShoot()
     {
-        return Time.time >= lastShootTime + shootCooldown;
+        return Time.time >= lastShootTime +  characterData.shootCooldown;
     }
 }

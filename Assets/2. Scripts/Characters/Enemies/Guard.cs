@@ -1,7 +1,12 @@
 using UnityEngine;
+using Scripts.FSM.Models;
+using Scripts.FSM.Base.StateMachine;
+using System.Collections.Generic;
 
-public class Guard : BaseCharacter, IUpdatable
+//todo revisar pasar a MVC
+public class Guard : BaseCharacter, IUpdatable, IUseFsm
 {
+    //todo utilizar scriptable object
     [Header("Guard Settings")]
     [SerializeField] private float detectionRange = 8f;
     [SerializeField] private float attackRange = 2f;
@@ -11,12 +16,15 @@ public class Guard : BaseCharacter, IUpdatable
     [SerializeField] private float idleTime = 3f;
     [SerializeField] private float searchTime = 5f;
     [SerializeField] private Transform[] patrolPoints;
+
+    [Header("FSM Configuration")]
+    [SerializeField] private List<StateData> statesData = new();
     
     private StateMachine stateMachine;
     private Transform player;
     private Vector3 lastKnownPlayerPosition;
-    private int currentPatrolIndex = 0;
-    private float stateTimer = 0f;
+    private int currentPatrolIndex;
+    private float stateTimer ;
     
     public float DetectionRange => detectionRange;
     public float AttackRange => attackRange;
@@ -48,8 +56,7 @@ public class Guard : BaseCharacter, IUpdatable
     protected override void Awake()
     {
         base.Awake();
-        InitializeStateMachine();
-        FindPlayer();
+        InitializeStateMachine(); ;
         SetupPatrolPoints();
         
         var updateManager = ServiceLocator.Get<UpdateManager>();
@@ -64,19 +71,13 @@ public class Guard : BaseCharacter, IUpdatable
     private System.Collections.IEnumerator DelayedStart()
     {
         yield return null;
-        
-        if (player == null)
-        {
-            FindPlayer();
-        }
-        
-        stateMachine.StartState<IdleState>();
     }
     
     public void OnUpdate(float deltaTime)
     {
         if (!isAlive) return;
-        stateMachine.Update();
+        UpdateFsm();
+        stateTimer += deltaTime; // Keep timer for conditions that need it
     }
     
     protected override void OnDeath()
@@ -88,37 +89,13 @@ public class Guard : BaseCharacter, IUpdatable
     
     private void InitializeStateMachine()
     {
-        stateMachine = new StateMachine();
-        
-        stateMachine.AddState(new IdleState(this));
-        stateMachine.AddState(new PatrollingState(this));
-        stateMachine.AddState(new ChasingState(this));
-        stateMachine.AddState(new SearchingState(this));
-        stateMachine.AddState(new AttackingState(this));
-        
-        stateMachine.AddTransition<IdleState, PatrollingState>(() => stateTimer >= idleTime);
-        stateMachine.AddTransition<PatrollingState, IdleState>(() => ReachedPatrolPoint());
-        stateMachine.AddTransition<IdleState, ChasingState>(() => CanSeePlayer());
-        stateMachine.AddTransition<PatrollingState, ChasingState>(() => CanSeePlayer());
-        stateMachine.AddTransition<ChasingState, AttackingState>(() => IsPlayerInAttackRange());
-        stateMachine.AddTransition<ChasingState, SearchingState>(() => !CanSeePlayer());
-        stateMachine.AddTransition<AttackingState, ChasingState>(() => !IsPlayerInAttackRange() && CanSeePlayer());
-        stateMachine.AddTransition<AttackingState, SearchingState>(() => !CanSeePlayer());
-        stateMachine.AddTransition<SearchingState, ChasingState>(() => CanSeePlayer());
-        stateMachine.AddTransition<SearchingState, IdleState>(() => stateTimer >= searchTime);
-    }
-    
-    private void FindPlayer()
-    {
-        var characterManager = ServiceLocator.Get<CharacterManager>();
-        if (characterManager?.MainCharacter != null)
+        if (statesData == null || statesData.Count == 0)
         {
-            player = characterManager.MainCharacter.Transform;
+            Logger.LogError($"Guard {gameObject.name}: No StateData configured! Please assign StateData in the inspector.");
+            return;
         }
-        else
-        {
-            Debug.LogWarning("Guard: CharacterManager not found or MainCharacter not spawned yet!");
-        }
+        
+        stateMachine = new StateMachine(statesData, this);
     }
     
     private void SetupPatrolPoints()
@@ -137,45 +114,12 @@ public class Guard : BaseCharacter, IUpdatable
         }
     }
     
-    public bool CanSeePlayer()
-    {
-        if (player == null) return false;
-        
-        Vector3 directionToPlayer = (player.position - transform.position);
-        float distanceToPlayer = directionToPlayer.magnitude;
-        
-        if (distanceToPlayer > detectionRange) return false;
-        
-        directionToPlayer.Normalize();
-        float angle = Vector3.Angle(transform.forward, directionToPlayer);
-        
-        if (angle > fieldOfView / 2f) return false;
-        
-        if (Physics.Raycast(transform.position + Vector3.up * 0.5f, directionToPlayer, out RaycastHit hit, distanceToPlayer))
-        {
-            return hit.collider.GetComponent<MainCharacter>() != null;
-        }
-        
-        return true;
-    }
-    
-    public bool IsPlayerInAttackRange()
-    {
-        if (player == null) return false;
-        return Vector3.Distance(transform.position, player.position) <= attackRange;
-    }
-    
-    public bool ReachedPatrolPoint()
-    {
-        if (patrolPoints == null || currentPatrolIndex >= patrolPoints.Length) return true;
-        return Vector3.Distance(transform.position, patrolPoints[currentPatrolIndex].position) < 1f;
-    }
     
     public override void Move(Vector3 direction)
     {
         if (!isAlive) return;
         
-        Vector3 movement = direction * moveSpeed * Time.deltaTime;
+        Vector3 movement = direction * (characterData.moveSpeed * Time.deltaTime);
         transform.position += movement;
         
         if (direction.magnitude > 0.1f)
@@ -194,19 +138,15 @@ public class Guard : BaseCharacter, IUpdatable
     
     private void CreateBullet(Vector3 direction)
     {
-        var poolManager = ServiceLocator.Get<ObjectPoolManager>();
-        if (poolManager != null)
+        var poolService = ServiceLocator.Get<ObjectPoolService>();
+        if (poolService != null)
         {
             Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            poolManager.GetBullet(spawnPosition, direction, 15f, true);
-        }
-        else if (BulletPool.Instance != null)
-        {
-            Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            BulletPool.Instance.GetBullet(spawnPosition, direction, 15f, true);
+            poolService.GetBullet(spawnPosition, direction, 15f, true);
         }
         else
         {
+            // Fallback to creating bullet manually if service not available
             GameObject bulletObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bulletObj.name = "EnemyBullet";
             bulletObj.transform.position = transform.position + Vector3.up * 0.5f + direction * 0.8f;
@@ -225,4 +165,28 @@ public class Guard : BaseCharacter, IUpdatable
             bulletObject.InitializeBullet(direction, 15f, null, true);
         }
     }
+    
+    #region IUseFsm Implementation
+    
+    public Transform GetModelTransform()
+    {
+        return transform;
+    }
+    
+    public void UpdateFsm()
+    {
+        stateMachine?.RunStateMachine();
+    }
+    
+    public void SetTargetTransform(Transform p_target)
+    {
+        player = p_target;
+    }
+    
+    public Transform GetTargetTransform()
+    {
+        return player;
+    }
+    
+    #endregion
 }

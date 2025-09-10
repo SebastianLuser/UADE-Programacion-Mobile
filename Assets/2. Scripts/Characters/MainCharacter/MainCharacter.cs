@@ -2,33 +2,28 @@ using UnityEngine;
 
 public class MainCharacter : BaseCharacter
 {
-    [SerializeField] private float rotationSpeed = 10f;
+    [SerializeField] private MainCharacterDataSO mainCharacterData;
+    
+    private float RotationSpeed => mainCharacterData.rotationSpeed;
+    private BulletDataSO BulletData => mainCharacterData.bulletData;
     
     private Rigidbody rb;
     private Camera mainCamera;
     private Vector3 lastMoveDirection;
     
-    protected override void Awake()
+    private void Awake()
     {
         base.Awake();
         rb = GetComponent<Rigidbody>();
         
-        var inputManager = ServiceLocator.Get<InputManager>();
-        if (inputManager != null)
-        {
-            mainCamera = inputManager.MainCamera;
-        }
-        else
-        {
-            mainCamera = Camera.main;
-        }
+        mainCamera = Camera.main;
     }
     
     public override void Move(Vector3 direction)
     {
         if (!isAlive) return;
         
-        Vector3 movement = direction * moveSpeed * Time.deltaTime;
+        Vector3 movement = direction * (characterData.moveSpeed * Time.deltaTime);
         rb.MovePosition(transform.position + movement);
         
         if (direction.magnitude > 0.1f)
@@ -47,32 +42,31 @@ public class MainCharacter : BaseCharacter
     
     private void CreateBullet(Vector3 direction)
     {
-        var poolManager = ServiceLocator.Get<ObjectPoolManager>();
-        if (poolManager != null)
+        float bulletSpeed = BulletData.speed;
+        
+        var poolService = ServiceLocator.Get<ObjectPoolService>();
+        if (poolService != null)
         {
             Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            poolManager.GetBullet(spawnPosition, direction, 25f, false);
-        }
-        else if (BulletPool.Instance != null)
-        {
-            Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            BulletPool.Instance.GetBullet(spawnPosition, direction, 25f, false);
+            poolService.GetBullet(spawnPosition, direction, bulletSpeed, false);
         }
         else
         {
+            // Fallback to creating bullet manually if service not available
             GameObject bulletObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bulletObj.name = "Bullet";
             bulletObj.transform.position = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            bulletObj.transform.localScale = Vector3.one * 0.2f;
+            bulletObj.transform.localScale = BulletData.scale;
             
+            //todo refactor use object pool , instance through prefab
             var bulletRb = bulletObj.AddComponent<Rigidbody>();
-            bulletRb.useGravity = false;
+            bulletRb.useGravity = BulletData.useGravity;
             
             var bulletCollider = bulletObj.GetComponent<Collider>();
-            bulletCollider.isTrigger = true;
+            bulletCollider.isTrigger = BulletData.isTrigger;
             
             var bulletObject = bulletObj.AddComponent<BulletObject>();
-            bulletObject.InitializeBullet(direction, 25f, null);
+            bulletObject.InitializeBullet(direction, bulletSpeed, null);
         }
     }
     
@@ -93,7 +87,7 @@ public class MainCharacter : BaseCharacter
         if (direction.magnitude > 0.1f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, RotationSpeed * Time.deltaTime);
         }
     }
 }
