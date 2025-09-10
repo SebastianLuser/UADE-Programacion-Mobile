@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+//todo revisar / refactor
 public class CharacterManager : BaseManager
 {
     [Header("Character Settings")]

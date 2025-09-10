@@ -1,23 +1,15 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// Generic Object Pool for any Component type - THE definitive pool implementation
 /// </summary>
-[System.Serializable]
 public class ObjectPool<T> where T : Component
 {
-    [SerializeField] private bool isDynamic = true;
-    [SerializeField] private int initialSize = 10;
-    [SerializeField] private int maxSize = 100;
-    
-    [Header("Pool Status (Debug)")]
-    [SerializeField] private int activeCount;
-    [SerializeField] private int availableCount;
-    
-    private Queue<T> availableObjects = new Queue<T>();
-    private HashSet<T> activeObjects = new HashSet<T>();
+    private int initialSize;
+    private int maxSize;
+    private Queue<T> availableObjects;
+    private HashSet<T> activeObjects;
     private T prefab;
     private Transform parent;
     
@@ -26,29 +18,18 @@ public class ObjectPool<T> where T : Component
     public int TotalCount => ActiveCount + AvailableCount;
     
     /// <summary>
-    /// Default constructor for serialization
-    /// </summary>
-    public ObjectPool()
-    {
-        this.activeObjects = new HashSet<T>();
-        this.availableObjects = new Queue<T>();
-    }
-    
-    /// <summary>
     /// Create an object pool
     /// </summary>
-    public ObjectPool(T prefab, Transform parent = null, int initialPoolSize = 10, 
-                     bool isDynamicPool = true, int maxPoolSize = 100)
+    public ObjectPool(T prefab, Transform parent = null, int initialPoolSize = 10, int maxPoolSize = 100)
     {
         this.prefab = prefab;
         this.parent = parent;
-        this.initialSize = initialPoolSize;
-        this.isDynamic = isDynamicPool;
-        this.maxSize = maxPoolSize;
+        initialSize = initialPoolSize;
+        maxSize = maxPoolSize;
         
         // Initialize collections
-        this.availableObjects = new Queue<T>();
-        this.activeObjects = new HashSet<T>();
+        availableObjects = new Queue<T>();
+        activeObjects = new HashSet<T>();
         
         InitializePool();
     }
@@ -60,8 +41,6 @@ public class ObjectPool<T> where T : Component
         {
             CreateNewObject();
         }
-        
-        UpdateDebugInfo();
     }
     
     private T CreateNewObject()
@@ -79,13 +58,13 @@ public class ObjectPool<T> where T : Component
     /// </summary>
     public T Get()
     {
-        T obj = null;
+        T obj;
         
         if (availableObjects.Count > 0)
         {
             obj = availableObjects.Dequeue();
         }
-        else if (isDynamic)
+        else
         {
             if (TotalCount >= maxSize)
             {
@@ -95,11 +74,6 @@ public class ObjectPool<T> where T : Component
             obj.name = $"{prefab.name}_Pooled_{TotalCount}";
             obj.gameObject.SetActive(false);
         }
-        else
-        {
-            Logger.LogWarning($"ObjectPool<{typeof(T).Name}>: No objects available and pool is not dynamic!");
-            return null;
-        }
         
         activeObjects.Add(obj);
         obj.gameObject.SetActive(true);
@@ -108,8 +82,6 @@ public class ObjectPool<T> where T : Component
         {
             poolable.OnPoolGet();
         }
-        
-        UpdateDebugInfo();
         return obj;
     }
     
@@ -118,7 +90,7 @@ public class ObjectPool<T> where T : Component
     /// </summary>
     public void Return(T obj)
     {
-        if (obj == null) return;
+        if (!obj) return;
         
         if (!activeObjects.Contains(obj))
         {
@@ -135,8 +107,6 @@ public class ObjectPool<T> where T : Component
         
         obj.gameObject.SetActive(false);
         availableObjects.Enqueue(obj);
-        
-        UpdateDebugInfo();
     }
     
     /// <summary>
@@ -161,7 +131,7 @@ public class ObjectPool<T> where T : Component
         while (availableObjects.Count > 0)
         {
             T obj = availableObjects.Dequeue();
-            if (obj != null)
+            if (obj)
             {
                 if (obj is IPoolable destroyPoolable)
                 {
@@ -173,13 +143,12 @@ public class ObjectPool<T> where T : Component
         }
         
         activeObjects.Clear();
-        UpdateDebugInfo();
     }
-    
-    private void UpdateDebugInfo()
-    {
-        activeCount = activeObjects.Count;
-        availableCount = availableObjects.Count;
-    }
-    
+}
+
+public interface IPoolable
+{
+    void OnPoolGet();
+    void OnPoolReturn();
+    void OnPoolDestroy();
 }

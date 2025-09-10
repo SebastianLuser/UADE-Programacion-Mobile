@@ -80,7 +80,7 @@ public class ObjectPoolService : IGameService
         return bulletComponent;
     }
     
-    public void RegisterBulletPool(string poolName, BulletObject prefab, int initialSize = 10, bool isDynamic = true)
+    public void RegisterBulletPool(string poolName, BulletObject prefab, int initialSize = 10)
     {
         if (bulletPools.ContainsKey(poolName))
         {
@@ -94,8 +94,7 @@ public class ObjectPoolService : IGameService
         var pool = new ObjectPool<BulletObject>(
             prefab,
             poolContainer.transform,
-            initialSize,
-            isDynamic
+            initialSize
         );
         
         bulletPools[poolName] = pool;
