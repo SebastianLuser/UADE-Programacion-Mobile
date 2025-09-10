@@ -10,6 +10,7 @@ public enum GameState
     Victory
 }
 
+//todo para que quiero este manager? Necesito saber el  estado del juego en alugn momento?  
 public class GameStateManager : BaseManager, IUpdatable
 {
     private GameState currentState = GameState.Menu;
@@ -145,19 +146,7 @@ public class GameStateManager : BaseManager, IUpdatable
     
     private void CheckGameConditions()
     {
-        if (currentState != GameState.Playing) return;
-        
-        var characterManager = ServiceLocator.Get<CharacterManager>();
-        if (characterManager == null) return;
-        
-        if (!characterManager.IsMainCharacterAlive())
-        {
-            GameOver();
-        }
-        else if (characterManager.GetAliveEnemiesCount() == 0)
-        {
-            Victory();
-        }
+        if (currentState != GameState.Playing);
     }
     
     protected override void OnShutdown()

@@ -5,12 +5,10 @@ public class GameManager : BaseManager
 {
     [Header("Manager Configuration")]
     [SerializeField] private bool autoInitialize = true;
-    [SerializeField] private GameObject[] managerPrefabs;
+    [SerializeField] private BaseManager[] managerPrefabs;
     
     [Header("Manager References")]
     [SerializeField] private UpdateManager updateManager;
-    [SerializeField] private CharacterManager characterManager;
-    [SerializeField] private InputManager inputManager;
     [SerializeField] private LevelManager levelManager;
     [SerializeField] private GameStateManager gameStateManager;
     
@@ -66,16 +64,15 @@ public class GameManager : BaseManager
     {
         foreach (var prefab in managerPrefabs)
         {
-            if (prefab == null) continue;
+            if (!prefab) continue;
             
             var managerInstance = Instantiate(prefab, transform);
-            var manager = managerInstance.GetComponent<BaseManager>();
             
-            if (manager != null)
+            if (managerInstance)
             {
-                manager.Initialize();
-                AssignManagerReference(manager);
-                Logger.LogInfo($"Manager {manager.GetType().Name} instantiated and initialized from prefab");
+                managerInstance.Initialize();
+                AssignManagerReference(managerInstance);
+                Logger.LogInfo($"Manager {managerInstance.GetType().Name} instantiated and initialized from prefab");
             }
             else
             {
@@ -88,8 +85,6 @@ public class GameManager : BaseManager
     {
         InitializeManager(updateManager, "UpdateManager");
         InitializeManager(levelManager, "LevelManager");
-        InitializeManager(characterManager, "CharacterManager");
-        InitializeManager(inputManager, "InputManager");
         InitializeManager(gameStateManager, "GameStateManager");
     }
     
@@ -97,14 +92,14 @@ public class GameManager : BaseManager
     {
         // Initialize services that don't inherit from BaseManager
         var objectPoolService = new ObjectPoolService();
-        ServiceLocator.Register<ObjectPoolService>(objectPoolService);
+        ServiceLocator.Register(objectPoolService);
         
         Logger.LogInfo("Services initialized");
     }
     
     private void InitializeManager(BaseManager manager, string name)
     {
-        if (manager != null)
+        if (manager)
         {
             manager.Initialize();
             Logger.LogInfo($"{name} initialized from reference");
@@ -122,12 +117,6 @@ public class GameManager : BaseManager
             case UpdateManager um:
                 updateManager = um;
                 break;
-            case CharacterManager cm:
-                characterManager = cm;
-                break;
-            case InputManager im:
-                inputManager = im;
-                break;
             case LevelManager lm:
                 levelManager = lm;
                 break;
@@ -137,26 +126,20 @@ public class GameManager : BaseManager
         }
     }
     
+    //todo service is not a manager
     private void RegisterServices()
     {
-        ServiceLocator.Register<GameManager>(this);
+        ServiceLocator.Register(this);
         
-        if (updateManager != null) ServiceLocator.Register<UpdateManager>(updateManager);
-        if (characterManager != null) ServiceLocator.Register<CharacterManager>(characterManager);
-        if (inputManager != null) ServiceLocator.Register<InputManager>(inputManager);
-        if (levelManager != null) ServiceLocator.Register<LevelManager>(levelManager);
-        if (gameStateManager != null) ServiceLocator.Register<GameStateManager>(gameStateManager);
+        if (updateManager) ServiceLocator.Register(updateManager);
+        if (levelManager) ServiceLocator.Register(levelManager);
+        if (gameStateManager) ServiceLocator.Register(gameStateManager);
     }
     
     private void StartGame()
     {
-        if (characterManager != null)
-        {
-            characterManager.SpawnMainCharacter();
-            characterManager.SpawnEnemiesAtDefaultPositions();
-        }
         
-        if (gameStateManager != null)
+        if (gameStateManager)
         {
             gameStateManager.StartGame();
         }
@@ -164,13 +147,6 @@ public class GameManager : BaseManager
     
     public void RestartGame()
     {
-        if (characterManager != null)
-        {
-            characterManager.RemoveAllCharacters();
-            characterManager.SpawnMainCharacter();
-            characterManager.SpawnEnemiesAtDefaultPositions();
-        }
-        
         var objectPoolService = ServiceLocator.Get<ObjectPoolService>();
         if (objectPoolService != null)
         {
@@ -188,8 +164,6 @@ public class GameManager : BaseManager
     protected override void OnShutdown()
     {
         if (gameStateManager != null) gameStateManager.Shutdown();
-        if (inputManager != null) inputManager.Shutdown();
-        if (characterManager != null) characterManager.Shutdown();
         if (levelManager != null) levelManager.Shutdown();
         if (updateManager != null) updateManager.Shutdown();
         

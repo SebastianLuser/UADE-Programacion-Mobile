@@ -16,15 +16,7 @@ public class MainCharacter : BaseCharacter
         base.Awake();
         rb = GetComponent<Rigidbody>();
         
-        var inputManager = ServiceLocator.Get<InputManager>();
-        if (inputManager != null)
-        {
-            mainCamera = inputManager.MainCamera;
-        }
-        else
-        {
-            mainCamera = Camera.main;
-        }
+        mainCamera = Camera.main;
     }
     
     public override void Move(Vector3 direction)

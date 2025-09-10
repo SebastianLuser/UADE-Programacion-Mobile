@@ -3,8 +3,10 @@ using Scripts.FSM.Models;
 using Scripts.FSM.Base.StateMachine;
 using System.Collections.Generic;
 
+//todo revisar pasar a MVC
 public class Guard : BaseCharacter, IUpdatable, IUseFsm
 {
+    //todo utilizar scriptable object
     [Header("Guard Settings")]
     [SerializeField] private float detectionRange = 8f;
     [SerializeField] private float attackRange = 2f;
@@ -54,8 +56,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     protected override void Awake()
     {
         base.Awake();
-        InitializeStateMachine();
-        FindPlayer();
+        InitializeStateMachine(); ;
         SetupPatrolPoints();
         
         var updateManager = ServiceLocator.Get<UpdateManager>();
@@ -70,12 +71,6 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     private System.Collections.IEnumerator DelayedStart()
     {
         yield return null;
-        
-        if (player == null)
-        {
-            FindPlayer();
-        }
-        
     }
     
     public void OnUpdate(float deltaTime)
@@ -101,19 +96,6 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         }
         
         stateMachine = new StateMachine(statesData, this);
-    }
-    
-    private void FindPlayer()
-    {
-        var characterManager = ServiceLocator.Get<CharacterManager>();
-        if (characterManager?.MainCharacter != null)
-        {
-            player = characterManager.MainCharacter.Transform;
-        }
-        else
-        {
-            Logger.LogWarning("Guard: CharacterManager not found or MainCharacter not spawned yet!");
-        }
     }
     
     private void SetupPatrolPoints()
