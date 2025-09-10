@@ -18,13 +18,13 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     [SerializeField] private Transform[] patrolPoints;
 
     [Header("FSM Configuration")]
-    [SerializeField] private List<StateData> statesData = new List<StateData>();
+    [SerializeField] private List<StateData> statesData = new();
     
-    private Scripts.FSM.Base.StateMachine.StateMachine stateMachine;
+    private StateMachine stateMachine;
     private Transform player;
     private Vector3 lastKnownPlayerPosition;
-    private int currentPatrolIndex = 0;
-    private float stateTimer = 0f;
+    private int currentPatrolIndex;
+    private float stateTimer ;
     
     public float DetectionRange => detectionRange;
     public float AttackRange => attackRange;
@@ -119,7 +119,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     {
         if (!isAlive) return;
         
-        Vector3 movement = direction * (MoveSpeed * Time.deltaTime);
+        Vector3 movement = direction * (characterData.moveSpeed * Time.deltaTime);
         transform.position += movement;
         
         if (direction.magnitude > 0.1f)

@@ -4,8 +4,8 @@ public class MainCharacter : BaseCharacter
 {
     [SerializeField] private MainCharacterDataSO mainCharacterData;
     
-    private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData?.rotationSpeed ?? 10f;
-    private BulletDataSO BulletData => mainCharacterData?.bulletData;
+    private float RotationSpeed => mainCharacterData.rotationSpeed;
+    private BulletDataSO BulletData => mainCharacterData.bulletData;
     
     private Rigidbody rb;
     private Camera mainCamera;
@@ -23,7 +23,7 @@ public class MainCharacter : BaseCharacter
     {
         if (!isAlive) return;
         
-        Vector3 movement = direction * (MoveSpeed * Time.deltaTime);
+        Vector3 movement = direction * (characterData.moveSpeed * Time.deltaTime);
         rb.MovePosition(transform.position + movement);
         
         if (direction.magnitude > 0.1f)
@@ -42,7 +42,7 @@ public class MainCharacter : BaseCharacter
     
     private void CreateBullet(Vector3 direction)
     {
-        float bulletSpeed = BulletData?.speed ?? 25f;
+        float bulletSpeed = BulletData.speed;
         
         var poolService = ServiceLocator.Get<ObjectPoolService>();
         if (poolService != null)
@@ -56,13 +56,14 @@ public class MainCharacter : BaseCharacter
             GameObject bulletObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bulletObj.name = "Bullet";
             bulletObj.transform.position = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            bulletObj.transform.localScale = BulletData?.scale ?? Vector3.one * 0.2f;
+            bulletObj.transform.localScale = BulletData.scale;
             
+            //todo refactor use object pool , instance through prefab
             var bulletRb = bulletObj.AddComponent<Rigidbody>();
-            bulletRb.useGravity = BulletData?.useGravity ?? false;
+            bulletRb.useGravity = BulletData.useGravity;
             
             var bulletCollider = bulletObj.GetComponent<Collider>();
-            bulletCollider.isTrigger = BulletData?.isTrigger ?? true;
+            bulletCollider.isTrigger = BulletData.isTrigger;
             
             var bulletObject = bulletObj.AddComponent<BulletObject>();
             bulletObject.InitializeBullet(direction, bulletSpeed, null);

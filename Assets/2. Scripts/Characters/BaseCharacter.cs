@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Assertions;
 
+//todo delete private 
 public abstract class BaseCharacter : MonoBehaviour, ICharacter
 {
     [SerializeField] protected CharacterDataSO characterData;
@@ -8,10 +9,6 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     protected float currentHealth;
     protected float lastShootTime;
     protected bool isAlive = true;
-    
-    public float Health => currentHealth;
-    protected float MoveSpeed => characterData?.moveSpeed ?? 5f;
-    private float ShootCooldown => characterData?.shootCooldown ?? 0.5f;
     
     public GameObject GameObject => gameObject;
     public Transform Transform => transform;
@@ -61,6 +58,6 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     
     protected bool CanShoot()
     {
-        return Time.time >= lastShootTime + ShootCooldown;
+        return Time.time >= lastShootTime +  characterData.shootCooldown;
     }
 }
