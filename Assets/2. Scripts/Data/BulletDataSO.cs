@@ -3,9 +3,10 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "BulletData", menuName = "Game Data/Bullet Data")]
 public class BulletDataSO : ScriptableObject
 {
-    [Header("Movement")]
-    public float speed = 25f;
-    
+    //FORMA CORRECTA LLEVAR AL RESTO DE SO
+    [field:Header("Movement")]
+    [field: SerializeField] public float speed { get; private set; } = 25f;
+
     [Header("Combat")]
     public float damage = 10f;
     public float lifetime = 5f;

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class BulletObject : MonoBehaviour
+public class BulletObject : MonoBehaviour, IPoolable
 {
     private BulletLogic bulletLogic;
     private Rigidbody rb;
@@ -13,7 +13,7 @@ public class BulletObject : MonoBehaviour
         bulletLogic = new BulletLogic(this);
     }
     
-    public void InitializeBullet(Vector3 shootDirection, float damage, BulletPool pool, bool isEnemyBullet = false)
+    public void InitializeBullet(Vector3 shootDirection, float damage, object pool = null, bool isEnemyBullet = false)
     {
         bulletLogic?.Initialize(shootDirection, damage, pool, isEnemyBullet);
     }
@@ -57,4 +57,26 @@ public class BulletObject : MonoBehaviour
     {
         return bulletLogic;
     }
+    
+    #region IPoolable Implementation
+    
+    public void OnPoolGet()
+    {
+        // Reset state when retrieved from pool
+        Reset();
+    }
+    
+    public void OnPoolReturn()
+    {
+        // Clean up when returning to pool
+        Reset();
+    }
+    
+    public void OnPoolDestroy()
+    {
+        // Cleanup when pool is destroyed
+        bulletLogic?.Reset();
+    }
+    
+    #endregion
 }

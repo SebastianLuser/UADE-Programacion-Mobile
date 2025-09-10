@@ -52,19 +52,15 @@ public class MainCharacter : BaseCharacter
     {
         float bulletSpeed = BulletData?.speed ?? 25f;
         
-        var poolManager = ServiceLocator.Get<ObjectPoolManager>();
-        if (poolManager != null)
+        var poolService = ServiceLocator.Get<ObjectPoolService>();
+        if (poolService != null)
         {
             Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            poolManager.GetBullet(spawnPosition, direction, bulletSpeed, false);
-        }
-        else if (BulletPool.Instance != null)
-        {
-            Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            BulletPool.Instance.GetBullet(spawnPosition, direction, bulletSpeed, false);
+            poolService.GetBullet(spawnPosition, direction, bulletSpeed, false);
         }
         else
         {
+            // Fallback to creating bullet manually if service not available
             GameObject bulletObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bulletObj.name = "Bullet";
             bulletObj.transform.position = transform.position + Vector3.up * 0.5f + direction * 0.8f;

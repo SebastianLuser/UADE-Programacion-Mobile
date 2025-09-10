@@ -1,4 +1,5 @@
 using UnityEngine;
+using DevelopmentUtilities;
 
 public class GameManager : BaseManager
 {
@@ -11,7 +12,6 @@ public class GameManager : BaseManager
     [SerializeField] private CharacterManager characterManager;
     [SerializeField] private InputManager inputManager;
     [SerializeField] private LevelManager levelManager;
-    [SerializeField] private ObjectPoolManager objectPoolManager;
     [SerializeField] private GameStateManager gameStateManager;
     
     private void Start()
@@ -26,11 +26,28 @@ public class GameManager : BaseManager
     {
         Logger.LogInfo("GameManager: Starting initialization...");
         
-        InitializeManagers();
-        RegisterServices();
-        StartGame();
-        
-        Logger.LogInfo("GameManager: Initialization completed!");
+        // Use ActionAfterFrame for robust initialization timing
+        this.ActionAfterFrame(() =>
+        {
+            InitializeManagers();
+            
+            this.ActionAfterFrame(() =>
+            {
+                InitializeServices();
+                RegisterServices();
+                
+                this.ActionAfterFrame(() =>
+                {
+                    ServiceLocator.InitializeAllServices();
+                    
+                    this.ActionAfterFrame(() =>
+                    {
+                        StartGame();
+                        Logger.LogInfo("GameManager: Initialization completed!");
+                    });
+                });
+            });
+        });
     }
     
     private void InitializeManagers()
@@ -70,11 +87,19 @@ public class GameManager : BaseManager
     private void InitializeManagersFromReferences()
     {
         InitializeManager(updateManager, "UpdateManager");
-        InitializeManager(objectPoolManager, "ObjectPoolManager");
         InitializeManager(levelManager, "LevelManager");
         InitializeManager(characterManager, "CharacterManager");
         InitializeManager(inputManager, "InputManager");
         InitializeManager(gameStateManager, "GameStateManager");
+    }
+    
+    private void InitializeServices()
+    {
+        // Initialize services that don't inherit from BaseManager
+        var objectPoolService = new ObjectPoolService();
+        ServiceLocator.Register<ObjectPoolService>(objectPoolService);
+        
+        Logger.LogInfo("Services initialized");
     }
     
     private void InitializeManager(BaseManager manager, string name)
@@ -106,9 +131,6 @@ public class GameManager : BaseManager
             case LevelManager lm:
                 levelManager = lm;
                 break;
-            case ObjectPoolManager opm:
-                objectPoolManager = opm;
-                break;
             case GameStateManager gsm:
                 gameStateManager = gsm;
                 break;
@@ -123,7 +145,6 @@ public class GameManager : BaseManager
         if (characterManager != null) ServiceLocator.Register<CharacterManager>(characterManager);
         if (inputManager != null) ServiceLocator.Register<InputManager>(inputManager);
         if (levelManager != null) ServiceLocator.Register<LevelManager>(levelManager);
-        if (objectPoolManager != null) ServiceLocator.Register<ObjectPoolManager>(objectPoolManager);
         if (gameStateManager != null) ServiceLocator.Register<GameStateManager>(gameStateManager);
     }
     
@@ -150,9 +171,10 @@ public class GameManager : BaseManager
             characterManager.SpawnEnemiesAtDefaultPositions();
         }
         
-        if (objectPoolManager != null)
+        var objectPoolService = ServiceLocator.Get<ObjectPoolService>();
+        if (objectPoolService != null)
         {
-            objectPoolManager.ReturnAllBullets();
+            objectPoolService.ReturnAllBulletsFromAllPools();
         }
         
         if (gameStateManager != null)
@@ -169,16 +191,10 @@ public class GameManager : BaseManager
         if (inputManager != null) inputManager.Shutdown();
         if (characterManager != null) characterManager.Shutdown();
         if (levelManager != null) levelManager.Shutdown();
-        if (objectPoolManager != null) objectPoolManager.Shutdown();
         if (updateManager != null) updateManager.Shutdown();
         
-        ServiceLocator.Unregister<GameManager>();
-        ServiceLocator.Unregister<UpdateManager>();
-        ServiceLocator.Unregister<CharacterManager>();
-        ServiceLocator.Unregister<InputManager>();
-        ServiceLocator.Unregister<LevelManager>();
-        ServiceLocator.Unregister<ObjectPoolManager>();
-        ServiceLocator.Unregister<GameStateManager>();
+        ServiceLocator.ShutdownAllServices();
+        ServiceLocator.Clear();
         
         Logger.LogInfo("GameManager shutdown completed");
     }

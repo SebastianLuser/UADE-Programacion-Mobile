@@ -7,8 +7,9 @@ public class CharacterManager : BaseManager
     [SerializeField] private Vector3 playerSpawnPosition = Vector3.zero;
     [SerializeField] private Vector3[] enemySpawnPositions = { new Vector3(10f, 0f, 0f) };
     
-    private MainCharacterFactory mainCharacterFactory;
-    private EnemyFactory enemyFactory;
+    [Header("Character Prefabs")]
+    [SerializeField] private GameObject mainCharacterPrefab;
+    [SerializeField] private GameObject enemyPrefab;
     
     private ICharacter mainCharacter;
     private List<ICharacter> enemies = new List<ICharacter>();
@@ -20,14 +21,7 @@ public class CharacterManager : BaseManager
     
     protected override void OnInitialize()
     {
-        InitializeFactories();
         ServiceLocator.Register<CharacterManager>(this);
-    }
-    
-    private void InitializeFactories()
-    {
-        mainCharacterFactory = new MainCharacterFactory();
-        enemyFactory = new EnemyFactory();
     }
     
     public void SpawnMainCharacter()
@@ -38,15 +32,44 @@ public class CharacterManager : BaseManager
             return;
         }
         
-        mainCharacter = mainCharacterFactory.CreateCharacter(playerSpawnPosition, Quaternion.identity);
-        allCharacters.Add(mainCharacter);
+        if (mainCharacterPrefab == null)
+        {
+            Logger.LogError("Main character prefab is not assigned!");
+            return;
+        }
         
+        GameObject characterObject = Instantiate(mainCharacterPrefab, playerSpawnPosition, Quaternion.identity);
+        mainCharacter = characterObject.GetComponent<ICharacter>();
+        
+        if (mainCharacter == null)
+        {
+            Logger.LogError("Main character prefab does not have ICharacter component!");
+            Destroy(characterObject);
+            return;
+        }
+        
+        allCharacters.Add(mainCharacter);
         Logger.LogInfo("Main character spawned successfully");
     }
     
     public ICharacter SpawnEnemy(Vector3 position, Quaternion rotation)
     {
-        var enemy = enemyFactory.CreateCharacter(position, rotation);
+        if (enemyPrefab == null)
+        {
+            Logger.LogError("Enemy prefab is not assigned!");
+            return null;
+        }
+        
+        GameObject enemyObject = Instantiate(enemyPrefab, position, rotation);
+        var enemy = enemyObject.GetComponent<ICharacter>();
+        
+        if (enemy == null)
+        {
+            Logger.LogError("Enemy prefab does not have ICharacter component!");
+            Destroy(enemyObject);
+            return null;
+        }
+        
         enemies.Add(enemy);
         allCharacters.Add(enemy);
         
