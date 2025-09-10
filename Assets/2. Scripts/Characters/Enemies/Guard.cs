@@ -100,7 +100,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
             return;
         }
         
-        stateMachine = new Scripts.FSM.Base.StateMachine.StateMachine(statesData, this);
+        stateMachine = new StateMachine(statesData, this);
     }
     
     private void FindPlayer()
@@ -137,7 +137,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     {
         if (!isAlive) return;
         
-        Vector3 movement = direction * MoveSpeed * Time.deltaTime;
+        Vector3 movement = direction * (MoveSpeed * Time.deltaTime);
         transform.position += movement;
         
         if (direction.magnitude > 0.1f)
