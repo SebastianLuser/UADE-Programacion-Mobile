@@ -9,8 +9,8 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     protected bool isAlive = true;
     
     public float Health => currentHealth;
-    public float MoveSpeed => characterData?.moveSpeed ?? 5f;
-    public float ShootCooldown => characterData?.shootCooldown ?? 0.5f;
+    private float MoveSpeed => characterData?.moveSpeed ?? 5f;
+    private float ShootCooldown => characterData?.shootCooldown ?? 0.5f;
     
     public GameObject GameObject => gameObject;
     public Transform Transform => transform;
