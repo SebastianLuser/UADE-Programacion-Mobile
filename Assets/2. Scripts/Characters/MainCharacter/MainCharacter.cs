@@ -11,7 +11,7 @@ public class MainCharacter : BaseCharacter
     private Camera mainCamera;
     private Vector3 lastMoveDirection;
     
-    protected override void Awake()
+    private void Awake()
     {
         base.Awake();
         rb = GetComponent<Rigidbody>();

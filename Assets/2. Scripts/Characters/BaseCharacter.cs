@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Assertions;
 
 public abstract class BaseCharacter : MonoBehaviour, ICharacter
 {
@@ -18,6 +19,7 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     
     protected virtual void Awake()
     {
+        Assert.IsNotNull(characterData);
         Initialize();
     }
     
