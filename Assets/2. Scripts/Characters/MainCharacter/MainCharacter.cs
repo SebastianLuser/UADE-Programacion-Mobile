@@ -31,7 +31,7 @@ public class MainCharacter : BaseCharacter
     {
         if (!isAlive) return;
         
-        Vector3 movement = direction * MoveSpeed * Time.deltaTime;
+        Vector3 movement = direction * (MoveSpeed * Time.deltaTime);
         rb.MovePosition(transform.position + movement);
         
         if (direction.magnitude > 0.1f)

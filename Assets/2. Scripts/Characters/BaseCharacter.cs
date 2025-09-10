@@ -9,7 +9,7 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     protected bool isAlive = true;
     
     public float Health => currentHealth;
-    private float MoveSpeed => characterData?.moveSpeed ?? 5f;
+    protected float MoveSpeed => characterData?.moveSpeed ?? 5f;
     private float ShootCooldown => characterData?.shootCooldown ?? 0.5f;
     
     public GameObject GameObject => gameObject;
