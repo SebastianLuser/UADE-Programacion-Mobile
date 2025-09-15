@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5cc2fc3d77f6cbc4b882191e400f1943, type: 3}
-  m_Name: GuardPatrolState
-  m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.GuardPatrolState
-  <StateName>k__BackingField: Patrol
+  m_Script: {fileID: 11500000, guid: 81c65a6bc3eb9f44a86f3a35e0692763, type: 3}
+  m_Name: GuardAttackState
+  m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.GuardAttackState
+  <StateName>k__BackingField: Attack
