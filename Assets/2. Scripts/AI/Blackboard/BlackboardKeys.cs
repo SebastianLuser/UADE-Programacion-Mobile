@@ -17,6 +17,9 @@ public static class BlackboardKeys
     /// <summary>Vector3 - Last known player position when detected</summary>
     public const string PLAYER_LAST_SEEN = "player_last_seen";
     
+    /// <summary>Vector3 - Last known player position for AI decision making</summary>
+    public const string LAST_KNOWN_PLAYER_POSITION = "last_known_player_position";
+    
     /// <summary>bool - Whether any AI has detected the player</summary>
     public const string PLAYER_DETECTED = "player_detected";
     

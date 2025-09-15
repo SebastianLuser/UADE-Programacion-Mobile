@@ -132,12 +132,37 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
         // Notify all subscribers
         NotifyObjectSubscribers(key, value);
         NotifyTypedSubscribers<T>(key, value);
-        
-        if (enableDebugLogs && !key.Equals(BlackboardKeys.CURRENT_FRAME)) // Don't spam with frame updates
+
+        // Only log changes for important keys, not frequently updated ones
+        if (enableDebugLogs && !IsFrequentlyUpdatedKey(key))
             Logger.LogDebug($"Blackboard: '{key}' changed from {oldValue} to {value}");
     }
     
-    public bool HasKey(string key)
+    /// <summary>
+    /// Check if a key is frequently updated to avoid debug spam
+    /// </summary>
+    private bool IsFrequentlyUpdatedKey(string key)
+    {
+        // Keys that are updated frequently and shouldn't spam the console
+        return key.Equals(BlackboardKeys.CURRENT_FRAME) ||
+               key.Equals(BlackboardKeys.PLAYER_TRANSFORM) ||
+               key.Equals(BlackboardKeys.PLAYER_POSITION) ||
+               key.Equals(BlackboardKeys.PLAYER_PREDICTED_POSITION) ||
+               key.Equals(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION) ||
+               key.Equals(BlackboardKeys.PLAYER_LAST_SEEN) ||
+               key.Equals(BlackboardKeys.PLAYER_LAST_SEEN_TIME) ||
+               key.Equals(BlackboardKeys.LAST_SHOT_TIME) ||
+               key.Equals(BlackboardKeys.ALERT_TIME) ||
+               key.Contains("_DetectionLevel") ||
+               key.Contains("_CanSeePlayer") ||
+               key.Contains("_CurrentPosition") ||
+               key.Contains("_LastUpdateTime") ||
+               key.Contains("_LastShootTime") ||
+               key.Contains("_Time") ||
+               key.EndsWith("_FRAME_DATA") ||
+               key.EndsWith("_TIME") ||
+               (key.StartsWith("Guard_") && (key.Contains("_DetectionLevel") || key.Contains("_CanSeePlayer")));
+    }    public bool HasKey(string key)
     {
         return data.ContainsKey(key);
     }

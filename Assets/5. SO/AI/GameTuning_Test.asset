@@ -1,0 +1,107 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9daee23b7a4014c48976fdd98ae2cd8d, type: 3}
+  m_Name: GameTuning_Test
+  m_EditorClassIdentifier: Assembly-CSharp::GameTuningSO
+  aiUpdateInterval: 0.05
+  enablePerformanceOptimizations: 1
+  maxSimultaneousDetections: 5
+  enableFrameCaching: 1
+  enableDebugGizmos: 1
+  enableDebugLogs: 0
+  showDetectionRanges: 1
+  showFOVCones: 1
+  showRaycastDebug: 0
+  baseDetectionRange: 10
+  baseFOVAngle: 90
+  baseDetectionHeight: 1.8
+  detectionSmoothTime: 0.5
+  peripheralThreshold: 0.8
+  partialThreshold: 0.6
+  clearThreshold: 0.3
+  immediateThreshold: 0.1
+  raycastDensity: 3
+  obstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  playerLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
+  aggressiveConfig:
+    detectionRangeMultiplier: 1.2
+    fovMultiplier: 1.1
+    alertnessMultiplier: 1.3
+    accuracyMultiplier: 1
+    aggressionMultiplier: 1.5
+    reactionTimeMultiplier: 0.7
+    persistenceMultiplier: 1.4
+    speedMultiplier: 1.2
+    rotationSpeedMultiplier: 1.3
+  cautiousConfig:
+    detectionRangeMultiplier: 1
+    fovMultiplier: 1
+    alertnessMultiplier: 1
+    accuracyMultiplier: 1.1
+    aggressionMultiplier: 1
+    reactionTimeMultiplier: 1
+    persistenceMultiplier: 1
+    speedMultiplier: 1
+    rotationSpeedMultiplier: 1
+  conservativeConfig:
+    detectionRangeMultiplier: 0.8
+    fovMultiplier: 0.9
+    alertnessMultiplier: 0.8
+    accuracyMultiplier: 1.2
+    aggressionMultiplier: 0.7
+    reactionTimeMultiplier: 1.3
+    persistenceMultiplier: 0.8
+    speedMultiplier: 0.9
+    rotationSpeedMultiplier: 0.8
+  basePatrolSpeed: 2
+  baseChaseSpeed: 4
+  baseRotationSpeed: 1
+  baseIdleTime: 3
+  baseSearchTime: 5
+  baseInvestigateTime: 3
+  baseAttackRange: 2
+  baseCooldownTime: 1
+  baseProjectileSpeed: 15
+  blackboardUpdateInterval: 0.1
+  memoryRetentionTime: 15
+  enableSharedMemory: 1
+  easyPreset:
+    name: Easy
+    detectionRangeMultiplier: 0.7
+    fovMultiplier: 0.8
+    alertnessMultiplier: 0.7
+    reactionTimeMultiplier: 1.5
+    speedMultiplier: 0.8
+    attackRangeMultiplier: 0.8
+    cooldownMultiplier: 1.3
+  normalPreset:
+    name: Normal
+    detectionRangeMultiplier: 1
+    fovMultiplier: 1
+    alertnessMultiplier: 1
+    reactionTimeMultiplier: 1
+    speedMultiplier: 1
+    attackRangeMultiplier: 1
+    cooldownMultiplier: 1
+  hardPreset:
+    name: Hard
+    detectionRangeMultiplier: 1.3
+    fovMultiplier: 1.2
+    alertnessMultiplier: 1.4
+    reactionTimeMultiplier: 0.7
+    speedMultiplier: 1.3
+    attackRangeMultiplier: 1.2
+    cooldownMultiplier: 0.7

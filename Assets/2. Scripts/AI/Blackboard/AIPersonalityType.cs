@@ -26,6 +26,15 @@ public enum AIPersonalityType
     Conservative,
     
     /// <summary>
+    /// Cautious guards that balance aggression with careful observation
+    /// - Medium reaction times
+    /// - Investigate thoroughly before acting
+    /// - Good balance between pursuit and caution
+    /// - Standard coordination behavior
+    /// </summary>
+    Cautious,
+    
+    /// <summary>
     /// Civilian NPCs that panic and flee from danger
     /// - Non-hostile behavior
     /// - Create distractions when panicked
@@ -100,6 +109,7 @@ public static class AIPersonalityExtensions
         {
             AIPersonalityType.Aggressive => 1.2f,
             AIPersonalityType.Conservative => 0.9f,
+            AIPersonalityType.Cautious => 1.0f,
             AIPersonalityType.Elite => 1.5f,
             AIPersonalityType.Patrol => 1.0f,
             AIPersonalityType.Coward => 1.3f, // Cowards notice threats from farther
@@ -120,6 +130,7 @@ public static class AIPersonalityExtensions
         {
             AIPersonalityType.Aggressive => 1.1f,
             AIPersonalityType.Conservative => 0.9f,
+            AIPersonalityType.Cautious => 1.0f,
             AIPersonalityType.Elite => 1.0f, // Tactical, not rushed
             AIPersonalityType.Patrol => 0.8f,
             AIPersonalityType.Coward => 1.4f, // Fast when fleeing
@@ -140,6 +151,7 @@ public static class AIPersonalityExtensions
         {
             AIPersonalityType.Aggressive => 0.7f,
             AIPersonalityType.Conservative => 1.3f,
+            AIPersonalityType.Cautious => 1.0f,
             AIPersonalityType.Elite => 0.5f,
             AIPersonalityType.Patrol => 1.0f,
             AIPersonalityType.Coward => 0.6f, // Quick to notice danger
@@ -160,6 +172,7 @@ public static class AIPersonalityExtensions
         {
             AIPersonalityType.Aggressive => true,
             AIPersonalityType.Conservative => true,
+            AIPersonalityType.Cautious => true,
             AIPersonalityType.Elite => true,
             AIPersonalityType.Patrol => true,
             AIPersonalityType.Berserker => true,

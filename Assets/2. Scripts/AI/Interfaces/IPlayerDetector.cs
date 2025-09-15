@@ -51,6 +51,11 @@ public interface IPlayerDetector
     void SetDetectionParameters(float detectionRange, float fieldOfView, LayerMask obstacleLayerMask);
     
     /// <summary>
+    /// MEJORA: Obtener configuración actual de detección
+    /// </summary>
+    DetectionConfig GetDetectionConfig();
+    
+    /// <summary>
     /// MEJORA: Detección auditiva para AI más avanzada
     /// </summary>
     bool CanHearPlayer(Transform player, float noiseLevel = 1f);
