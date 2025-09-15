@@ -12,6 +12,10 @@ public class GameManager : BaseManager
     [SerializeField] private LevelManager levelManager;
     [SerializeField] private GameStateManager gameStateManager;
     
+    // MEJORA: Agregado AISystemInitializer para integración completa del sistema de AI
+    [Header("AI System")]
+    [SerializeField] private AISystemInitializer aiSystemInitializer;
+    
     private void Start()
     {
         if (autoInitialize)
@@ -86,6 +90,10 @@ public class GameManager : BaseManager
         InitializeManager(updateManager, "UpdateManager");
         InitializeManager(levelManager, "LevelManager");
         InitializeManager(gameStateManager, "GameStateManager");
+        
+        // MEJORA: Inicializar AISystemInitializer después de los managers básicos
+        // pero antes de los servicios para asegurar el orden correcto
+        InitializeManager(aiSystemInitializer, "AISystemInitializer");
     }
     
     private void InitializeServices()
@@ -123,6 +131,10 @@ public class GameManager : BaseManager
             case GameStateManager gsm:
                 gameStateManager = gsm;
                 break;
+            // MEJORA: Agregado case para AISystemInitializer
+            case AISystemInitializer asi:
+                aiSystemInitializer = asi;
+                break;
         }
     }
     
@@ -134,6 +146,10 @@ public class GameManager : BaseManager
         if (updateManager) ServiceLocator.Register(updateManager);
         if (levelManager) ServiceLocator.Register(levelManager);
         if (gameStateManager) ServiceLocator.Register(gameStateManager);
+        
+        // MEJORA: Registrar AISystemInitializer como servicio también
+        // Esto permite que otros sistemas accedan a él si necesitan configurar AI en runtime
+        if (aiSystemInitializer) ServiceLocator.Register(aiSystemInitializer);
     }
     
     private void StartGame()
@@ -163,6 +179,9 @@ public class GameManager : BaseManager
     
     protected override void OnShutdown()
     {
+        // MEJORA: Shutdown en orden reverso para dependencies correctas
+        // AI System debe cerrarse antes que los managers de los que depende
+        if (aiSystemInitializer != null) aiSystemInitializer.Shutdown();
         if (gameStateManager != null) gameStateManager.Shutdown();
         if (levelManager != null) levelManager.Shutdown();
         if (updateManager != null) updateManager.Shutdown();
