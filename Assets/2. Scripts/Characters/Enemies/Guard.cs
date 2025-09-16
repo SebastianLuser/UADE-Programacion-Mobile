@@ -1,8 +1,11 @@
 using UnityEngine;
 using Game.AI.Steering;
+using Scripts.FSM.Base.StateMachine;
+using Scripts.FSM.Models;
+using System.Collections.Generic;
 
 //todo revisar pasar a MVC
-public class Guard : BaseCharacter, IUpdatable, IAIMovementController
+public class Guard : BaseCharacter, IUpdatable, IAIMovementController, IUseFsm
 {
     //todo utilizar scriptable object
     [Header("Guard Settings")]
@@ -15,6 +18,14 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     [SerializeField] private float searchTime = 5f;
     [SerializeField] private float baseRotationSpeed = 2f;
     [SerializeField] private Transform[] patrolPoints;
+
+    [Header("FSM Patrol Settings")]
+    [SerializeField] private int loopsToIdle = 3;
+    [SerializeField] private float idleSeconds = 5f;
+
+    [Header("State Machine Configuration")]
+    [SerializeField] private List<StateData> stateDataList = new List<StateData>();
+    [SerializeField] private bool useFSM = true;
     
     [Header("AI Configuration")]
     [SerializeField] private AIPersonalityType personalityType = AIPersonalityType.Aggressive;
@@ -37,6 +48,11 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     private int currentPatrolIndex;
     private float stateTimer;
     private bool isActivelyPatrolling = false;  // Track patrol state independently
+
+    // FSM patrol tracking
+    private int currentPatrolLoops = 0;
+    private bool patrolDirection = true; // true = 0->N, false = N->0
+    private bool hasReachedCurrentPatrolPoint = false;
     
     // AI System components
     private AIContext aiContext;
@@ -46,6 +62,9 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     // Steering components
     private Vector3 _vel;
     private ObstacleAvoidance obstacleAvoidance;
+
+    // FSM components
+    private StateMachine stateMachine;
     
     // Movement state for IAIMovementController
     private Vector3 currentMovementDirection;
@@ -72,20 +91,39 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     public float BaseRotationSpeed => baseRotationSpeed;
     public Transform[] PatrolPoints => patrolPoints;
     public Transform Player => player;
-    public Vector3 LastKnownPlayerPosition 
-    { 
-        get => lastKnownPlayerPosition; 
-        set => lastKnownPlayerPosition = value; 
+    public Vector3 LastKnownPlayerPosition
+    {
+        get => lastKnownPlayerPosition;
+        set => lastKnownPlayerPosition = value;
     }
-    public int CurrentPatrolIndex 
-    { 
-        get => currentPatrolIndex; 
-        set => currentPatrolIndex = value; 
+    public int CurrentPatrolIndex
+    {
+        get => currentPatrolIndex;
+        set => currentPatrolIndex = value;
     }
-    public float StateTimer 
-    { 
-        get => stateTimer; 
-        set => stateTimer = value; 
+    public float StateTimer
+    {
+        get => stateTimer;
+        set => stateTimer = value;
+    }
+
+    // FSM Patrol Properties
+    public int LoopsToIdle => loopsToIdle;
+    public float IdleSeconds => idleSeconds;
+    public int CurrentPatrolLoops
+    {
+        get => currentPatrolLoops;
+        set => currentPatrolLoops = value;
+    }
+    public bool PatrolDirection
+    {
+        get => patrolDirection;
+        set => patrolDirection = value;
+    }
+    public bool HasReachedCurrentPatrolPoint
+    {
+        get => hasReachedCurrentPatrolPoint;
+        set => hasReachedCurrentPatrolPoint = value;
     }
     
     public bool IsActive => isAlive && gameObject.activeInHierarchy;
@@ -239,6 +277,22 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
             maxSpeed = chaseSpeed * 1.2f; // Give some headroom
             Logger.LogInfo($"Guard {gameObject.name}: Adjusted maxSpeed to {maxSpeed} to match chaseSpeed");
         }
+
+        // Initialize FSM
+        InitializeFSM();
+    }
+
+    private void InitializeFSM()
+    {
+        if (useFSM && stateDataList != null && stateDataList.Count > 0)
+        {
+            stateMachine = new StateMachine(stateDataList, this);
+            Logger.LogInfo($"Guard {gameObject.name}: FSM initialized with {stateDataList.Count} states");
+        }
+        else
+        {
+            Logger.LogWarning($"Guard {gameObject.name}: FSM not initialized - useFSM: {useFSM}, stateDataList count: {stateDataList?.Count ?? 0}");
+        }
     }
     
     private void Start()
@@ -270,17 +324,26 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     public void OnUpdate(float deltaTime)
     {
         if (!isAlive) return;
-        
+
         // Add debug log with reduced frequency to avoid spam
         if (Time.frameCount % 60 == 0) // Log every 60 frames (about once per second at 60fps)
         {
             Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: OnUpdate is being called - Frame {Time.frameCount}");
         }
-        
+
         UpdateAISystem(deltaTime);
-        UpdateMovementSystem(deltaTime);
-        //UpdateFsm();
-        stateTimer += deltaTime; // Keep timer for conditions that need it
+
+        // Run FSM if enabled, otherwise use legacy movement system
+        if (useFSM && stateMachine != null)
+        {
+            stateMachine.RunStateMachine();
+            // In FSM mode, states handle their own timers - don't auto-increment
+        }
+        else
+        {
+            UpdateMovementSystem(deltaTime);
+            stateTimer += deltaTime; // Keep timer for conditions in legacy mode
+        }
     }
     
     private void UpdateMovementSystem(float deltaTime)
@@ -1200,6 +1263,40 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
         transform.position += highSpeedMovement;
         Debug.Log($"Direct high speed movement: {highSpeedMovement.magnitude} units per frame");
     }
-    
+
+    [ContextMenu("Debug FSM Status")]
+    private void DebugFSMStatus()
+    {
+        Debug.Log("=== FSM STATUS ===");
+        Debug.Log($"Use FSM: {useFSM}");
+        Debug.Log($"State Data Count: {stateDataList?.Count ?? 0}");
+        Debug.Log($"StateMachine Initialized: {stateMachine != null}");
+
+        if (stateMachine != null)
+        {
+            var currentState = stateMachine.GetCurrentState();
+            Debug.Log($"Current State: {currentState?.State?.StateName ?? "None"}");
+        }
+
+        Debug.Log($"Current Patrol Loops: {CurrentPatrolLoops}/{LoopsToIdle}");
+        Debug.Log($"Patrol Direction: {(PatrolDirection ? "Forward" : "Backward")}");
+        Debug.Log($"Current Patrol Index: {CurrentPatrolIndex}");
+        Debug.Log($"Has Reached Current Point: {HasReachedCurrentPatrolPoint}");
+        Debug.Log($"State Timer: {StateTimer:F2}");
+        Debug.Log("==================");
+    }
+
+    #endregion
+
+    #region IUseFsm Implementation
+
+    public void UpdateFsm()
+    {
+        // This method exists for interface compatibility but we call RunStateMachine directly in OnUpdate
+        stateMachine?.RunStateMachine();
+    }
+
+    // GetModelTransform, SetTargetTransform, and GetTargetTransform are already implemented above
+
     #endregion
 }
