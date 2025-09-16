@@ -3,6 +3,7 @@ using Game.AI.Steering;
 using Scripts.FSM.Base.StateMachine;
 using Scripts.FSM.Models;
 using System.Collections.Generic;
+using System.Linq;
 
 public class Civilian : BaseCharacter, IUpdatable, IUseFsm
 {
@@ -51,6 +52,9 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     [SerializeField] private List<StateData> stateDataList = new List<StateData>();
     [SerializeField] private bool useFSM = true;
 
+    [Header("Decision Tree")]
+    [SerializeField] private bool useDecisionTree = true;   // Enable/disable decision tree system
+    
     [Header("Debug")]
     [SerializeField] private bool enableDebugLogs = false;
     [SerializeField] private bool canAttack = false;        // Civilians typically don't attack
@@ -62,6 +66,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     private Renderer meshRenderer;
     private Material originalMaterial;
     private Color originalColor;
+    private CivilianDecisionTreeRunner decisionTreeRunner;
 
     // Steering components (identical to Guard)
     private Vector3 _vel;
@@ -114,6 +119,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     public Color AttackColor => attackColor;
     public bool CanAttack => canAttack;
     public bool EnableDebugLogs => enableDebugLogs;
+    public bool UseDecisionTree => useDecisionTree;
     public Transform Player => player;
     public CivilianState CurrentState => currentState;
     public Vector3 CurrentVelocity => _vel;
@@ -159,11 +165,22 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     {
         if (!isAlive) return;
 
+        // Update timers
+        stateTimer += deltaTime;
+
         // Use ScriptableObject FSM if enabled, otherwise fallback to legacy system
         if (useFSM && stateMachine != null)
         {
             UpdateFsm();
         }
+        else if (!useDecisionTree)
+        {
+            // Use legacy behavior system only if decision tree is disabled
+            // UpdateBehavior(); // Commented out - legacy system replaced by FSM/DT
+        }
+
+        // Note: Decision Tree runs independently via its own coroutine
+        // and influences behavior through RequestStateChange calls
     }
 
     #endregion
@@ -196,6 +213,18 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         if (blackboard == null && enableDebugLogs)
         {
             Logger.LogWarning($"Civilian {gameObject.name}: Blackboard service not available");
+        }
+
+        // Initialize decision tree runner if enabled
+        if (useDecisionTree)
+        {
+            decisionTreeRunner = GetComponent<CivilianDecisionTreeRunner>();
+            if (decisionTreeRunner == null)
+            {
+                decisionTreeRunner = gameObject.AddComponent<CivilianDecisionTreeRunner>();
+                if (enableDebugLogs)
+                    Logger.LogInfo($"Civilian {gameObject.name}: Added CivilianDecisionTreeRunner component");
+            }
         }
     }
 
@@ -342,6 +371,169 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
 
         // If we can't see the player, check if grace period has elapsed
         return pursuitLoseSightTimer >= attackLoseSightGrace;
+    }
+
+    /// <summary>
+    /// Request a specific FSM state change (called by Decision Tree)
+    /// </summary>
+    public void RequestStateChange(string stateName)
+    {
+        if (!isAlive) return;
+
+        if (enableDebugLogs)
+            Logger.LogInfo($"Civilian {gameObject.name}: Decision Tree requesting state change to {stateName}");
+
+        // Map DT suggestion to actual FSM state name
+        string mappedStateName = MapDecisionTreeSuggestionToFSMState(stateName);
+
+        // If using ScriptableObject FSM, try to change state by name
+        if (useFSM && stateMachine != null)
+        {
+            bool stateChangeSuccess = stateMachine.ChangeStateByName(mappedStateName);
+            
+            if (stateChangeSuccess)
+            {
+                if (enableDebugLogs)
+                    Logger.LogInfo($"Civilian {gameObject.name}: Successfully changed FSM state to {mappedStateName}");
+            }
+            else
+            {
+                if (enableDebugLogs)
+                    Logger.LogWarning($"Civilian {gameObject.name}: Failed to find FSM state with name '{mappedStateName}'. Available states: {GetAvailableStateNames()}");
+                
+                // Fallback to legacy system if FSM state change fails
+                RequestLegacyStateChange(stateName);
+            }
+        }
+        else
+        {
+            // Use legacy state system as fallback
+            RequestLegacyStateChange(stateName);
+        }
+    }
+
+    /// <summary>
+    /// Map Decision Tree suggestions to actual FSM state names
+    /// </summary>
+    private string MapDecisionTreeSuggestionToFSMState(string dtSuggestion)
+    {
+        switch (dtSuggestion.ToLower())
+        {
+            case "fleeing":
+            case "flee":
+                return "S_CivFlee";
+                
+            case "pursuing":
+            case "pursue":
+                return "S_CivPersuit";
+                
+            case "idle":
+                return "S_CivIdle";
+                
+            case "evading":
+            case "evade":
+                return "S_CivEvade";
+                
+            case "attack":
+            case "attacking":
+                return "S_CivAttack";
+                
+            default:
+                // Return original suggestion if no mapping found
+                return dtSuggestion;
+        }
+    }
+
+    /// <summary>
+    /// Request a state change using the legacy state system
+    /// </summary>
+    private void RequestLegacyStateChange(string stateName)
+    {
+        CivilianState newState = currentState;
+
+        switch (stateName.ToLower())
+        {
+            case "fleeing":
+            case "flee":
+                newState = CivilianState.Fleeing;
+                break;
+            case "evading":
+            case "evade":
+                newState = CivilianState.Evading;
+                break;
+            case "idle":
+                newState = CivilianState.Idle;
+                break;
+            case "safe":
+                newState = CivilianState.Safe;
+                break;
+            case "pursuing":
+            case "pursue":
+                // Civilians don't normally pursue, but if canAttack is true, treat as fleeing for now
+                newState = canAttack ? CivilianState.Fleeing : CivilianState.Fleeing;
+                break;
+        }
+
+        if (newState != currentState)
+        {
+            ChangeState(newState);
+        }
+    }
+
+    /// <summary>
+    /// Check if the decision tree system is actively influencing behavior
+    /// </summary>
+    public bool IsDecisionTreeActive()
+    {
+        return useDecisionTree && decisionTreeRunner != null && decisionTreeRunner.enabled;
+    }
+
+    /// <summary>
+    /// Get available state names for debugging
+    /// </summary>
+    private string GetAvailableStateNames()
+    {
+        if (stateMachine?.GetAllStates() == null)
+            return "None";
+
+        var stateNames = stateMachine.GetAllStates()
+            .Where(state => state?.State?.StateName != null)
+            .Select(state => state.State.StateName)
+            .ToArray();
+
+        return stateNames.Length > 0 ? string.Join(", ", stateNames) : "None";
+    }
+
+    #endregion
+
+    #region Legacy State System Support
+
+    /// <summary>
+    /// Change legacy state (for compatibility and fallback)
+    /// </summary>
+    private void ChangeState(CivilianState newState)
+    {
+        if (currentState != newState)
+        {
+            if (enableDebugLogs)
+                Logger.LogInfo($"Civilian {gameObject.name}: {currentState} → {newState}");
+
+            currentState = newState;
+            stateTimer = 0f;
+
+            // State-specific initialization
+            switch (newState)
+            {
+                case CivilianState.Safe:
+                    // Write to blackboard if civilian reaches safety
+                    if (blackboard != null)
+                    {
+                        // This could be used for global alert state
+                        blackboard.SetValue(BlackboardKeys.GLOBAL_ALERT, true);
+                    }
+                    break;
+            }
+        }
     }
 
     #endregion
@@ -744,12 +936,14 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     {
         Debug.Log("=== CIVILIAN STATUS ===");
         Debug.Log($"Using ScriptableObject FSM: {useFSM}");
+        Debug.Log($"Using Decision Tree: {useDecisionTree}");
         
         if (useFSM && stateMachine != null)
         {
             var currentState = stateMachine.GetCurrentState();
             Debug.Log($"Current State: {(currentState?.State?.StateName ?? "None")}");
             Debug.Log($"ScriptableObject FSM Active: True");
+            Debug.Log($"Available FSM States: {GetAvailableStateNames()}");
         }
         else
         {
@@ -766,6 +960,19 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         Debug.Log($"Has Ever Seen Player: {hasEverSeenPlayer}");
         Debug.Log($"Last Known Player Pos: {lastKnownPlayerPosition}");
         Debug.Log($"Can Attack: {canAttack}");
+        
+        // Decision Tree status
+        if (useDecisionTree && decisionTreeRunner != null)
+        {
+            Debug.Log($"Decision Tree Active: {decisionTreeRunner.enabled}");
+            Debug.Log($"DT Status: {decisionTreeRunner.GetStatus()}");
+            Debug.Log($"DT Last Suggestion: {decisionTreeRunner.LastSuggestion}");
+        }
+        else
+        {
+            Debug.Log($"Decision Tree Active: False");
+        }
+        
         Debug.Log("=======================");
     }
 

@@ -64,10 +64,10 @@ public class ObstacleAvoidance
         {
             newDir = -Vector3.Cross(npcTransform.up, dirToClosetPoint);
         }
-        Debug.Log("NewDir" + newDir);
+        // Debug.Log("NewDir" + newDir); // Commented out to prevent log spam
         Debug.DrawRay(npcTransform.position, newDir, Color.red);
 
-        var clampedDistance = Mathf.Clamp(nearCollDistance - _personalArea, 0, _radius); //Distancia clampeada hacia la colision más cercana
+        var clampedDistance = Mathf.Clamp(nearCollDistance - _personalArea, 0, _radius); //Distancia clampeada hacia la colision mï¿½s cercana
         var inversedClampedDistance = _radius - clampedDistance; //Invierto el valor sobre radio
         var proportionalDistance = inversedClampedDistance / _radius; // Lo convierto a valor entre 0 y 1
         return Vector3.Lerp(currDir, newDir, proportionalDistance); // Interpolo entre la direccion actual y la direccion de avoidance
@@ -91,10 +91,10 @@ public class ObstacleAvoidance
             {
                 newDir = -Vector3.Cross(npcTransform.up, dirToClosetPoint);
             }
-            Debug.Log("NewDir" + newDir);
+            // Debug.Log("NewDir" + newDir); // Commented out to prevent log spam
             Debug.DrawRay(npcTransform.position, newDir, Color.red);
 
-            var clampedDistance = Mathf.Clamp(hitDistance - _personalArea, 0, _radius); //Distancia clampeada hacia la colision más cercana
+            var clampedDistance = Mathf.Clamp(hitDistance - _personalArea, 0, _radius); //Distancia clampeada hacia la colision mï¿½s cercana
             var inversedClampedDistance = _radius - clampedDistance; //Invierto el valor sobre radio
             var proportionalDistance = inversedClampedDistance / _radius; // Lo convierto a valor entre 0 y 1
             
