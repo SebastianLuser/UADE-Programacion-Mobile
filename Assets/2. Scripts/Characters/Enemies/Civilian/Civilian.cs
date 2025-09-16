@@ -22,6 +22,18 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     [SerializeField] private float idleSecondsAfterSafe = 3f; // Idle time after reaching safety
     [SerializeField] private float loseSightGrace = 2f;     // Grace period after losing sight
 
+    [Header("Roulette Decision System")]
+    [SerializeField] private float escapeWeight = 0.8f;     // Weight for escape path
+    [SerializeField] private float attackWeight = 0.2f;     // Weight for attack path
+
+    [Header("Attack Configuration")]
+    [SerializeField] private float attackWindup = 0.35f;    // Seconds before hit
+    [SerializeField] private float attackHitWin = 0.10f;    // Hit window duration
+    [SerializeField] private float attackRecover = 0.35f;   // Recovery after hit
+    [SerializeField] private float attackLoseSightGrace = 0.3f; // Time before aborting attack
+    [SerializeField] private int meleeDamage = 1;           // Damage per melee hit
+    [SerializeField] private Color attackColor = Color.red; // Visual feedback while attacking
+
     [Header("Steering Physics")]
     [SerializeField] private float mass = 1f;
     [SerializeField] private float maxForce = 15f;
@@ -47,6 +59,9 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     private Transform player;
     private IPlayerDetector playerDetector;
     private IBlackboard blackboard;
+    private Renderer meshRenderer;
+    private Material originalMaterial;
+    private Color originalColor;
 
     // Steering components (identical to Guard)
     private Vector3 _vel;
@@ -57,6 +72,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     private StateMachine stateMachine;
     private float stateTimer;
     private float safeTimer; // Timer for tracking safety duration
+    private float pursuitLoseSightTimer; // Timer for tracking lose sight during pursuit
 
     // Legacy state tracking (for compatibility)
     private CivilianState currentState = CivilianState.Idle;
@@ -88,6 +104,14 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     public float IdleSecondsAfterSafe => idleSecondsAfterSafe;
     public float EvadeTime => evadeTime;
     public float SafeTime => safeTime;
+    public float EscapeWeight => escapeWeight;
+    public float AttackWeight => attackWeight;
+    public float AttackWindup => attackWindup;
+    public float AttackHitWin => attackHitWin;
+    public float AttackRecover => attackRecover;
+    public float AttackLoseSightGrace => attackLoseSightGrace;
+    public int MeleeDamage => meleeDamage;
+    public Color AttackColor => attackColor;
     public bool CanAttack => canAttack;
     public bool EnableDebugLogs => enableDebugLogs;
     public Transform Player => player;
@@ -106,6 +130,12 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     { 
         get => safeTimer; 
         set => safeTimer = value; 
+    }
+
+    public float PursuitLoseSightTimer 
+    { 
+        get => pursuitLoseSightTimer; 
+        set => pursuitLoseSightTimer = value; 
     }
 
     #endregion
@@ -151,6 +181,14 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
 
             if (enableDebugLogs)
                 Logger.LogInfo($"Civilian {gameObject.name}: Added PlayerDetector component");
+        }
+
+        // Get renderer for color changes during attacks
+        meshRenderer = GetComponentInChildren<Renderer>();
+        if (meshRenderer != null && meshRenderer.material != null)
+        {
+            originalMaterial = meshRenderer.material;
+            originalColor = meshRenderer.material.color;
         }
 
         // Get blackboard service (read-only access)
@@ -236,6 +274,74 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     public void SetCurrentMaxSpeed(float speed)
     {
         currentMaxSpeed = speed;
+    }
+
+    /// <summary>
+    /// Change material color to attack color (red)
+    /// </summary>
+    public void SetAttackColor()
+    {
+        if (meshRenderer != null && meshRenderer.material != null)
+        {
+            meshRenderer.material.color = attackColor;
+        }
+    }
+
+    /// <summary>
+    /// Restore original material color
+    /// </summary>
+    public void RestoreOriginalColor()
+    {
+        if (meshRenderer != null && meshRenderer.material != null)
+        {
+            meshRenderer.material.color = originalColor;
+        }
+    }
+
+    /// <summary>
+    /// Apply damage to player if available
+    /// </summary>
+    public void DealMeleeAttack()
+    {
+        if (player == null) return;
+
+        // Try to get player health component
+        var playerHealth = player.GetComponent<ICharacter>();
+        if (playerHealth != null)
+        {
+            playerHealth.TakeDamage(meleeDamage);
+            
+            if (enableDebugLogs)
+                Logger.LogInfo($"Civilian {gameObject.name}: Dealt {meleeDamage} melee damage to player");
+        }
+        else
+        {
+            // Fallback: try GameStateManager
+            var gameStateManager = ServiceLocator.Get<GameStateManager>();
+            if (gameStateManager != null)
+            {
+                // gameStateManager.ApplyMeleeHit(meleeDamage);
+                if (enableDebugLogs)
+                    Logger.LogInfo($"Civilian {gameObject.name}: Applied melee hit via GameStateManager");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Check if pursuit should abort due to extended lose sight period
+    /// This method implements the Single Responsibility pattern - 
+    /// the Civilian owns the decision logic for pursuit abort
+    /// </summary>
+    public bool ShouldAbortPursuit()
+    {
+        // If we can see the player, pursuit should continue
+        if (HasLoS())
+        {
+            return false;
+        }
+
+        // If we can't see the player, check if grace period has elapsed
+        return pursuitLoseSightTimer >= attackLoseSightGrace;
     }
 
     #endregion

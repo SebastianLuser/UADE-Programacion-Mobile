@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 64d13ba7ac30e1d4891285ddebe412b7, type: 3}
-  m_Name: CivilianEvadeState
-  m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.CivilianEvadeState
-  <StateName>k__BackingField: Evade
+  m_Script: {fileID: 11500000, guid: b9df1b3d42d165a4fbde04f8c6667bea, type: 3}
+  m_Name: st_CivilianPursuitState
+  m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.CivilianPursuitState
+  <StateName>k__BackingField: 

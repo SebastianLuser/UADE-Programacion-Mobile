@@ -9,6 +9,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1077a2e5c996c24d8e82d752b7bcf1f, type: 3}
-  m_Name: CanSeePlayerCondition 1
-  m_EditorClassIdentifier: Assembly-CSharp::CivilianCanSeePlayerCondition
+  m_Script: {fileID: 11500000, guid: 5956efb09621b6446b8f6c6b7537be0d, type: 3}
+  m_Name: C_ChooseAttackPathCondition
+  m_EditorClassIdentifier: Assembly-CSharp::CivilianChooseAttackPathCondition

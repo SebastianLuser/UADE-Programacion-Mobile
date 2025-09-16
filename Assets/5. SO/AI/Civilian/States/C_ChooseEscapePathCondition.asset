@@ -9,6 +9,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 66838cef99fdb26479c20b1b86bb45a2, type: 3}
-  m_Name: IsSafeCondition
-  m_EditorClassIdentifier: Assembly-CSharp::CivilianIsSafeCondition
+  m_Script: {fileID: 11500000, guid: e0249f79727ae28479c79a38e1b0fa3e, type: 3}
+  m_Name: C_ChooseEscapePathCondition
+  m_EditorClassIdentifier: Assembly-CSharp::CivilianChooseEscapePathCondition

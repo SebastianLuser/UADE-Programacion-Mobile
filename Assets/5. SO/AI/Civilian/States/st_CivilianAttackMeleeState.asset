@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f2278919dace0f242b630fce3433a6a6, type: 3}
-  m_Name: CivilianIdleState
-  m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.CivilianIdleState
-  <StateName>k__BackingField: Idle
+  m_Script: {fileID: 11500000, guid: 6b9f3154230229f4589e3f79b5fd30bf, type: 3}
+  m_Name: st_CivilianAttackMeleeState
+  m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.CivilianAttackMeleeState
+  <StateName>k__BackingField: 
