@@ -153,6 +153,8 @@ MonoBehaviour:
   cleanupInterval: 30
   maxPanicAreas: 10
   maxAIPositions: 50
+  useMinimumScope: 0
+  enableAdvancedFeatures: 0
   debugEntries: []
 --- !u!4 &112199107
 Transform:
@@ -980,7 +982,7 @@ Transform:
   m_GameObject: {fileID: 1889664971}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.5, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1106,6 +1108,16 @@ MonoBehaviour:
   patrolPoints: []
   personalityType: 0
   enableNewAISystem: 1
+  mass: 1
+  maxForce: 100
+  maxSpeed: 100
+  slowingDistance: 3
+  obstaclesMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  avoidRadius: 2
+  avoidAngle: 90
+  personalArea: 0.5
 --- !u!54 &2069506500
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1131,7 +1143,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 4
+  m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!136 &2069506501
 CapsuleCollider:
