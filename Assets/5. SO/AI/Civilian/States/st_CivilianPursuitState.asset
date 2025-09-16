@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b9df1b3d42d165a4fbde04f8c6667bea, type: 3}
   m_Name: st_CivilianPursuitState
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.CivilianPursuitState
-  <StateName>k__BackingField: 
+  <StateName>k__BackingField: Persuit

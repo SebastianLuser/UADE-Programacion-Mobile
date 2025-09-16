@@ -16,5 +16,5 @@ MonoBehaviour:
   moveSpeed: 5
   shootCooldown: 0.5
   rotationSpeed: 10
-  characterName: Character
-  characterColor: {r: 1, g: 1, b: 1, a: 1}
+  characterName: Civil
+  characterColor: {r: 0.31837395, g: 0.6037736, b: 0.21359916, a: 1}

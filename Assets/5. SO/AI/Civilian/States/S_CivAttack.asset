@@ -12,6 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01f542c06373b254891eed3f2dc2e2ec, type: 3}
   m_Name: S_CivAttack
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.StateData
-  <State>k__BackingField: {fileID: 0}
-  <StateConditions>k__BackingField: []
-  <ExitStates>k__BackingField: []
+  <State>k__BackingField: {fileID: 11400000, guid: e2abbcdcdb456c142b1e08882c4a9dbf,
+    type: 2}
+  <StateConditions>k__BackingField:
+  - {fileID: 11400000, guid: 61071d4c5509d7f4c8d842ecdcc12c56, type: 2}
+  - {fileID: 11400000, guid: 303cba55018982e44938c5b67b387e43, type: 2}
+  <ExitStates>k__BackingField:
+  - {fileID: 11400000, guid: 02168e89df64c9c4c820cabe57ea19d4, type: 2}
+  - {fileID: 11400000, guid: 02168e89df64c9c4c820cabe57ea19d4, type: 2}
