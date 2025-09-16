@@ -502,6 +502,9 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
         blackboard.SetValue(BlackboardKeys.PLAYER_POSITION, result.lastKnownPosition);
         blackboard.SetValue(BlackboardKeys.PLAYER_LAST_SEEN, result.lastKnownPosition);
         blackboard.SetValue(BlackboardKeys.PLAYER_LAST_SEEN_TIME, Time.time);
+
+        // Minimum scope: Update last known position when player is detected
+        blackboard.SetValue(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION, result.lastKnownPosition);
         
         // Update alert level based on detection
         int currentAlertLevel = blackboard.GetValue<int>(BlackboardKeys.ALERT_LEVEL);

@@ -21,7 +21,11 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
     [SerializeField] private float cleanupInterval = 30f; // Cleanup every 30 seconds
     [SerializeField] private int maxPanicAreas = 10;
     [SerializeField] private int maxAIPositions = 50;
-    
+
+    [Header("Minimum Scope Mode")]
+    [SerializeField] private bool useMinimumScope = false;
+    [SerializeField] private bool enableAdvancedFeatures = false;
+
     // Core data storage
     private Dictionary<string, object> data = new Dictionary<string, object>();
     
@@ -228,7 +232,36 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
     }
     
     #endregion
-    
+
+    #region Minimum Scope Support
+
+    /// <summary>
+    /// TODO(MIN_SCOPE): Conditional setter for non-minimum features
+    /// </summary>
+    private void SetValueIfMinScope<T>(string key, T value, bool isMinimumKey = false)
+    {
+        if (useMinimumScope && !isMinimumKey && !enableAdvancedFeatures)
+        {
+            // TODO(MIN_SCOPE): Feature parked - key: {key}
+            if (enableDebugLogs)
+                Logger.LogDebug($"Blackboard: Key '{key}' parked (minimum scope mode)");
+            return;
+        }
+        SetValue(key, value);
+    }
+
+    /// <summary>
+    /// TODO(MIN_SCOPE): Check if key is part of minimum scope
+    /// </summary>
+    private bool IsMinimumScopeKey(string key)
+    {
+        return key == BlackboardKeys.PLAYER_TRANSFORM ||
+               key == BlackboardKeys.LAST_KNOWN_PLAYER_POSITION ||
+               key == BlackboardKeys.GLOBAL_ALERT;
+    }
+
+    #endregion
+
     #region Initialization and Cleanup
     
     private void InitializeDefaultValues()
@@ -236,6 +269,12 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
         // Player information
         SetValue(BlackboardKeys.PLAYER_DETECTED, false);
         SetValue(BlackboardKeys.PLAYER_LAST_SEEN_TIME, 0f);
+
+        // Minimum scope keys (always initialized)
+        SetValue(BlackboardKeys.GLOBAL_ALERT, false);
+
+        // TODO(MIN_SCOPE): When civilian Decision Tree "Alert" action is implemented, it should write:
+        // blackboard.SetValue(BlackboardKeys.GLOBAL_ALERT, true);
         
         // Alert system
         SetValue(BlackboardKeys.ALERT_LEVEL, 0);
@@ -444,6 +483,23 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
     {
         Clear();
         Logger.LogInfo("Blackboard: All data cleared manually");
+    }
+
+    [ContextMenu("Toggle Minimum Scope Mode")]
+    private void ToggleMinimumScope()
+    {
+        useMinimumScope = !useMinimumScope;
+        Logger.LogInfo($"Blackboard: Minimum scope mode {(useMinimumScope ? "ENABLED" : "DISABLED")}");
+    }
+
+    [ContextMenu("Test Minimum Scope Keys")]
+    private void TestMinimumScopeKeys()
+    {
+        Logger.LogInfo("=== MINIMUM SCOPE TEST ===");
+        Logger.LogInfo($"PLAYER_TRANSFORM: {GetValue<Transform>(BlackboardKeys.PLAYER_TRANSFORM)?.name ?? "null"}");
+        Logger.LogInfo($"LAST_KNOWN_PLAYER_POSITION: {GetValue<Vector3>(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION)}");
+        Logger.LogInfo($"GLOBAL_ALERT: {GetValue<bool>(BlackboardKeys.GLOBAL_ALERT)}");
+        Logger.LogInfo("========================");
     }
     
     #endregion

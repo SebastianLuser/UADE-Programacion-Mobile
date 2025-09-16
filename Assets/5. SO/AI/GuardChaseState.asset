@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3fcb6894d705aa343a8de8ac913d5b2d, type: 3}
   m_Name: GuardChaseState
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.GuardChaseState
-  <StateName>k__BackingField: 
+  <StateName>k__BackingField: Chase

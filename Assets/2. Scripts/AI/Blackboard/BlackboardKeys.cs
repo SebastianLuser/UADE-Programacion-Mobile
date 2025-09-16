@@ -28,6 +28,9 @@ public static class BlackboardKeys
     
     /// <summary>Vector3 - Player's predicted position based on movement</summary>
     public const string PLAYER_PREDICTED_POSITION = "player_predicted_position";
+
+    /// <summary>bool - Global alert state raised by civilians (minimum scope)</summary>
+    public const string GLOBAL_ALERT = "global_alert";
     #endregion
     
     #region Alert System

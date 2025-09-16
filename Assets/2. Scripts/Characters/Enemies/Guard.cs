@@ -1,7 +1,11 @@
 using UnityEngine;
+using Game.AI.Steering;
+using Scripts.FSM.Base.StateMachine;
+using Scripts.FSM.Models;
+using System.Collections.Generic;
 
 //todo revisar pasar a MVC
-public class Guard : BaseCharacter, IUpdatable, IAIMovementController
+public class Guard : BaseCharacter, IUpdatable, IAIMovementController, IUseFsm
 {
     //todo utilizar scriptable object
     [Header("Guard Settings")]
@@ -14,21 +18,53 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     [SerializeField] private float searchTime = 5f;
     [SerializeField] private float baseRotationSpeed = 2f;
     [SerializeField] private Transform[] patrolPoints;
+
+    [Header("FSM Patrol Settings")]
+    [SerializeField] private int loopsToIdle = 3;
+    [SerializeField] private float idleSeconds = 5f;
+
+    [Header("State Machine Configuration")]
+    [SerializeField] private List<StateData> stateDataList = new List<StateData>();
+    [SerializeField] private bool useFSM = true;
     
     [Header("AI Configuration")]
     [SerializeField] private AIPersonalityType personalityType = AIPersonalityType.Aggressive;
     [SerializeField] private bool enableNewAISystem = true;
+
+    [Header("Steering Physics")]
+    [SerializeField] private float mass = 1f;
+    [SerializeField] private float maxForce = 25f;
+    [SerializeField] private float maxSpeed = 8f;
+    [SerializeField] private float slowingDistance = 2f;
+
+    [Header("Obstacle Avoidance")]
+    [SerializeField] private LayerMask obstaclesMask = -1;
+    [SerializeField] private float avoidRadius = 2f;
+    [SerializeField] private float avoidAngle = 90f;
+    [SerializeField] private float personalArea = 0.5f;
     
     private Transform player;
     private Vector3 lastKnownPlayerPosition;
     private int currentPatrolIndex;
     private float stateTimer;
     private bool isActivelyPatrolling = false;  // Track patrol state independently
+
+    // FSM patrol tracking
+    private int currentPatrolLoops = 0;
+    private bool patrolDirection = true; // true = 0->N, false = N->0
+    private bool hasReachedCurrentPatrolPoint = false;
     
     // AI System components
     private AIContext aiContext;
     private IBlackboard blackboard;
     private IPlayerDetector playerDetector;
+
+    // Steering components
+    private Vector3 _vel;
+    private ObstacleAvoidance obstacleAvoidance;
+
+    // FSM components
+    private StateMachine stateMachine;
     
     // Movement state for IAIMovementController
     private Vector3 currentMovementDirection;
@@ -55,20 +91,39 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     public float BaseRotationSpeed => baseRotationSpeed;
     public Transform[] PatrolPoints => patrolPoints;
     public Transform Player => player;
-    public Vector3 LastKnownPlayerPosition 
-    { 
-        get => lastKnownPlayerPosition; 
-        set => lastKnownPlayerPosition = value; 
+    public Vector3 LastKnownPlayerPosition
+    {
+        get => lastKnownPlayerPosition;
+        set => lastKnownPlayerPosition = value;
     }
-    public int CurrentPatrolIndex 
-    { 
-        get => currentPatrolIndex; 
-        set => currentPatrolIndex = value; 
+    public int CurrentPatrolIndex
+    {
+        get => currentPatrolIndex;
+        set => currentPatrolIndex = value;
     }
-    public float StateTimer 
-    { 
-        get => stateTimer; 
-        set => stateTimer = value; 
+    public float StateTimer
+    {
+        get => stateTimer;
+        set => stateTimer = value;
+    }
+
+    // FSM Patrol Properties
+    public int LoopsToIdle => loopsToIdle;
+    public float IdleSeconds => idleSeconds;
+    public int CurrentPatrolLoops
+    {
+        get => currentPatrolLoops;
+        set => currentPatrolLoops = value;
+    }
+    public bool PatrolDirection
+    {
+        get => patrolDirection;
+        set => patrolDirection = value;
+    }
+    public bool HasReachedCurrentPatrolPoint
+    {
+        get => hasReachedCurrentPatrolPoint;
+        set => hasReachedCurrentPatrolPoint = value;
     }
     
     public bool IsActive => isAlive && gameObject.activeInHierarchy;
@@ -77,6 +132,13 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     public AIContext AIContext => aiContext;
     public IBlackboard Blackboard => blackboard;
     public AIPersonalityType PersonalityType => personalityType;
+
+    // Steering Physics access
+    public float Mass => mass;
+    public float MaxForce => maxForce;
+    public float MaxSpeed => maxSpeed;
+    public float SlowingDistance => slowingDistance;
+    public Vector3 CurrentVelocity => _vel;
     
     // MEJORA: Improved player detection using new AI system
     public bool CanSeePlayer()
@@ -181,14 +243,14 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
                 aiContext = gameObject.AddComponent<AIContext>();
                 Logger.LogInfo($"Guard {gameObject.name}: Added AIContext component");
             }
-            
+
             // Get blackboard service
             blackboard = ServiceLocator.Get<IBlackboard>();
             if (blackboard == null)
             {
                 Logger.LogWarning($"Guard {gameObject.name}: Blackboard service not available yet");
             }
-            
+
             // Get player detector
             playerDetector = gameObject.GetComponent<IPlayerDetector>();
             if (playerDetector == null)
@@ -197,12 +259,39 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
                 playerDetector = detectorComponent;
                 Logger.LogInfo($"Guard {gameObject.name}: Added PlayerDetector component");
             }
-            
+
             // Configure personality
             if (aiContext != null)
             {
                 aiContext.SetPersonalityType(personalityType);
             }
+        }
+
+        // Initialize steering physics
+        _vel = Vector3.zero;
+        obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, personalArea, obstaclesMask);
+
+        // Ensure maxSpeed is at least as fast as chaseSpeed for proper movement
+        if (maxSpeed < chaseSpeed)
+        {
+            maxSpeed = chaseSpeed * 1.2f; // Give some headroom
+            Logger.LogInfo($"Guard {gameObject.name}: Adjusted maxSpeed to {maxSpeed} to match chaseSpeed");
+        }
+
+        // Initialize FSM
+        InitializeFSM();
+    }
+
+    private void InitializeFSM()
+    {
+        if (useFSM && stateDataList != null && stateDataList.Count > 0)
+        {
+            stateMachine = new StateMachine(stateDataList, this);
+            Logger.LogInfo($"Guard {gameObject.name}: FSM initialized with {stateDataList.Count} states");
+        }
+        else
+        {
+            Logger.LogWarning($"Guard {gameObject.name}: FSM not initialized - useFSM: {useFSM}, stateDataList count: {stateDataList?.Count ?? 0}");
         }
     }
     
@@ -235,17 +324,26 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     public void OnUpdate(float deltaTime)
     {
         if (!isAlive) return;
-        
+
         // Add debug log with reduced frequency to avoid spam
         if (Time.frameCount % 60 == 0) // Log every 60 frames (about once per second at 60fps)
         {
             Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: OnUpdate is being called - Frame {Time.frameCount}");
         }
-        
+
         UpdateAISystem(deltaTime);
-        UpdateMovementSystem(deltaTime);
-        //UpdateFsm();
-        stateTimer += deltaTime; // Keep timer for conditions that need it
+
+        // Run FSM if enabled, otherwise use legacy movement system
+        if (useFSM && stateMachine != null)
+        {
+            stateMachine.RunStateMachine();
+            // In FSM mode, states handle their own timers - don't auto-increment
+        }
+        else
+        {
+            UpdateMovementSystem(deltaTime);
+            stateTimer += deltaTime; // Keep timer for conditions in legacy mode
+        }
     }
     
     private void UpdateMovementSystem(float deltaTime)
@@ -304,6 +402,32 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
                 MoveTo(patrolPoints[currentPatrolIndex].position, patrolSpeed);
             }
         }
+        // Continue steering-based movement towards current destination
+        else if (currentMovementStatus == MovementStatus.Moving && currentDestination != Vector3.zero)
+        {
+            // Use maxSpeed instead of currentMovementSpeed for more aggressive movement
+            float targetSpeed = Mathf.Max(currentMovementSpeed, maxSpeed * 0.5f); // At least half max speed
+            Vector3 steering = Steering.Seek(transform.position, currentDestination, _vel, targetSpeed);
+
+            // Debug steering calculation
+            if (Time.frameCount % 60 == 0)
+            {
+                Logger.LogInfo($"[STEERING CALC] Pos: {transform.position}, Target: {currentDestination}, Vel: {_vel}, TargetSpeed: {targetSpeed}");
+                Logger.LogInfo($"[STEERING CALC] Calculated steering: {steering}");
+            }
+
+            ApplySteering(steering);
+        }
+        else if (currentMovementStatus == MovementStatus.Patrolling && patrolPoints != null && patrolPoints.Length > 0)
+        {
+            // Continue moving towards current patrol point
+            if (currentPatrolIndex < patrolPoints.Length)
+            {
+                // Use Seek instead of Arrive for patrol movement to maintain constant speed
+                Vector3 steering = Steering.Seek(transform.position, patrolPoints[currentPatrolIndex].position, _vel, patrolSpeed);
+                ApplySteering(steering);
+            }
+        }
         
         // Check movement constraints
         if (hasMovementConstraints && !movementConstraints.Contains(transform.position))
@@ -312,37 +436,6 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
             currentMovementStatus = MovementStatus.Constrained;
             OnMovementBlocked?.Invoke();
             return;
-        }
-        
-        // Execute actual movement based on current status
-        Vector3 movementDirection = Vector3.zero;
-        
-        if (currentMovementStatus == MovementStatus.Moving || currentMovementStatus == MovementStatus.Patrolling)
-        {
-            if (currentDestination != Vector3.zero)
-            {
-                movementDirection = (currentDestination - transform.position).normalized;
-                
-                // Only log movement direction occasionally to reduce spam
-                if (Time.frameCount % 60 == 0)
-                {
-                    Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Calculated movement direction: {movementDirection} towards {currentDestination}");
-                }
-                
-                // Actually move the character
-                if (movementDirection.magnitude > 0.1f)
-                {
-                    Move(movementDirection);
-                }
-            }
-            else
-            {
-                // Only log this warning occasionally as it's likely a persistent state
-                if (Time.frameCount % 120 == 0)
-                {
-                    Logger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Current destination is zero, cannot move");
-                }
-            }
         }
     }
     
@@ -446,9 +539,112 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     }
     
     
+    #region Steering Physics
+
+    /// <summary>
+    /// Integrate steering force to update velocity with mass and force limits
+    /// </summary>
+    private Vector3 Integrate(Vector3 steering, float dt)
+    {
+        // Clamp steering force to maximum
+        Vector3 clampedForce = steering;
+        if (clampedForce.sqrMagnitude > maxForce * maxForce)
+        {
+            clampedForce = clampedForce.normalized * maxForce;
+        }
+
+        // Apply force to velocity (F = ma, so a = F/m)
+        Vector3 acceleration = clampedForce / mass;
+        Vector3 newVel = _vel + acceleration * dt;
+
+        // Clamp velocity to maximum speed
+        if (newVel.sqrMagnitude > maxSpeed * maxSpeed)
+        {
+            newVel = newVel.normalized * maxSpeed;
+        }
+
+        return newVel;
+    }
+
+    /// <summary>
+    /// Apply steering force with obstacle avoidance and movement
+    /// </summary>
+    public void ApplySteering(Vector3 steering)
+    {
+        if (!isAlive) return;
+
+        // 1) Update velocity using physics integration
+        _vel = Integrate(steering, Time.deltaTime);
+
+        // 2) Pass velocity through obstacle avoidance
+        Vector3 avoidedVel = obstacleAvoidance.GetDir2(_vel, false);
+
+        // 3) Move and face movement direction
+        if (avoidedVel.sqrMagnitude > 0.001f)
+        {
+            // Use actual deltaTime - the steering system works correctly now
+            float effectiveDeltaTime = Time.deltaTime;
+
+            // Update position
+            Vector3 movement = avoidedVel * effectiveDeltaTime;
+            transform.position += movement;
+
+            // Update movement controller state
+            currentMovementDirection = avoidedVel.normalized;
+            currentMovementSpeed = avoidedVel.magnitude;
+
+            // Face movement direction with faster rotation
+            if (avoidedVel.magnitude > 0.1f)
+            {
+                Vector3 lookDirection = avoidedVel.normalized;
+                lookDirection.y = 0f; // Keep rotation in XZ plane
+
+                // Use faster rotation speed for more responsive steering
+                float rotationSpeed = baseRotationSpeed * 3f;
+                Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            }
+        }
+
+        // Debug velocity more frequently during development
+        if (Time.frameCount % 30 == 0)
+        {
+            float effectiveDeltaTime = Mathf.Max(Time.deltaTime, 0.016f);
+            Logger.LogInfo($"[STEERING DEBUG] {gameObject.name}: Vel: {_vel.magnitude:F2}, AvoidedVel: {avoidedVel.magnitude:F2}, MaxSpeed: {maxSpeed}");
+            Logger.LogInfo($"[STEERING DEBUG] Raw steering: {steering.magnitude:F2}, DeltaTime: {Time.deltaTime:F4}, Effective: {effectiveDeltaTime:F4}, Movement: {(avoidedVel * effectiveDeltaTime).magnitude:F4}");
+        }
+    }
+
+    /// <summary>
+    /// Configure steering physics parameters at runtime
+    /// </summary>
+    public void ConfigureSteering(float newMass, float newMaxForce, float newMaxSpeed, float newSlowingDistance)
+    {
+        mass = newMass;
+        maxForce = newMaxForce;
+        maxSpeed = newMaxSpeed;
+        slowingDistance = newSlowingDistance;
+    }
+
+    /// <summary>
+    /// Configure obstacle avoidance parameters at runtime
+    /// </summary>
+    public void ConfigureObstacleAvoidance(float radius, float angle, float personalArea, LayerMask obstacleMask)
+    {
+        avoidRadius = radius;
+        avoidAngle = angle;
+        personalArea = personalArea;
+        obstaclesMask = obstacleMask;
+
+        // Recreate obstacle avoidance with new parameters
+        obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, personalArea, obstaclesMask);
+    }
+
+    #endregion
+
     public override void Move(Vector3 direction)
     {
-        if (!isAlive) 
+        if (!isAlive)
         {
             // Only log this occasionally if it's being called repeatedly
             if (Time.frameCount % 120 == 0)
@@ -457,30 +653,11 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
             }
             return;
         }
-        
-        // Only log detailed movement info occasionally to reduce spam
-        if (Time.frameCount % 60 == 0)
-        {
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Move called with direction {direction}, magnitude: {direction.magnitude:F2}");
-        }
-        
-        // Update movement controller state
-        currentMovementDirection = direction;
-        currentMovementSpeed = direction.magnitude * characterData.moveSpeed;
-        
-        Vector3 movement = direction * (characterData.moveSpeed * Time.deltaTime);
-        transform.position += movement;
-        
-        // Only log position updates occasionally
-        if (Time.frameCount % 60 == 0)
-        {
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Applied movement {movement}, new position: {transform.position}");
-        }
-        
-        if (direction.magnitude > 0.1f)
-        {
-            transform.rotation = Quaternion.LookRotation(direction);
-        }
+
+        // Legacy direct movement - use maxSpeed instead of characterData.moveSpeed
+        Vector3 targetVel = direction.normalized * maxSpeed;
+        Vector3 steering = targetVel - _vel;
+        ApplySteering(steering);
     }
     
     public override void Shoot(Vector3 direction)
@@ -558,7 +735,7 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     
     public Vector3 GetCurrentVelocity()
     {
-        return currentMovementDirection * currentMovementSpeed;
+        return _vel;
     }
     
     public Vector3 GetCurrentDirection()
@@ -608,22 +785,17 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     public void MoveTo(Vector3 target, float speed)
     {
         Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: MoveTo called - Target: {target}, Speed: {speed}, CanMove: {CanMove()}");
-        
-        if (!CanMove()) 
+
+        if (!CanMove())
         {
             Logger.LogWarning($"[PATROL DEBUG] {gameObject.name}: MoveTo blocked - CanMove returned false");
             return;
         }
-        
+
         currentDestination = target;
         currentMovementSpeed = speed;
         currentMovementStatus = MovementStatus.Moving;
-        
-        Vector3 direction = (target - transform.position).normalized;
-        currentMovementDirection = direction;
-        
-        Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: MoveTo set - Destination: {currentDestination}, Status: {currentMovementStatus}, Direction: {direction}");
-        
+
         // Check constraints
         if (hasMovementConstraints && !movementConstraints.Contains(target))
         {
@@ -632,19 +804,42 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
             OnMovementBlocked?.Invoke();
             return;
         }
+
+        // For patrol movement, use Seek to maintain constant speed
+        // For precise positioning (like reaching a specific point), use Arrive
+        float distanceToTarget = Vector3.Distance(transform.position, target);
+        Vector3 steering;
+
+        if (distanceToTarget > slowingDistance * 2f)
+        {
+            // Use Seek for constant speed when far from target
+            steering = Steering.Seek(transform.position, target, _vel, speed);
+        }
+        else
+        {
+            // Use Arrive for smooth stop near target
+            steering = Steering.Arrive(transform.position, target, _vel, speed, slowingDistance);
+        }
+
+        ApplySteering(steering);
+
+        Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: MoveTo using steering - Destination: {currentDestination}, Status: {currentMovementStatus}");
     }
     
     public void Flee(Vector3 fromPosition, float speed)
     {
         if (!CanMove()) return;
-        
-        Vector3 fleeDirection = (transform.position - fromPosition).normalized;
-        Vector3 fleeTarget = transform.position + fleeDirection * 10f; // Flee 10 units away
-        
-        currentDestination = fleeTarget;
+
         currentMovementSpeed = speed;
         currentMovementStatus = MovementStatus.Fleeing;
-        currentMovementDirection = fleeDirection;
+
+        // Use steering behavior for fleeing
+        Vector3 steering = Steering.Flee(transform.position, fromPosition, _vel, speed);
+        ApplySteering(steering);
+
+        // Set destination for debugging/tracking purposes
+        Vector3 fleeDirection = (transform.position - fromPosition).normalized;
+        currentDestination = transform.position + fleeDirection * 10f;
     }
     
     public void Patrol(Transform[] waypoints, float speed)
@@ -827,10 +1022,10 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     {
         var detectionResult = GetDetectionResult();
         float distance = Vector3.Distance(transform.position, player.position);
-        
+
         bool inAttackRange = distance <= attackRange;
         bool canSee = detectionResult.level >= PlayerDetectionLevel.Clear;
-        
+
         return personalityType switch
         {
             AIPersonalityType.Aggressive => canSee && distance <= detectionRange,
@@ -839,6 +1034,49 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
             _ => canSee && inAttackRange
         };
     }
+
+    /// <summary>
+    /// Pursue the player using steering behaviors
+    /// </summary>
+    public void PursuePlayer()
+    {
+        if (player == null) return;
+
+        Vector3 playerVel = Vector3.zero;
+        var playerRb = player.GetComponent<Rigidbody>();
+        if (playerRb != null)
+        {
+            playerVel = playerRb.linearVelocity;
+        }
+
+        Vector3 steering = Steering.Pursuit(transform.position, _vel, player.position, playerVel, chaseSpeed);
+        ApplySteering(steering);
+
+        currentMovementStatus = MovementStatus.Moving;
+        currentDestination = player.position;
+    }
+
+    /// <summary>
+    /// Evade from the player using steering behaviors
+    /// </summary>
+    public void EvadePlayer()
+    {
+        if (player == null) return;
+
+        Vector3 playerVel = Vector3.zero;
+        var playerRb = player.GetComponent<Rigidbody>();
+        if (playerRb != null)
+        {
+            playerVel = playerRb.linearVelocity;
+        }
+
+        Vector3 steering = Steering.Evade(transform.position, _vel, player.position, playerVel, chaseSpeed);
+        ApplySteering(steering);
+
+        currentMovementStatus = MovementStatus.Fleeing;
+        Vector3 fleeDirection = (transform.position - player.position).normalized;
+        currentDestination = transform.position + fleeDirection * 10f;
+    }
     
     /// <summary>
     /// Get movement speed based on current state and personality
@@ -846,8 +1084,8 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
     public float GetContextualSpeed()
     {
         var detectionResult = GetDetectionResult();
-        
-        return detectionResult.level switch
+
+        float baseSpeed = detectionResult.level switch
         {
             PlayerDetectionLevel.None => patrolSpeed,
             PlayerDetectionLevel.Peripheral => patrolSpeed * 1.2f,
@@ -856,6 +1094,9 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
             PlayerDetectionLevel.Immediate => chaseSpeed * 1.2f,
             _ => patrolSpeed
         };
+
+        // Ensure we don't exceed maxSpeed
+        return Mathf.Min(baseSpeed, maxSpeed);
     }
     
     #endregion
@@ -869,7 +1110,7 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
         Debug.Log($"AI System Enabled: {enableNewAISystem}");
         Debug.Log($"Personality: {personalityType}");
         Debug.Log($"Can See Player: {CanSeePlayer()}");
-        
+
         var detectionResult = GetDetectionResult();
         Debug.Log($"Detection Level: {detectionResult.level}");
         Debug.Log($"Threat Level: {GetThreatLevel():F2}");
@@ -877,13 +1118,185 @@ public class Guard : BaseCharacter, IUpdatable, IAIMovementController
         Debug.Log($"Should Investigate: {ShouldInvestigate()}");
         Debug.Log($"Should Attack: {ShouldAttack()}");
         Debug.Log($"Contextual Speed: {GetContextualSpeed():F1}");
-        
+
+        // Steering physics status
+        Debug.Log($"Current Velocity: {_vel} (magnitude: {_vel.magnitude:F2})");
+        Debug.Log($"Max Speed: {maxSpeed}, Max Force: {maxForce}, Mass: {mass}");
+
         if (player != null)
         {
             Debug.Log($"Distance to Player: {Vector3.Distance(transform.position, player.position):F2}");
         }
         Debug.Log("======================");
     }
-    
+
+    [ContextMenu("Test Pursue Player")]
+    private void TestPursuePlayer()
+    {
+        if (player != null)
+        {
+            PursuePlayer();
+            Debug.Log("Started pursuing player using steering behaviors");
+        }
+        else
+        {
+            Debug.Log("No player found to pursue");
+        }
+    }
+
+    [ContextMenu("Test Evade Player")]
+    private void TestEvadePlayer()
+    {
+        if (player != null)
+        {
+            EvadePlayer();
+            Debug.Log("Started evading player using steering behaviors");
+        }
+        else
+        {
+            Debug.Log("No player found to evade from");
+        }
+    }
+
+    [ContextMenu("Test Direct Movement")]
+    private void TestDirectMovement()
+    {
+        Vector3 testDirection = transform.forward;
+        Move(testDirection);
+        Debug.Log($"Applied direct movement - Direction: {testDirection}, Current Vel: {_vel.magnitude:F2}");
+    }
+
+    [ContextMenu("Reset Velocity")]
+    private void ResetVelocity()
+    {
+        _vel = Vector3.zero;
+        Debug.Log("Velocity reset to zero");
+    }
+
+    [ContextMenu("Force High Speed")]
+    private void ForceHighSpeed()
+    {
+        mass = 0.1f;
+        maxForce = 100f;
+        maxSpeed = 20f;
+        slowingDistance = 0.5f;
+        Debug.Log($"Forced high speed settings: Mass={mass}, MaxForce={maxForce}, MaxSpeed={maxSpeed}");
+    }
+
+    [ContextMenu("Test Seek Behavior")]
+    private void TestSeekBehavior()
+    {
+        if (patrolPoints != null && patrolPoints.Length > 0)
+        {
+            Vector3 target = patrolPoints[0].position;
+            Debug.Log($"=== SEEK TEST ===");
+            Debug.Log($"Position: {transform.position}");
+            Debug.Log($"Target: {target}");
+            Debug.Log($"Current Vel: {_vel}");
+            Debug.Log($"Max Speed: {maxSpeed}");
+
+            Vector3 steering = Steering.Seek(transform.position, target, _vel, maxSpeed);
+            Debug.Log($"Calculated steering: {steering}, magnitude: {steering.magnitude:F2}");
+
+            // Calculate expected values manually
+            Vector3 desired = target - transform.position;
+            desired.y = 0f;
+            desired = desired.normalized * maxSpeed;
+            Vector3 expectedSteering = desired - _vel;
+            Debug.Log($"Expected desired: {desired}");
+            Debug.Log($"Expected steering: {expectedSteering}");
+
+            ApplySteering(steering);
+        }
+    }
+
+    [ContextMenu("Force Manual Movement")]
+    private void ForceManualMovement()
+    {
+        Vector3 forceVel = transform.forward * 5f;
+        _vel = forceVel;
+        transform.position += _vel * Time.deltaTime;
+        Debug.Log($"Forced velocity: {_vel}, moved to: {transform.position}");
+    }
+
+    [ContextMenu("Debug Complete Steering Pipeline")]
+    private void DebugSteeringPipeline()
+    {
+        Debug.Log("=== COMPLETE STEERING DEBUG ===");
+        Debug.Log($"Current Status: isAlive={isAlive}, currentMovementStatus={currentMovementStatus}");
+        Debug.Log($"Current destination: {currentDestination}");
+        Debug.Log($"Physics: mass={mass}, maxForce={maxForce}, maxSpeed={maxSpeed}");
+        Debug.Log($"Current velocity: {_vel}");
+        Debug.Log($"Time.deltaTime: {Time.deltaTime:F6}, FPS: {1f/Time.deltaTime:F1}");
+
+        if (currentDestination != Vector3.zero)
+        {
+            // Test direct steering calculation
+            Vector3 steering = Steering.Seek(transform.position, currentDestination, _vel, maxSpeed);
+            Debug.Log($"Direct Seek result: {steering}");
+
+            // Test integration
+            Vector3 integratedVel = Integrate(steering, Time.deltaTime);
+            Debug.Log($"After integration: {integratedVel}");
+
+            // Test obstacle avoidance
+            Vector3 avoidedVel = obstacleAvoidance.GetDir2(integratedVel, false);
+            Debug.Log($"After obstacle avoidance: {avoidedVel}");
+
+            // Calculate final movement
+            float effectiveDeltaTime = Mathf.Max(Time.deltaTime, 0.016f);
+            Vector3 finalMovement = avoidedVel * effectiveDeltaTime;
+            Debug.Log($"Final movement per frame: {finalMovement.magnitude:F6} units");
+            Debug.Log($"Movement per second: {finalMovement.magnitude * (1f/effectiveDeltaTime):F2} units/sec");
+
+            // Apply directly
+            ApplySteering(steering);
+        }
+    }
+
+    [ContextMenu("Test High Speed Movement")]
+    private void TestHighSpeedMovement()
+    {
+        // Bypass all steering and move directly at high speed
+        Vector3 direction = (currentDestination - transform.position).normalized;
+        Vector3 highSpeedMovement = direction * 2f; // 2 units per frame = 120 units/sec at 60fps
+        transform.position += highSpeedMovement;
+        Debug.Log($"Direct high speed movement: {highSpeedMovement.magnitude} units per frame");
+    }
+
+    [ContextMenu("Debug FSM Status")]
+    private void DebugFSMStatus()
+    {
+        Debug.Log("=== FSM STATUS ===");
+        Debug.Log($"Use FSM: {useFSM}");
+        Debug.Log($"State Data Count: {stateDataList?.Count ?? 0}");
+        Debug.Log($"StateMachine Initialized: {stateMachine != null}");
+
+        if (stateMachine != null)
+        {
+            var currentState = stateMachine.GetCurrentState();
+            Debug.Log($"Current State: {currentState?.State?.StateName ?? "None"}");
+        }
+
+        Debug.Log($"Current Patrol Loops: {CurrentPatrolLoops}/{LoopsToIdle}");
+        Debug.Log($"Patrol Direction: {(PatrolDirection ? "Forward" : "Backward")}");
+        Debug.Log($"Current Patrol Index: {CurrentPatrolIndex}");
+        Debug.Log($"Has Reached Current Point: {HasReachedCurrentPatrolPoint}");
+        Debug.Log($"State Timer: {StateTimer:F2}");
+        Debug.Log("==================");
+    }
+
+    #endregion
+
+    #region IUseFsm Implementation
+
+    public void UpdateFsm()
+    {
+        // This method exists for interface compatibility but we call RunStateMachine directly in OnUpdate
+        stateMachine?.RunStateMachine();
+    }
+
+    // GetModelTransform, SetTargetTransform, and GetTargetTransform are already implemented above
+
     #endregion
 }

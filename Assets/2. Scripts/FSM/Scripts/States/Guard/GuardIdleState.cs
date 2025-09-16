@@ -10,20 +10,34 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                guard.StateTimer = 0f;
-                Logger.LogDebug($"Guard {guard.name}: Entered Idle State");
+                // Initialize idle timer using IdleSeconds property
+                guard.StateTimer = guard.IdleSeconds;
+
+                // Reset patrol loops for next patrol cycle
+                guard.CurrentPatrolLoops = 0;
+
+                Logger.LogDebug($"Guard {guard.name}: Entered Idle State - Will idle for {guard.IdleSeconds} seconds");
             }
         }
 
         public override void ExecuteState(IUseFsm p_model)
         {
+            if (p_model is Guard guard)
+            {
+                // Countdown the idle timer
+                guard.StateTimer -= Time.deltaTime;
+
+                // Apply brake force to gradually stop movement
+                Vector3 brakeForce = -guard.CurrentVelocity * 5f; // Brake force proportional to velocity
+                guard.ApplySteering(brakeForce);
+            }
         }
 
         public override void ExitState(IUseFsm p_model)
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Exited Idle State");
+                Logger.LogDebug($"Guard {guard.name}: Exited Idle State - Returning to patrol");
             }
         }
     }
