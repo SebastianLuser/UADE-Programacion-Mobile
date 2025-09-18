@@ -10,13 +10,13 @@ public class CivilianCanSeePlayerCondition : StateCondition
         Debug.Log($"CanSeePlayerCondition: Evaluating for {p_model?.GetType()?.Name}");
     
         if (p_model is Civilian civilian)
-         {
-        bool canSee = civilian.HasLoS();
-        Debug.Log($"CanSeePlayerCondition: HasLoS() = {canSee}");
-        return canSee;
-         }
+        {
+            bool canSee = civilian.HasLoS();
+            Debug.Log($"CanSeePlayerCondition: HasLoS() = {canSee}");
+            return canSee;
+        }
     
-         Debug.Log("CanSeePlayerCondition: Model is not Civilian!");
-         return false;
+        Debug.Log("CanSeePlayerCondition: Model is not Civilian!");
+        return false;
     }
 }

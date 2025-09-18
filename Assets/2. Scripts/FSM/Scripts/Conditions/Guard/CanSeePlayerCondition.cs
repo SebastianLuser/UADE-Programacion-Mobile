@@ -3,7 +3,7 @@ using Scripts.FSM.Models;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "CanSeePlayerCondition", menuName = "Main/FSM/Guard Conditions/Can See Player")]
-public class CanSeePlayerCondition : StateCondition
+public class GuardCanSeePlayerCondition : StateCondition
 {
     public override bool CompleteCondition(IUseFsm p_model)
     {
