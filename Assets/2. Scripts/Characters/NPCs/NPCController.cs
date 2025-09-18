@@ -3,7 +3,7 @@ using Scripts.FSM.Base.StateMachine;
 using UnityEngine;
 using System.Collections.Generic;
 
-public abstract class NPCController : Character, IUseFsm
+public abstract class  NPCController : Character, IUseFsm
 {
     [SerializeField] protected NPCDataSO npcData;
     [SerializeField] protected List<StateData> stateDataList;

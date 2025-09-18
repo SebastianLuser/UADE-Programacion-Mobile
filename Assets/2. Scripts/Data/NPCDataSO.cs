@@ -12,8 +12,8 @@ public class NPCDataSO : CharacterDataSO
     [field: SerializeField] public float idleTime { get; private set; } = 3f;
     [field: SerializeField] public float searchTime { get; private set; } = 5f;
     [field: SerializeField] public float patrolSpeed { get; private set; } = 2f;
-    [field: SerializeField] public float rotationSpeed { get; private set; } = 5f;
+    [field: SerializeField] public new float rotationSpeed { get; private set; } = 5f;
     
     [Header("Patrol Points")]
-    [field: SerializeField] public Transform[] patrolPoints { get; private set; }
+    [field: SerializeField] public Transform[] patrolPoints { get; set; }
 }
