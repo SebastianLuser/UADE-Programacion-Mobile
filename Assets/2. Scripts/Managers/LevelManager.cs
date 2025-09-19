@@ -16,7 +16,7 @@ public class LevelManager : BaseManager
     
     private void SetupScene()
     {
-        CreateGround();
+        //CreateGround();
         Logger.LogInfo("Scene setup completed");
     }
     

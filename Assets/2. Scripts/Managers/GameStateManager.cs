@@ -131,7 +131,7 @@ public class GameStateManager : BaseManager, IUpdatable
     {
         CheckGameConditions();
         
-        if (Input.GetKeyDown(KeyCode.Escape))
+        /*if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (currentState == GameState.Playing)
             {
@@ -141,7 +141,7 @@ public class GameStateManager : BaseManager, IUpdatable
             {
                 ResumeGame();
             }
-        }
+        }*/
     }
     
     private void CheckGameConditions()
