@@ -1,6 +1,7 @@
 using UnityEngine;
 using DevelopmentUtilities;
 
+[DefaultExecutionOrder(-1000)]
 public class GameManager : BaseManager
 {
     [Header("Manager Configuration")]
@@ -15,7 +16,7 @@ public class GameManager : BaseManager
     [Header("AI System")]
     [SerializeField] private AISystemInitializer aiSystemInitializer;
     
-    private void Start()
+    private void Awake()
     {
         if (autoInitialize)
         {
