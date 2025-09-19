@@ -146,7 +146,10 @@ public class GameStateManager : BaseManager, IUpdatable
     
     private void CheckGameConditions()
     {
-        if (currentState != GameState.Playing);
+        if (currentState != GameState.Playing)
+        {
+            //TODO rest of the code
+        }
     }
     
     protected override void OnShutdown()

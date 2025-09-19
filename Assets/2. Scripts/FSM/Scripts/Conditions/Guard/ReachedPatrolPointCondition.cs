@@ -9,11 +9,11 @@ public class ReachedPatrolPointCondition : StateCondition
     {
         if (p_model is Guard guard)
         {
-            if (guard.PatrolPoints == null || guard.CurrentPatrolIndex >= guard.PatrolPoints.Length) 
+            if (guard.PatrolPoints == null || guard.CurrentPatrolIndex >= guard.PatrolPoints.Length)
                 return true;
-                
+
             float distance = Vector3.Distance(guard.transform.position, guard.PatrolPoints[guard.CurrentPatrolIndex].position);
-            
+
             if (distance < 1f)
             {
                 // Move to next patrol point
