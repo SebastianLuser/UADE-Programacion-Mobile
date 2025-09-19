@@ -3,9 +3,6 @@ using UnityEngine;
 /// <summary>
 /// Levels of player detection for different AI responses.
 /// Used for graduated AI reactions and debugging.
-/// 
-/// MEJORA: Sistema gradual de detección para comportamientos más naturales
-/// MEJORA: Integración con sistema de alerta del blackboard
 /// </summary>
 public enum PlayerDetectionLevel
 {

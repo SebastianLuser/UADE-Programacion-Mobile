@@ -1,9 +1,9 @@
 /// <summary>
 /// Centralized keys for the blackboard system to ensure consistency and prevent typos.
 /// 
-/// MEJORA: Organizadas por categorías para mejor mantenibilidad
-/// MEJORA: Agregadas keys adicionales para features avanzados
-/// MEJORA: Documentación detallada del tipo de dato esperado para cada key
+/// IMPROVEMENT: Organized by categories for better maintainability
+/// IMPROVEMENT: Added additional keys for advanced features NOT IMPLEMENTED YET
+/// IMPROVEMENT: Detailed documentation of the expected data type for each key
 /// </summary>
 public static class BlackboardKeys
 {
@@ -109,7 +109,7 @@ public static class BlackboardKeys
     public const string PLAY_AREA_BOUNDS = "play_area_bounds";
     #endregion
     
-    #region MEJORA: Performance Tracking
+    #region Performance Tracking
     /// <summary>int - Current frame number for cache invalidation</summary>
     public const string CURRENT_FRAME = "current_frame";
     
@@ -120,7 +120,7 @@ public static class BlackboardKeys
     public const string AI_DEBUG_ENABLED = "ai_debug_enabled";
     #endregion
     
-    #region MEJORA: Event System
+    #region Event System
     /// <summary>Queue&lt;AIEvent&gt; - Queue of AI events to process</summary>
     public const string AI_EVENT_QUEUE = "ai_event_queue";
     

@@ -1,7 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// ObstacleAvoidance:
+/// Computes an adjusted movement direction to steer an NPC away from the nearest obstacle
+/// within a scan radius and forward angle.
+/// </summary>
 public class ObstacleAvoidance
 {
     Transform npcTransform;
@@ -15,7 +18,6 @@ public class ObstacleAvoidance
     {
         npcTransform = entity;
         _radius = radius;
-        //_radius = Mathf.Min(_radius, 1);
         _angle = angle;
         _obsMask = obsMask;
         _colls = new Collider[countMaxObs];
@@ -64,13 +66,16 @@ public class ObstacleAvoidance
         {
             newDir = -Vector3.Cross(npcTransform.up, dirToClosetPoint);
         }
-        // Debug.Log("NewDir" + newDir); // Commented out to prevent log spam
         Debug.DrawRay(npcTransform.position, newDir, Color.red);
-
-        var clampedDistance = Mathf.Clamp(nearCollDistance - _personalArea, 0, _radius); //Distancia clampeada hacia la colision m�s cercana
-        var inversedClampedDistance = _radius - clampedDistance; //Invierto el valor sobre radio
-        var proportionalDistance = inversedClampedDistance / _radius; // Lo convierto a valor entre 0 y 1
-        return Vector3.Lerp(currDir, newDir, proportionalDistance); // Interpolo entre la direccion actual y la direccion de avoidance
+       
+        // Distance to the closest obstacle clamped after subtracting personal area
+        var clampedDistance = Mathf.Clamp(nearCollDistance - _personalArea, 0, _radius);
+        // Inverted: closer obstacle => larger value
+        var inversedClampedDistance = _radius - clampedDistance;
+        // Normalized to 0..1 (0 = far, 1 = very close)
+        var proportionalDistance = inversedClampedDistance / _radius;
+        // Blend current direction toward avoidance direction
+        return Vector3.Lerp(currDir, newDir, proportionalDistance);
     }
 
     public Vector3 GetDir2(Vector3 currDir, bool calculateY = true)
@@ -91,14 +96,16 @@ public class ObstacleAvoidance
             {
                 newDir = -Vector3.Cross(npcTransform.up, dirToClosetPoint);
             }
-            // Debug.Log("NewDir" + newDir); // Commented out to prevent log spam
             Debug.DrawRay(npcTransform.position, newDir, Color.red);
-
-            var clampedDistance = Mathf.Clamp(hitDistance - _personalArea, 0, _radius); //Distancia clampeada hacia la colision m�s cercana
-            var inversedClampedDistance = _radius - clampedDistance; //Invierto el valor sobre radio
-            var proportionalDistance = inversedClampedDistance / _radius; // Lo convierto a valor entre 0 y 1
             
-            return Vector3.Lerp(currDir.normalized, newDir.normalized, proportionalDistance).normalized * currDir.magnitude; // Interpolo entre la direccion actual y la direccion de avoidance
+            // Distance to hit point clamped after subtracting personal area
+            var clampedDistance = Mathf.Clamp(hitDistance - _personalArea, 0, _radius);
+            // Inverted: closer obstacle => larger value
+            var inversedClampedDistance = _radius - clampedDistance; 
+            // Normalized to 0..1 (0 = far, 1 = very close)
+            var proportionalDistance = inversedClampedDistance / _radius;
+            // Lerp using normalized directions, then restore original magnitude
+            return Vector3.Lerp(currDir.normalized, newDir.normalized, proportionalDistance).normalized * currDir.magnitude;
         }
         return currDir;
     }

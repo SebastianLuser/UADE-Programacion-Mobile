@@ -1,14 +1,11 @@
 using UnityEngine;
 
 /// <summary>
+/// DEPRECATED: This configuration file is scheduled for removal.
+/// Final review by SLuser is still pending before deletion.
+
 /// Centralized tuning parameters for the AI system and game balance.
 /// This ScriptableObject allows designers to easily adjust AI behavior without touching code.
-/// 
-/// MEJORA: Configuration per AI personality type
-/// MEJORA: Runtime parameter validation and clamping
-/// MEJORA: Debug visualization settings
-/// MEJORA: Performance optimization toggles
-/// MEJORA: Easy preset system for different difficulty levels
 /// </summary>
 [CreateAssetMenu(fileName = "GameTuningSO", menuName = "AI System/Game Tuning Configuration", order = 1)]
 public class GameTuningSO : ScriptableObject

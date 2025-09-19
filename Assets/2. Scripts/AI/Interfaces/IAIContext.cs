@@ -5,7 +5,6 @@ using UnityEngine;
 /// Acts as a facade to abstract complex subsystems and provide a clean API for AI logic.
 /// 
 /// MEJORA: Agregado cache para valores costosos de calcular (distancias, line of sight)
-/// MEJORA: Agregado soporte para múltiples targets (no solo player)
 /// MEJORA: Integración con el sistema de UpdateManager existente para mejor performance
 /// </summary>
 public interface IAIContext
@@ -22,13 +21,13 @@ public interface IAIContext
     
     /// <summary>
     /// Checks if the player is currently visible to this AI
-    /// MEJORA: Cached para evitar raycast múltiples por frame
+    /// Cached para evitar raycast múltiples por frame
     /// </summary>
     bool IsPlayerVisible();
     
     /// <summary>
     /// Gets the current player position
-    /// MEJORA: Con fallback a última posición conocida si player no está disponible
+    /// Con fallback a última posición conocida si player no está disponible
     /// </summary>
     Vector3 GetPlayerPosition();
     
@@ -44,39 +43,39 @@ public interface IAIContext
     AIPersonalityType GetPersonalityType();
     
     /// <summary>
-    /// MEJORA: Soporte para múltiples targets, no solo el player
+    /// Soporte para múltiples targets, no solo el player
     /// Útil para escorts, grupos, etc.
     /// </summary>
     Transform GetTarget(string targetTag = "Player");
     
     /// <summary>
-    /// MEJORA: Obtener distancia a cualquier target
+    /// Obtener distancia a cualquier target
     /// </summary>
     float GetDistanceToTarget(string targetTag = "Player");
     
     /// <summary>
-    /// MEJORA: Check de visibilidad para cualquier target
+    /// Check de visibilidad para cualquier target
     /// </summary>
     bool IsTargetVisible(string targetTag = "Player");
     
     /// <summary>
-    /// MEJORA: Acceso directo al detector para casos avanzados
+    /// Acceso directo al detector para casos avanzados
     /// </summary>
     IPlayerDetector GetPlayerDetector();
     
     /// <summary>
-    /// MEJORA: Acceso al movement controller para casos avanzados
+    /// Acceso al movement controller para casos avanzados
     /// </summary>
     IAIMovementController GetMovementController();
     
     /// <summary>
-    /// MEJORA: Frame en el que se calcularon los valores cacheados
+    /// Frame en el que se calcularon los valores cacheados
     /// Para invalidar cache automáticamente
     /// </summary>
     int GetCacheFrame();
     
     /// <summary>
-    /// MEJORA: Forzar recálculo de valores cacheados
+    /// Forzar recálculo de valores cacheados
     /// </summary>
     void InvalidateCache();
 }

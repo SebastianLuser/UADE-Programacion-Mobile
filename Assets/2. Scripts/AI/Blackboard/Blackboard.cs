@@ -7,11 +7,11 @@ using UnityEngine;
 /// Central AI memory system that allows NPCs to share information and coordinate behavior.
 /// Integrates with the existing ServiceLocator pattern for consistent architecture.
 /// 
-/// MEJORA: Implementado como IGameService para integración perfecta con el sistema existente
-/// MEJORA: Agregado sistema de callbacks tipados para mejor performance
-/// MEJORA: Cache inteligente para evitar boxing/unboxing innecesario
-/// MEJORA: Cleanup automático de datos temporales para mejor gestión de memoria
-/// MEJORA: Integration con UpdateManager para cleanup periódico
+/// IMPROVEMENT: Implemented as IGameService
+/// IMPROVEMENT: Added typed callback system for better performance
+/// IMPROVEMENT: Smart cache to avoid unnecessary boxing/unboxing
+/// IMPROVEMENT: Automatic cleanup of temporary data for better memory management
+/// IMPROVEMENT: Integration with UpdateManager for periodic cleanup
 /// </summary>
 public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
 {
@@ -29,7 +29,7 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
     // Core data storage
     private Dictionary<string, object> data = new Dictionary<string, object>();
     
-    // MEJORA: Dual callback system - typed and object-based for flexibility
+    // Dual callback system - typed and object-based for flexibility
     private Dictionary<string, List<Action<object>>> objectSubscribers = new Dictionary<string, List<Action<object>>>();
     private Dictionary<string, object> typedSubscribers = new Dictionary<string, object>(); // Will store List<Action<T>>
     
@@ -52,11 +52,11 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
     {
         if (IsInitialized) return;
         
-        // MEJORA: Register as both interface and concrete type for flexibility
+        // Register as both interface and concrete type for flexibility
         ServiceLocator.Register<IBlackboard>(this);
         ServiceLocator.Register<Blackboard>(this);
         
-        // MEJORA: Register with UpdateManager for periodic cleanup
+        // Register with UpdateManager for periodic cleanup
         var updateManager = ServiceLocator.Get<UpdateManager>();
         updateManager?.RegisterUpdatable(this);
         
@@ -173,10 +173,10 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
     
     #endregion
     
-    #region MEJORA: Typed Subscription System
+    #region Typed Subscription System
     
     /// <summary>
-    /// MEJORA: Subscribe with typed callback for better performance and type safety
+    /// Subscribe with typed callback for better performance and type safety
     /// </summary>
     public void Subscribe<T>(string key, Action<T> callback)
     {
@@ -272,9 +272,6 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
 
         // Minimum scope keys (always initialized)
         SetValue(BlackboardKeys.GLOBAL_ALERT, false);
-
-        // TODO(MIN_SCOPE): When civilian Decision Tree "Alert" action is implemented, it should write:
-        // blackboard.SetValue(BlackboardKeys.GLOBAL_ALERT, true);
         
         // Alert system
         SetValue(BlackboardKeys.ALERT_LEVEL, 0);
@@ -292,7 +289,7 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
         if (gameStateManager != null)
         {
             SetValue(BlackboardKeys.GAME_STATE, gameStateManager.CurrentState);
-            // MEJORA: Subscribe to game state changes
+            // Subscribe to game state changes
             gameStateManager.OnStateChanged += (prev, current) => SetValue(BlackboardKeys.GAME_STATE, current);
         }
         
@@ -508,7 +505,7 @@ public class Blackboard : MonoBehaviour, IBlackboard, IGameService, IUpdatable
     
     private void Awake()
     {
-        // MEJORA: Initialize automatically but allow manual control
+        // Initialize automatically but allow manual control
         if (GetComponent<GameManager>() == null) // Only auto-initialize if not part of GameManager
         {
             Initialize();

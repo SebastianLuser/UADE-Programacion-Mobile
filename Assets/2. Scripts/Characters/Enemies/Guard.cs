@@ -5,7 +5,7 @@ using Scripts.FSM.Models;
 using System.Collections.Generic;
 
 //todo revisar pasar a MVC
-public class Guard : BaseCharacter, IUpdatable, IAIMovementController, IUseFsm
+public class Guard : BaseCharacter, IUpdatable, IUseFsm
 {
     //todo utilizar scriptable object
     [Header("Guard Settings")]

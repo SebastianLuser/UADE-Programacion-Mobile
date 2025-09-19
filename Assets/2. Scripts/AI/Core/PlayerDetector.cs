@@ -4,12 +4,11 @@ using UnityEngine;
 /// <summary>
 /// Advanced player detection system implementing realistic Line of Sight.
 /// Integrates with the blackboard system for AI coordination.
-/// 
-/// MEJORA: Sistema de cache inteligente para performance
-/// MEJORA: Detección gradual con niveles de alerta
-/// MEJORA: Integración completa con blackboard para coordinación
-/// MEJORA: Debug visualization completo con gizmos
-/// MEJORA: Support para múltiples tipos de detección (visual, auditiva, etc.)
+///
+/// IMPROVEMENT: Intelligent caching system for performance
+/// IMPROVEMENT: Gradual detection with alert levels
+/// IMPROVEMENT: Complete debug visualization with gizmos
+/// IMPROVEMENT: Support for multiple detection types (visual, auditory, etc.) NEED CHECK SLuser
 /// </summary>
 public class PlayerDetector : MonoBehaviour, IPlayerDetector
 {
@@ -137,7 +136,7 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     
     private void ApplyPersonalityConfig()
     {
-        // MEJORA: Configuración automática basada en personalidad
+        // Configuración automática basada en personalidad
         // Esto permite balancing centralizado sin modificar cada prefab
         var newConfig = DetectionConfig.GetDefault(personalityType);
         
@@ -219,7 +218,7 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     
     private DetectionResult PerformDetection(Transform player)
     {
-        // MEJORA: Frame caching para performance
+        // Frame caching para performance
         if (useFrameCaching && lastUpdateFrame == Time.frameCount)
         {
             return cachedResult;
@@ -295,7 +294,7 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
             return PlayerDetectionLevel.None;
         }
         
-        // MEJORA: Sistema gradual de detección para comportamientos más naturales
+        // Sistema gradual de detección para comportamientos más naturales
         float maxRange = config.detectionRange;
         float immediateRange = maxRange * 0.25f;
         float clearRange = maxRange * 0.5f;

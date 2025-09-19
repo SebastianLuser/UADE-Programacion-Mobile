@@ -538,7 +538,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
 
     #endregion
 
-    #region Steering Physics (Identical to Guard)
+    #region Steering Physics
 
     /// <summary>
     /// Integrate steering force to update velocity with mass and force limits

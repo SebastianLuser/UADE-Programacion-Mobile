@@ -1,13 +1,10 @@
 using UnityEngine;
 
 /// <summary>
-/// Concrete implementation of IAIContext providing centralized access to AI information.
-/// Acts as a facade for all AI-related queries and caches expensive operations.
+/// Concrete implementation of IAIContext that centralizes access to AI data.
 /// 
-/// MEJORA: Cache inteligente para evitar cálculos redundantes por frame
-/// MEJORA: Integración completa con PlayerDetector y Blackboard
-/// MEJORA: Support para múltiples targets y tipos de AI
-/// MEJORA: Automatic cache invalidation por frame
+/// IMPROVEMENT: Smart per-frame cache to avoid redundant calculations.
+/// IMPROVEMENT: Full integration with PlayerDetector and Blackboard.
 /// </summary>
 public class AIContext : MonoBehaviour, IAIContext
 {
@@ -69,7 +66,6 @@ public class AIContext : MonoBehaviour, IAIContext
     
     private void InitializeComponents()
     {
-        // Get or add required components
         playerDetector = GetComponent<IPlayerDetector>();
         if (playerDetector == null)
         {
@@ -193,7 +189,7 @@ public class AIContext : MonoBehaviour, IAIContext
     
     #endregion
     
-    #region MEJORA: Extended IAIContext Implementation
+    #region Extended IAIContext Implementation
     
     public Transform GetTarget(string targetTag = "Player")
     {
@@ -344,7 +340,7 @@ public class AIContext : MonoBehaviour, IAIContext
     #region Public API Extensions
     
     /// <summary>
-    /// MEJORA: Set personality type at runtime
+    /// Set personality type at runtime
     /// </summary>
     public void SetPersonalityType(AIPersonalityType newPersonality)
     {
@@ -364,7 +360,7 @@ public class AIContext : MonoBehaviour, IAIContext
     }
     
     /// <summary>
-    /// MEJORA: Get detailed detection information
+    /// Get detailed detection information
     /// </summary>
     public DetectionResult GetDetectionResult()
     {
@@ -377,7 +373,7 @@ public class AIContext : MonoBehaviour, IAIContext
     }
     
     /// <summary>
-    /// MEJORA: Check if any target is visible
+    /// Check if any target is visible
     /// </summary>
     public bool IsAnyTargetVisible(params string[] targetTags)
     {
@@ -392,7 +388,7 @@ public class AIContext : MonoBehaviour, IAIContext
     }
     
     /// <summary>
-    /// MEJORA: Get closest target from a list
+    /// Get closest target from a list
     /// </summary>
     public Transform GetClosestTarget(params string[] targetTags)
     {
@@ -417,7 +413,7 @@ public class AIContext : MonoBehaviour, IAIContext
     }
     
     /// <summary>
-    /// MEJORA: Get threat level based on detection and distance
+    /// Get threat level based on detection and distance
     /// </summary>
     public float GetThreatLevel()
     {
@@ -447,7 +443,7 @@ public class AIContext : MonoBehaviour, IAIContext
     }
     
     /// <summary>
-    /// MEJORA: Get confidence level in current information
+    /// Get confidence level in current information
     /// </summary>
     public float GetInformationConfidence()
     {
