@@ -1,5 +1,6 @@
 using Scripts.FSM.Models;
 using UnityEngine;
+using Game.AI.Steering;
 
 namespace Scripts.FSM.Base.StateMachine
 {
@@ -10,7 +11,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Entered Attack State");
+                Logger.LogDebug($"Guard {guard.name}: Entered Attack State - Engaging player");
             }
         }
 
@@ -35,15 +36,46 @@ namespace Scripts.FSM.Base.StateMachine
             Transform target = guard.GetTargetTransform();
             if (target == null) return;
 
-            Vector3 direction = (target.position - guard.transform.position).normalized;
-            direction.y = 0;
-            
-            if (direction.magnitude > 0.1f)
-            {
-                guard.transform.rotation = Quaternion.LookRotation(direction);
-            }
+            float distanceToPlayer = Vector3.Distance(guard.transform.position, target.position);
 
-            guard.Shoot(direction);
+            // If too far from attack range, pursue the player using steering
+            if (distanceToPlayer > guard.AttackRange)
+            {
+                // Use Pursuit behavior for intelligent chasing
+                Vector3 playerVelocity = Vector3.zero;
+                var playerRb = target.GetComponent<Rigidbody>();
+                if (playerRb != null)
+                {
+                    playerVelocity = playerRb.linearVelocity;
+                }
+
+                Vector3 steering = Steering.Pursuit(
+                    guard.transform.position,
+                    guard.CurrentVelocity,
+                    target.position,
+                    playerVelocity,
+                    guard.ChaseSpeed
+                );
+
+                guard.ApplySteering(steering);
+            }
+            else
+            {
+                // Within attack range - stop moving and attack
+                guard.ApplySteering(Vector3.zero);
+
+                // Face the target
+                Vector3 direction = (target.position - guard.transform.position).normalized;
+                direction.y = 0;
+
+                if (direction.magnitude > 0.1f)
+                {
+                    guard.transform.rotation = Quaternion.LookRotation(direction);
+                }
+
+                // Attack
+                guard.Shoot(direction);
+            }
         }
     }
 }

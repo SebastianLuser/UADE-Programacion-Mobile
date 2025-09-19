@@ -12,6 +12,9 @@ public class GameManager : BaseManager
     [SerializeField] private LevelManager levelManager;
     [SerializeField] private GameStateManager gameStateManager;
     
+    [Header("AI System")]
+    [SerializeField] private AISystemInitializer aiSystemInitializer;
+    
     private void Start()
     {
         if (autoInitialize)
@@ -86,6 +89,7 @@ public class GameManager : BaseManager
         InitializeManager(updateManager, "UpdateManager");
         InitializeManager(levelManager, "LevelManager");
         InitializeManager(gameStateManager, "GameStateManager");
+        InitializeManager(aiSystemInitializer, "AISystemInitializer");
     }
     
     private void InitializeServices()
@@ -123,6 +127,9 @@ public class GameManager : BaseManager
             case GameStateManager gsm:
                 gameStateManager = gsm;
                 break;
+            case AISystemInitializer asi:
+                aiSystemInitializer = asi;
+                break;
         }
     }
     
@@ -134,6 +141,7 @@ public class GameManager : BaseManager
         if (updateManager) ServiceLocator.Register(updateManager);
         if (levelManager) ServiceLocator.Register(levelManager);
         if (gameStateManager) ServiceLocator.Register(gameStateManager);
+        if (aiSystemInitializer) ServiceLocator.Register(aiSystemInitializer);
     }
     
     private void StartGame()
@@ -163,6 +171,7 @@ public class GameManager : BaseManager
     
     protected override void OnShutdown()
     {
+        if (aiSystemInitializer != null) aiSystemInitializer.Shutdown();
         if (gameStateManager != null) gameStateManager.Shutdown();
         if (levelManager != null) levelManager.Shutdown();
         if (updateManager != null) updateManager.Shutdown();
