@@ -98,7 +98,8 @@ public class PlayerCollector : MonoBehaviour, ICollector
         }
 
         // Check for bullet collision
-        if (other.CompareTag("EnemyBullet") || other.name.Contains("Bullet") || other.name.Contains("bullet"))
+        //if (other.CompareTag("EnemyBullet") || other.name.Contains("Bullet") || other.name.Contains("bullet"))
+        if (other.name.Contains("Bullet") || other.name.Contains("bullet"))
         {
             TakeDamage(bulletDamage);
             Destroy(other.gameObject);

@@ -430,6 +430,7 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     
     private bool CheckLineOfSight(Vector3 fromPosition, Vector3 toPosition, out string blocker)
     {
+        // AI Line of Sight
         blocker = "";
         
         Vector3 direction = (toPosition - fromPosition).normalized;

@@ -12,6 +12,8 @@ public class CivilianChooseEscapePathCondition : StateCondition
             // Only trigger if we can see the player
             if (!civilian.HasLoS()) return false;
 
+
+            // IA Roulette Wheel Selection
             // Roulette decision: calculate if we should choose escape path
             float r = Random.value;
             float total = civilian.EscapeWeight + civilian.AttackWeight;
