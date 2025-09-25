@@ -24,13 +24,8 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Civilian civilian)
             {
-                // Countdown the evade timer
-                civilian.StateTimer -= Time.deltaTime;
-
-                // Perform evasive movement
+                // Perform evasive movement only - Decision Tree handles transitions
                 PerformEvadeMovement(civilian);
-
-                // FSM conditions will handle the transition when timer expires
             }
         }
 

@@ -354,6 +354,26 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
                     Logger.LogInfo($"Civilian {gameObject.name}: Applied melee hit via GameStateManager");
             }
         }
+
+        // Notify decision tree that damage was dealt
+        if (useDecisionTree && decisionTreeRunner != null)
+        {
+            decisionTreeRunner.OnMeleeDamageDealt();
+        }
+    }
+
+    /// <summary>
+    /// Called by FSM when an attack cycle completes (for decision tree integration)
+    /// </summary>
+    public void OnAttackCycleComplete()
+    {
+        if (useDecisionTree && decisionTreeRunner != null)
+        {
+            decisionTreeRunner.OnAttackCycleComplete();
+            
+            if (enableDebugLogs)
+                Logger.LogInfo($"Civilian {gameObject.name}: Notified DecisionTree of attack cycle completion");
+        }
     }
 
     /// <summary>
@@ -610,11 +630,19 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     {
         if (player == null || playerDetector == null) return false;
 
-        // Delegate to PlayerDetector with distance and FOV checks
-        var detectionResult = playerDetector.CanSeePlayer(player);
+        // Force visibility if player is in melee range to avoid LoS flickering during attacks
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        if (distanceToPlayer <= meleeRange)
+        {
+            if (enableDebugLogs)
+                Logger.LogInfo($"Civilian {gameObject.name}: Forcing LoS=true (in melee range: {distanceToPlayer:F2} <= {meleeRange})");
+            return true;
+        }
+
+        // Get debug info which includes hasLOS (line of sight) information
+        var debugInfo = playerDetector.GetDebugInfo();
 
         // Additional distance check
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         bool inRange = distanceToPlayer <= sightRange;
 
         // Additional FOV check
@@ -623,7 +651,8 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         float angle = Vector3.Angle(forward, directionToPlayer);
         bool inFOV = angle <= sightFOV * 0.5f;
 
-        return detectionResult && inRange && inFOV;
+        // Use hasLOS specifically - true line of sight with no obstacles
+        return debugInfo.hasLOS && inRange && inFOV;
     }
 
     /// <summary>

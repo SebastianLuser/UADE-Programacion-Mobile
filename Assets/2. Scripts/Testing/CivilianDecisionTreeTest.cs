@@ -173,4 +173,60 @@ public class CivilianDecisionTreeTest : MonoBehaviour
             dtRunner.DebugDecisionTreeStatus(); // This will show state matching info
         }
     }
+
+    [ContextMenu("Test Attack Cycle Completion")]
+    public void TestAttackCycleCompletion()
+    {
+        if (civilian != null)
+        {
+            Debug.Log("=== TESTING ATTACK CYCLE COMPLETION ===");
+            civilian.OnAttackCycleComplete();
+            Debug.Log("Attack cycle completion test finished");
+        }
+    }
+
+    [ContextMenu("Test Melee Damage Event")]
+    public void TestMeleeDamageEvent()
+    {
+        if (civilian != null)
+        {
+            Debug.Log("=== TESTING MELEE DAMAGE EVENT ===");
+            civilian.DealMeleeAttack();
+            Debug.Log("Melee damage event test finished");
+        }
+    }
+
+    [ContextMenu("Force DT Re-evaluation")]
+    public void ForceDTReevaluation()
+    {
+        if (dtRunner != null)
+        {
+            Debug.Log("=== FORCING DT RE-EVALUATION ===");
+            dtRunner.EvaluateDecisionTree();
+            Debug.Log("DT re-evaluation completed");
+        }
+    }
+
+    [ContextMenu("Test Enhanced Status Logging")]
+    public void TestEnhancedStatusLogging()
+    {
+        Debug.Log("=== ENHANCED STATUS TEST ===");
+        
+        if (civilian != null)
+        {
+            Debug.Log($"Has LoS: {civilian.HasLoS()}");
+            Debug.Log($"In Melee Range: {civilian.IsPlayerInMeleeRange()}");
+            Debug.Log($"Distance: {civilian.GetDistanceToPlayer():F2}");
+            Debug.Log($"Can Attack: {civilian.CanAttack}");
+        }
+
+        if (dtRunner != null)
+        {
+            Debug.Log($"Current Suggestion: {dtRunner.CurrentSuggestion}");
+            Debug.Log($"Last Suggestion: {dtRunner.LastSuggestion}");
+            dtRunner.DebugDecisionTreeStatus();
+        }
+        
+        Debug.Log("Enhanced status logging completed");
+    }
 }

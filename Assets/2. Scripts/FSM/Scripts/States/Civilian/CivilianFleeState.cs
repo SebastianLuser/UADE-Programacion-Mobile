@@ -24,13 +24,8 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Civilian civilian)
             {
-                // Perform flee movement
+                // Perform flee movement only - Decision Tree handles transitions
                 PerformFleeMovement(civilian);
-
-                // Update safety timer (accumulates only while safe conditions are met)
-                UpdateSafetyTimer(civilian);
-
-                // FSM conditions will handle transition when safe conditions are sustained
             }
         }
 
@@ -61,41 +56,5 @@ namespace Scripts.FSM.Base.StateMachine
             civilian.ApplySteering(steering);
         }
 
-        private void UpdateSafetyTimer(Civilian civilian)
-        {
-            if (civilian.Player == null) return;
-
-            float distanceToPlayer = Vector3.Distance(civilian.transform.position, civilian.Player.position);
-            bool hasLineOfSight = civilian.HasLoS();
-            bool isSafeDistance = distanceToPlayer >= civilian.SafeDistance;
-
-            // Safety conditions: far enough AND no line of sight
-            bool isSafe = isSafeDistance && !hasLineOfSight;
-
-            if (isSafe)
-            {
-                // Accumulate safe time (grace timer)
-                civilian.SafeTimer += Time.deltaTime;
-
-                if (civilian.EnableDebugLogs && civilian.SafeTimer > 0f && 
-                    Mathf.FloorToInt(civilian.SafeTimer) != Mathf.FloorToInt(civilian.SafeTimer - Time.deltaTime))
-                {
-                    Logger.LogInfo($"Civilian {civilian.name}: Safe for {civilian.SafeTimer:F1}s/{civilian.SafeTime:F1}s (distance: {distanceToPlayer:F1}, no LoS)");
-                }
-            }
-            else
-            {
-                // Reset safe timer if conditions not met
-                if (civilian.SafeTimer > 0f)
-                {
-                    if (civilian.EnableDebugLogs)
-                    {
-                        string reason = !isSafeDistance ? $"too close ({distanceToPlayer:F1} < {civilian.SafeDistance:F1})" : "still visible";
-                        Logger.LogInfo($"Civilian {civilian.name}: Safety lost - {reason}, resetting timer");
-                    }
-                    civilian.SafeTimer = 0f;
-                }
-            }
-        }
     }
 }

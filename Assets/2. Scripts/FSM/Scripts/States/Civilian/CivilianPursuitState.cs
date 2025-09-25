@@ -24,20 +24,8 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Civilian civilian)
             {
-                // Update the lose sight timer based on current LoS status
-                UpdateLoseSightTimer(civilian);
-
-                // Perform pursuit movement
+                // Perform pursuit movement only - Decision Tree handles transitions
                 PerformPursuitMovement(civilian);
-
-                // Check if in melee range (transition handled by InMeleeRangeCondition)
-                float distanceToPlayer = civilian.GetDistanceToPlayer();
-                if (civilian.EnableDebugLogs && distanceToPlayer <= civilian.MeleeRange + 0.1f)
-                {
-                    Logger.LogInfo($"Civilian {civilian.name}: In melee range ({distanceToPlayer:F2}), ready to attack");
-                }
-
-                // The ShouldAbortPursuit() decision will be handled by CivilianLoseSightCondition
             }
         }
 
@@ -53,39 +41,6 @@ namespace Scripts.FSM.Base.StateMachine
             }
         }
 
-        /// <summary>
-        /// Update the lose sight timer - this is the core logic owned by this state
-        /// </summary>
-        private void UpdateLoseSightTimer(Civilian civilian)
-        {
-            bool hasLoS = civilian.HasLoS();
-            
-            if (!hasLoS)
-            {
-                // Accumulate lose sight time
-                civilian.PursuitLoseSightTimer += Time.deltaTime;
-                
-                if (civilian.EnableDebugLogs && civilian.PursuitLoseSightTimer > 0f)
-                {
-                    // Log every 0.5 seconds
-                    float logInterval = 0.5f;
-                    if (Mathf.FloorToInt(civilian.PursuitLoseSightTimer / logInterval) != 
-                        Mathf.FloorToInt((civilian.PursuitLoseSightTimer - Time.deltaTime) / logInterval))
-                    {
-                        Logger.LogInfo($"Civilian {civilian.name}: Lost sight for {civilian.PursuitLoseSightTimer:F1}s/{civilian.AttackLoseSightGrace:F1}s");
-                    }
-                }
-            }
-            else
-            {
-                // Reset timer when we regain sight
-                if (civilian.PursuitLoseSightTimer > 0f && civilian.EnableDebugLogs)
-                {
-                    Logger.LogInfo($"Civilian {civilian.name}: Regained sight, resetting timer from {civilian.PursuitLoseSightTimer:F2}s");
-                }
-                civilian.PursuitLoseSightTimer = 0f;
-            }
-        }
 
         private void PerformPursuitMovement(Civilian civilian)
         {
