@@ -1,7 +1,5 @@
 # 🏗️ FASE 1: FUNDACIONES (Día 1–2)
 
----
-
 ## 🎯 **OBJETIVO DE LA FASE**
 Crear la **arquitectura base** del sistema de AI, estableciendo las interfaces y el sistema de comunicación central (Blackboard) que servirá como fundamento para todas las demás fases.
 

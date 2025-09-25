@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+using DevelopmentUtilities;
 
 /// <summary>
 /// Decision Tree runner for Civilian NPCs that evaluates behavioral suggestions at runtime.
@@ -313,23 +315,24 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
             return currentStance;
         }
 
-        // Stance lock expired or no lock - roll new roulette
         Debug.Log("STANCE LOCK EXPIRED OR NO LOCK - Rolling new roulette");
 
-        float totalWeight = civilian.EscapeWeight + civilian.AttackWeight;
-        float attackThreshold = civilian.AttackWeight / totalWeight;
-        float roll = UnityEngine.Random.value;
+        var decisions = new Dictionary<string, float>
+        {
+            {"ATTACK", civilian.AttackWeight},
+            {"ESCAPE", civilian.EscapeWeight}
+        };
+        
+        string choice = RouletteWheel<string>.Run(decisions);
+        bool chooseAttack = (choice == "ATTACK");
 
-        bool chooseAttack = roll < attackThreshold;
-        string choice = chooseAttack ? "ATTACK" : "ESCAPE";
-
-        Debug.Log($"NEW ROULETTE: Roll={roll:F3}, Attack Weight={civilian.AttackWeight}, Escape Weight={civilian.EscapeWeight}, Choose={choice}");
+        Debug.Log($"NEW ROULETTE: Choice={choice}, Attack Weight={civilian.AttackWeight}, Escape Weight={civilian.EscapeWeight}");
 
         // Lock into the new stance
         LockStance(chooseAttack, $"New roulette: {choice}");
 
         if (debugDT)
-            Logger.LogInfo($"Civilian {civilian.name}: New roulette - Roll: {roll:F3}, Choose: {choice}, Locked for {stanceLockDuration}s");
+            Logger.LogInfo($"Civilian {civilian.name}: New roulette - Choose: {choice}, Locked for {stanceLockDuration}s");
 
         return chooseAttack;
     }

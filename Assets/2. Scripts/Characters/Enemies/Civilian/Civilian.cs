@@ -596,7 +596,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         _vel = Integrate(steering, Time.deltaTime);
 
         // 2) Pass velocity through obstacle avoidance
-        Vector3 avoidedVel = obstacleAvoidance.GetDir2(_vel, false);
+        Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(_vel, false);
 
         // 3) Move and face movement direction
         if (avoidedVel.sqrMagnitude > 0.001f)
