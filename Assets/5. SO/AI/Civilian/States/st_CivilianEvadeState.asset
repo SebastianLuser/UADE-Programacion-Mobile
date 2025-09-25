@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64d13ba7ac30e1d4891285ddebe412b7, type: 3}
   m_Name: st_CivilianEvadeState
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.CivilianEvadeState
-  <StateName>k__BackingField: Evade
+  <StateName>k__BackingField: S_CivEvade

@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f2278919dace0f242b630fce3433a6a6, type: 3}
   m_Name: st_CivilianIdleState
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.CivilianIdleState
-  <StateName>k__BackingField: Idle
+  <StateName>k__BackingField: S_CivIdle

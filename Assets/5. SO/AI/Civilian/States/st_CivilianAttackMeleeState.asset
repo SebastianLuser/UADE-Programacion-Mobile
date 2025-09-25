@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6b9f3154230229f4589e3f79b5fd30bf, type: 3}
   m_Name: st_CivilianAttackMeleeState
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.CivilianAttackMeleeState
-  <StateName>k__BackingField: 
+  <StateName>k__BackingField: S_CivAttack
