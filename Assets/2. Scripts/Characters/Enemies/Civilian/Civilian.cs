@@ -1,11 +1,14 @@
 using UnityEngine;
-using Game.AI.Steering;
 using Scripts.FSM.Base.StateMachine;
 using Scripts.FSM.Models;
 using System.Collections.Generic;
 using System.Linq;
+using Services.MicroServices.BlackboardService;
+using Services;
+using Services.MicroServices.UpdateService;
+using Unity.Assertions;
 
-public class Civilian : BaseCharacter, IUpdatable, IUseFsm
+public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 {
     [Header("Movement Speeds")]
     [SerializeField] private float walkSpeed = 1.5f;        // Idle drift speed
@@ -62,7 +65,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     // Component references
     private Transform player;
     private IPlayerDetector playerDetector;
-    private IBlackboard blackboard;
+    private IBlackboardService m_blackboardService;
     private Renderer meshRenderer;
     private Material originalMaterial;
     private Color originalColor;
@@ -151,6 +154,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
     private void Awake()
     {
         InitializeComponents();
+        SubscribeUpdateService();
     }
 
     private void Start()
@@ -158,29 +162,6 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         InitializeSteering();
         FindPlayer();
         InitializeScriptableObjectFSM();
-        RegisterWithUpdateManager();
-    }
-
-    public void OnUpdate(float deltaTime)
-    {
-        if (!isAlive) return;
-
-        // Update timers
-        stateTimer += deltaTime;
-
-        // Use ScriptableObject FSM if enabled, otherwise fallback to legacy system
-        if (useFSM && stateMachine != null)
-        {
-            UpdateFsm();
-        }
-        else if (!useDecisionTree)
-        {
-            // Use legacy behavior system only if decision tree is disabled
-            // UpdateBehavior(); // Commented out - legacy system replaced by FSM/DT
-        }
-
-        // Note: Decision Tree runs independently via its own coroutine
-        // and influences behavior through RequestStateChange calls
     }
 
     #endregion
@@ -189,16 +170,10 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
 
     private void InitializeComponents()
     {
+        
         // Get or add PlayerDetector
         playerDetector = GetComponent<IPlayerDetector>();
-        if (playerDetector == null)
-        {
-            var detectorComponent = gameObject.AddComponent<PlayerDetector>();
-            playerDetector = detectorComponent;
-
-            if (enableDebugLogs)
-                Logger.LogInfo($"Civilian {gameObject.name}: Added PlayerDetector component");
-        }
+        Assert.IsNotNull(playerDetector);
 
         // Get renderer for color changes during attacks
         meshRenderer = GetComponentInChildren<Renderer>();
@@ -209,22 +184,17 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         }
 
         // Get blackboard service (read-only access)
-        blackboard = ServiceLocator.Get<IBlackboard>();
-        if (blackboard == null && enableDebugLogs)
+        m_blackboardService = ServiceLocator.Get<IBlackboardService>();
+        if (m_blackboardService == null && enableDebugLogs)
         {
-            Logger.LogWarning($"Civilian {gameObject.name}: Blackboard service not available");
+            MyLogger.LogWarning($"Civilian {gameObject.name}: Blackboard service not available");
         }
 
         // Initialize decision tree runner if enabled
         if (useDecisionTree)
         {
             decisionTreeRunner = GetComponent<CivilianDecisionTreeRunner>();
-            if (decisionTreeRunner == null)
-            {
-                decisionTreeRunner = gameObject.AddComponent<CivilianDecisionTreeRunner>();
-                if (enableDebugLogs)
-                    Logger.LogInfo($"Civilian {gameObject.name}: Added CivilianDecisionTreeRunner component");
-            }
+            Assert.IsNotNull(decisionTreeRunner);
         }
     }
 
@@ -236,7 +206,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         currentMaxSpeed = walkSpeed;
 
         if (enableDebugLogs)
-            Logger.LogInfo($"Civilian {gameObject.name}: Steering initialized");
+            MyLogger.LogInfo($"Civilian {gameObject.name}: Steering initialized");
     }
 
     private void FindPlayer()
@@ -248,19 +218,8 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
             {
                 player = playerGO.transform;
                 if (enableDebugLogs)
-                    Logger.LogInfo($"Civilian {gameObject.name}: Found player at {player.name}");
+                    MyLogger.LogInfo($"Civilian {gameObject.name}: Found player at {player.name}");
             }
-        }
-    }
-
-    private void RegisterWithUpdateManager()
-    {
-        var updateManager = ServiceLocator.Get<UpdateManager>();
-        if (updateManager != null)
-        {
-            updateManager.RegisterUpdatable(this);
-            if (enableDebugLogs)
-                Logger.LogInfo($"Civilian {gameObject.name}: Registered with UpdateManager");
         }
     }
 
@@ -270,7 +229,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         currentState = CivilianState.Idle;
         
         if (enableDebugLogs)
-            Logger.LogInfo($"Civilian {gameObject.name}: Legacy FSM initialized");
+            MyLogger.LogInfo($"Civilian {gameObject.name}: Legacy FSM initialized");
     }
 
     private void InitializeScriptableObjectFSM()
@@ -280,7 +239,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
             stateMachine = new StateMachine(stateDataList, this);
             
             if (enableDebugLogs)
-                Logger.LogInfo($"Civilian {gameObject.name}: ScriptableObject FSM initialized with {stateDataList.Count} states");
+                MyLogger.LogInfo($"Civilian {gameObject.name}: ScriptableObject FSM initialized with {stateDataList.Count} states");
         }
         else
         {
@@ -288,7 +247,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
             InitializeFSM();
             
             if (enableDebugLogs)
-                Logger.LogInfo($"Civilian {gameObject.name}: Using legacy FSM (ScriptableObject FSM disabled or no states configured)");
+                MyLogger.LogInfo($"Civilian {gameObject.name}: Using legacy FSM (ScriptableObject FSM disabled or no states configured)");
         }
     }
 
@@ -341,18 +300,19 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
             playerHealth.TakeDamage(meleeDamage);
             
             if (enableDebugLogs)
-                Logger.LogInfo($"Civilian {gameObject.name}: Dealt {meleeDamage} melee damage to player");
+                MyLogger.LogInfo($"Civilian {gameObject.name}: Dealt {meleeDamage} melee damage to player");
         }
         else
         {
+            /* Todo: Que es esto?
             // Fallback: try GameStateManager
-            var gameStateManager = ServiceLocator.Get<GameStateManager>();
+            var gameStateManager = ServiceLocator.Get<GameStateService>();
             if (gameStateManager != null)
             {
                 // gameStateManager.ApplyMeleeHit(meleeDamage);
                 if (enableDebugLogs)
-                    Logger.LogInfo($"Civilian {gameObject.name}: Applied melee hit via GameStateManager");
-            }
+                    MyLogger.LogInfo($"Civilian {gameObject.name}: Applied melee hit via GameStateManager");
+            }*/
         }
 
         // Notify decision tree that damage was dealt
@@ -372,7 +332,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
             decisionTreeRunner.OnAttackCycleComplete();
             
             if (enableDebugLogs)
-                Logger.LogInfo($"Civilian {gameObject.name}: Notified DecisionTree of attack cycle completion");
+                MyLogger.LogInfo($"Civilian {gameObject.name}: Notified DecisionTree of attack cycle completion");
         }
     }
 
@@ -401,7 +361,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         if (!isAlive) return;
 
         if (enableDebugLogs)
-            Logger.LogInfo($"Civilian {gameObject.name}: Decision Tree requesting state change to {stateName}");
+            MyLogger.LogInfo($"Civilian {gameObject.name}: Decision Tree requesting state change to {stateName}");
 
         // Map DT suggestion to actual FSM state name
         string mappedStateName = MapDecisionTreeSuggestionToFSMState(stateName);
@@ -414,12 +374,12 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
             if (stateChangeSuccess)
             {
                 if (enableDebugLogs)
-                    Logger.LogInfo($"Civilian {gameObject.name}: Successfully changed FSM state to {mappedStateName}");
+                    MyLogger.LogInfo($"Civilian {gameObject.name}: Successfully changed FSM state to {mappedStateName}");
             }
             else
             {
                 if (enableDebugLogs)
-                    Logger.LogWarning($"Civilian {gameObject.name}: Failed to find FSM state with name '{mappedStateName}'. Available states: {GetAvailableStateNames()}");
+                    MyLogger.LogWarning($"Civilian {gameObject.name}: Failed to find FSM state with name '{mappedStateName}'. Available states: {GetAvailableStateNames()}");
                 
                 // Fallback to legacy system if FSM state change fails
                 RequestLegacyStateChange(stateName);
@@ -536,7 +496,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         if (currentState != newState)
         {
             if (enableDebugLogs)
-                Logger.LogInfo($"Civilian {gameObject.name}: {currentState} → {newState}");
+                MyLogger.LogInfo($"Civilian {gameObject.name}: {currentState} → {newState}");
 
             currentState = newState;
             stateTimer = 0f;
@@ -546,10 +506,10 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
             {
                 case CivilianState.Safe:
                     // Write to blackboard if civilian reaches safety
-                    if (blackboard != null)
+                    if (m_blackboardService != null)
                     {
                         // This could be used for global alert state
-                        blackboard.SetValue(BlackboardKeys.GLOBAL_ALERT, true);
+                        m_blackboardService.SetValue(BlackboardKeys.GLOBAL_ALERT, true);
                     }
                     break;
             }
@@ -635,7 +595,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         if (distanceToPlayer <= meleeRange)
         {
             if (enableDebugLogs)
-                Logger.LogInfo($"Civilian {gameObject.name}: Forcing LoS=true (in melee range: {distanceToPlayer:F2} <= {meleeRange})");
+                MyLogger.LogInfo($"Civilian {gameObject.name}: Forcing LoS=true (in melee range: {distanceToPlayer:F2} <= {meleeRange})");
             return true;
         }
 
@@ -870,7 +830,7 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         // Basic shooting implementation
         lastShootTime = Time.time;
         if (enableDebugLogs)
-            Logger.LogInfo($"{gameObject.name}: Civilian shooting at {direction}");
+            MyLogger.LogInfo($"{gameObject.name}: Civilian shooting at {direction}");
         // TODO: Implement actual shooting logic when canAttack is enabled
     }
 
@@ -902,10 +862,10 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
         player = p_target;
         
         // Update AI system when target changes
-        if (blackboard != null && player != null)
+        if (m_blackboardService != null && player != null)
         {
-            blackboard.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
-            blackboard.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
+            m_blackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
+            m_blackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
         }
     }
 
@@ -1009,13 +969,41 @@ public class Civilian : BaseCharacter, IUpdatable, IUseFsm
 
     #region Cleanup
 
-    private void OnDestroy()
+    private void OnDisable()
     {
-        var updateManager = ServiceLocator.Get<UpdateManager>();
-        if (updateManager != null)
+        UnsubscribeUpdateService();
+    }
+
+    public void MyUpdate()
+    {
+        if (!isAlive) return;
+
+        // Update timers
+        stateTimer += Time.deltaTime;
+
+        // Use ScriptableObject FSM if enabled, otherwise fallback to legacy system
+        if (useFSM && stateMachine != null)
         {
-            updateManager.UnregisterUpdatable(this);
+            UpdateFsm();
         }
+        else if (!useDecisionTree)
+        {
+            // Use legacy behavior system only if decision tree is disabled
+            // UpdateBehavior(); // Commented out - legacy system replaced by FSM/DT
+        }
+
+        // Note: Decision Tree runs independently via its own coroutine
+        // and influences behavior through RequestStateChange calls
+    }
+
+    public void SubscribeUpdateService()
+    {
+        ServiceLocator.Get<IUpdateService>().AddUpdateListener(this);
+    }
+
+    public void UnsubscribeUpdateService()
+    {
+        ServiceLocator.Get<IUpdateService>().RemoveUpdateListener(this);
     }
 
     #endregion

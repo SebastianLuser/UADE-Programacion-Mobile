@@ -14,7 +14,7 @@ public abstract class NPCView : MonoBehaviour, ICharacter2
         rb = GetComponent<Rigidbody>();
         if (rb == null)
         {
-            Logger.LogWarning($"{gameObject.name}: No Rigidbody found, NPC won't move properly");
+            MyLogger.LogWarning($"{gameObject.name}: No Rigidbody found, NPC won't move properly");
         }
     }
 

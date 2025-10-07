@@ -12,7 +12,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is Guard guard)
             {
                 InitializePatrolling(guard);
-                Logger.LogDebug($"Guard {guard.name}: Entered Patrol State - Starting patrol loop {guard.CurrentPatrolLoops}");
+                MyLogger.LogDebug($"Guard {guard.name}: Entered Patrol State - Starting patrol loop {guard.CurrentPatrolLoops}");
             }
         }
 
@@ -28,7 +28,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Exited Patrol State - Completed {guard.CurrentPatrolLoops} loops");
+                MyLogger.LogDebug($"Guard {guard.name}: Exited Patrol State - Completed {guard.CurrentPatrolLoops} loops");
             }
         }
 
@@ -115,7 +115,7 @@ namespace Scripts.FSM.Base.StateMachine
 
             guard.HasReachedCurrentPatrolPoint = false;
 
-            Logger.LogDebug($"Guard {guard.name}: Moving to patrol point {guard.CurrentPatrolIndex}, " +
+            MyLogger.LogDebug($"Guard {guard.name}: Moving to patrol point {guard.CurrentPatrolIndex}, " +
                           $"Direction: {(guard.PatrolDirection ? "Forward" : "Backward")}, " +
                           $"Loops: {guard.CurrentPatrolLoops}");
         }

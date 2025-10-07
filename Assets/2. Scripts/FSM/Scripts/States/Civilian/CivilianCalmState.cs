@@ -11,7 +11,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is CivilianController civilian)
             {
                 civilian.CalmDown();
-                Logger.LogDebug($"Civilian {civilian.name}: Entered Calm State");
+                MyLogger.LogDebug($"Civilian {civilian.name}: Entered Calm State");
             }
         }
 
@@ -23,7 +23,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is CivilianController civilian)
             {
-                Logger.LogDebug($"Civilian {civilian.name}: Exited Calm State");
+                MyLogger.LogDebug($"Civilian {civilian.name}: Exited Calm State");
             }
         }
     }

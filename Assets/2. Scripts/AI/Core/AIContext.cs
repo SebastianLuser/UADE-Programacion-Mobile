@@ -1,3 +1,6 @@
+using Services.MicroServices.BlackboardService;
+using Services;
+using Unity.Assertions;
 using UnityEngine;
 
 /// <summary>
@@ -20,7 +23,6 @@ public class AIContext : MonoBehaviour, IAIContext
     [SerializeField] private bool enableDebugLogs = false;
     
     // Component references
-    private IBlackboard blackboard;
     private IPlayerDetector playerDetector;
     private IAIMovementController movementController;
     
@@ -31,6 +33,8 @@ public class AIContext : MonoBehaviour, IAIContext
     private float cachedDistanceToPlayer;
     private Transform cachedPlayerTransform;
     private Transform cachedTarget;
+    
+    private static IBlackboardService BlackboardService => ServiceLocator.Get<IBlackboardService>();
     
     // Multiple target support
     private System.Collections.Generic.Dictionary<string, Transform> targetCache = 
@@ -67,41 +71,26 @@ public class AIContext : MonoBehaviour, IAIContext
     private void InitializeComponents()
     {
         playerDetector = GetComponent<IPlayerDetector>();
-        if (playerDetector == null)
-        {
-            var detectorComponent = gameObject.AddComponent<PlayerDetector>();
-            playerDetector = detectorComponent;
-            
-            if (enableDebugLogs)
-                Logger.LogWarning($"AIContext on {gameObject.name}: PlayerDetector was missing, added automatically");
-        }
+        Assert.IsNotNull(playerDetector);
         
         movementController = GetComponent<IAIMovementController>();
         if (movementController == null && enableDebugLogs)
         {
-            Logger.LogWarning($"AIContext on {gameObject.name}: IAIMovementController not found");
+            MyLogger.LogWarning($"AIContext on {gameObject.name}: IAIMovementController not found");
         }
     }
     
     private void InitializeBlackboardConnection()
     {
-        blackboard = ServiceLocator.Get<IBlackboard>();
-        if (blackboard == null)
-        {
-            Logger.LogError($"AIContext on {gameObject.name}: Blackboard service not found!");
-            enabled = false;
-            return;
-        }
-        
         // Subscribe to relevant blackboard changes for cache invalidation
         if (enableCaching)
         {
-            blackboard.Subscribe<Transform>(BlackboardKeys.PLAYER_TRANSFORM, OnPlayerTransformChanged);
-            blackboard.Subscribe<Vector3>(BlackboardKeys.PLAYER_POSITION, OnPlayerPositionChanged);
+            BlackboardService.Subscribe<Transform>(BlackboardKeys.PLAYER_TRANSFORM, OnPlayerTransformChanged);
+            BlackboardService.Subscribe<Vector3>(BlackboardKeys.PLAYER_POSITION, OnPlayerPositionChanged);
         }
         
         if (enableDebugLogs)
-            Logger.LogInfo($"AIContext on {gameObject.name}: Initialized with personality {personalityType}");
+            MyLogger.LogInfo($"AIContext on {gameObject.name}: Initialized with personality {personalityType}");
     }
     
     #endregion
@@ -113,9 +102,9 @@ public class AIContext : MonoBehaviour, IAIContext
         return transform;
     }
     
-    public IBlackboard GetBlackboard()
+    public IBlackboardService GetBlackboard()
     {
-        return blackboard;
+        return BlackboardService;
     }
     
     public bool IsPlayerVisible()
@@ -154,7 +143,7 @@ public class AIContext : MonoBehaviour, IAIContext
         else
         {
             // Fallback to blackboard
-            cachedPlayerPosition = blackboard?.GetValue<Vector3>(BlackboardKeys.PLAYER_POSITION) ?? Vector3.zero;
+            cachedPlayerPosition = BlackboardService.GetValue<Vector3>(BlackboardKeys.PLAYER_POSITION);
         }
         
         UpdateCacheFrame();
@@ -204,21 +193,21 @@ public class AIContext : MonoBehaviour, IAIContext
         // Primary target (player) - try blackboard first
         if (targetTag == primaryTargetTag)
         {
-            target = blackboard?.GetValue<Transform>(BlackboardKeys.PLAYER_TRANSFORM);
+            target = BlackboardService.GetValue<Transform>(BlackboardKeys.PLAYER_TRANSFORM);
         }
         
         // Fallback to finding by tag
-        if (target == null)
+        if (!target)
         {
             var targetObject = GameObject.FindGameObjectWithTag(targetTag);
-            if (targetObject != null)
+            if (targetObject)
             {
                 target = targetObject.transform;
                 
                 // Update blackboard if this is the primary target
-                if (targetTag == primaryTargetTag && blackboard != null)
+                if (targetTag == primaryTargetTag)
                 {
-                    blackboard.SetValue(BlackboardKeys.PLAYER_TRANSFORM, target);
+                    BlackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, target);
                 }
             }
         }
@@ -295,7 +284,7 @@ public class AIContext : MonoBehaviour, IAIContext
         visibilityCache.Clear();
         
         if (enableDebugLogs)
-            Logger.LogDebug($"AIContext on {gameObject.name}: Cache invalidated");
+            MyLogger.LogDebug($"AIContext on {gameObject.name}: Cache invalidated");
     }
     
     #endregion
@@ -321,7 +310,7 @@ public class AIContext : MonoBehaviour, IAIContext
         InvalidateCache();
         
         if (enableDebugLogs)
-            Logger.LogDebug($"AIContext: Player transform changed, cache invalidated");
+            MyLogger.LogDebug($"AIContext: Player transform changed, cache invalidated");
     }
     
     private void OnPlayerPositionChanged(Vector3 newPosition)
@@ -349,13 +338,10 @@ public class AIContext : MonoBehaviour, IAIContext
             personalityType = newPersonality;
             
             // Update PlayerDetector personality if it supports it
-            if (playerDetector is PlayerDetector detectorComponent)
-            {
-                detectorComponent.SetPersonalityType(newPersonality);
-            }
+            playerDetector.SetPersonalityType(newPersonality);
             
             if (enableDebugLogs)
-                Logger.LogInfo($"AIContext: Personality changed to {newPersonality}");
+                MyLogger.LogInfo($"AIContext: Personality changed to {newPersonality}");
         }
     }
     
@@ -364,9 +350,9 @@ public class AIContext : MonoBehaviour, IAIContext
     /// </summary>
     public DetectionResult GetDetectionResult()
     {
-        if (playerDetector is PlayerDetector detectorComponent)
+        if (playerDetector != null)
         {
-            return detectorComponent.GetCurrentDetectionResult();
+            return playerDetector.GetCurrentDetectionResult();
         }
         
         return DetectionResult.None;
@@ -541,11 +527,10 @@ public class AIContext : MonoBehaviour, IAIContext
     private void OnDestroy()
     {
         // Unsubscribe from blackboard events
-        if (blackboard != null && enableCaching)
-        {
-            blackboard.Unsubscribe<Transform>(BlackboardKeys.PLAYER_TRANSFORM, OnPlayerTransformChanged);
-            blackboard.Unsubscribe<Vector3>(BlackboardKeys.PLAYER_POSITION, OnPlayerPositionChanged);
-        }
+        if (!enableCaching) return;
+        
+        BlackboardService.Unsubscribe<Transform>(BlackboardKeys.PLAYER_TRANSFORM, OnPlayerTransformChanged);
+        BlackboardService.Unsubscribe<Vector3>(BlackboardKeys.PLAYER_POSITION, OnPlayerPositionChanged);
     }
     
     #endregion

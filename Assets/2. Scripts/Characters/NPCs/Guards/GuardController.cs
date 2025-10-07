@@ -1,10 +1,14 @@
 using UnityEngine;
 using Scripts.FSM.Base.StateMachine;
 using System.Collections.Generic;
+using Services.MicroServices.BlackboardService;
 using Game.AI.Steering;
 using Scripts.FSM.Models;
+using Services;
+using Services.MicroServices.UpdateService;
+using Unity.Assertions;
 
-public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementController
+public class GuardController : NPCController, ICombat, IAIMovementController, IUpdateListener
 {
     [SerializeField] private GuardDataSO guardData;
 
@@ -17,7 +21,7 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
 
     // AI System components
     private AIContext aiContext;
-    private IBlackboard blackboard;
+    private IBlackboardService m_blackboardService;
     private IPlayerDetector playerDetector;
 
     // Steering components
@@ -51,7 +55,7 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
         view = GetComponent<NPCView>();
         if (view == null)
         {
-            Logger.LogError($"{gameObject.name}: NPCView component required for NPCController!");
+            MyLogger.LogError($"{gameObject.name}: NPCView component required for NPCController!");
         }
         else
         {
@@ -59,7 +63,8 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
         }
 
         InitializeAISystem();
-        RegisterWithUpdateManager();
+        
+        SubscribeUpdateService();
     }
 
     protected override void InitializeStateMachine()
@@ -68,11 +73,11 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
         {
             stateDataList = guardData.stateDataList;
             stateMachine = new StateMachine(stateDataList, this);
-            Logger.LogInfo($"Guard {gameObject.name}: FSM initialized with {stateDataList.Count} states");
+            MyLogger.LogInfo($"Guard {gameObject.name}: FSM initialized with {stateDataList.Count} states");
         }
         else
         {
-            Logger.LogWarning($"Guard {gameObject.name}: No FSM states configured!");
+            MyLogger.LogWarning($"Guard {gameObject.name}: No FSM states configured!");
         }
     }
 
@@ -88,15 +93,11 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
             }
 
             // Get blackboard service
-            blackboard = ServiceLocator.Get<IBlackboard>();
+            m_blackboardService = ServiceLocator.Get<IBlackboardService>();
 
             // Get player detector
             playerDetector = gameObject.GetComponent<IPlayerDetector>();
-            if (playerDetector == null)
-            {
-                var detectorComponent = gameObject.AddComponent<PlayerDetector>();
-                playerDetector = detectorComponent;
-            }
+            Assert.IsNotNull(playerDetector);
 
             // Configure personality
             if (aiContext != null)
@@ -110,35 +111,17 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
         obstacleAvoidance = new ObstacleAvoidance(transform, guardData.avoidRadius, guardData.avoidAngle, guardData.personalArea, guardData.obstaclesMask);
     }
 
-    private void RegisterWithUpdateManager()
+    private void UpdateAISystem()
     {
-        var updateManager = ServiceLocator.Get<UpdateManager>();
-        if (updateManager != null)
-        {
-            updateManager.RegisterUpdatable(this);
-        }
-    }
-
-    public void OnUpdate(float deltaTime)
-    {
-        if (!IsAlive) return;
-
-        UpdateAISystem(deltaTime);
-        UpdateModelState();
-        UpdatePatrolMovement(deltaTime);
-    }
-
-    private void UpdateAISystem(float deltaTime)
-    {
-        if (guardData.enableNewAISystem && blackboard != null && player != null)
+        if (guardData.enableNewAISystem && m_blackboardService != null && player != null)
         {
             // Update blackboard with current player information
-            blackboard.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
-            blackboard.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
+            m_blackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
+            m_blackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
 
             // Update detection information
             var detectionResult = GetDetectionResult();
-            blackboard.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.level > PlayerDetectionLevel.None);
+            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.level > PlayerDetectionLevel.None);
 
             // Update model with AI state
             if (guardModel != null)
@@ -160,8 +143,7 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
 
     protected void OnDestroy()
     {
-        var updateManager = ServiceLocator.Get<UpdateManager>();
-        updateManager?.UnregisterUpdatable(this);
+        UnsubscribeUpdateService();
     }
 
     #region ICombat Implementation
@@ -184,7 +166,7 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
     {
         if (guardData?.bulletData == null)
         {
-            Logger.LogWarning($"{gameObject.name}: BulletData not assigned, cannot shoot!");
+            MyLogger.LogWarning($"{gameObject.name}: BulletData not assigned, cannot shoot!");
             return;
         }
 
@@ -253,9 +235,9 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
 
     public DetectionResult GetDetectionResult()
     {
-        if (guardData.enableNewAISystem && playerDetector is PlayerDetector detector)
+        if (guardData.enableNewAISystem && playerDetector != null)
         {
-            return detector.GetCurrentDetectionResult();
+            return playerDetector.GetCurrentDetectionResult();
         }
 
         return CanSeePlayerLegacy() ? DetectionResult.Clear : DetectionResult.None;
@@ -586,7 +568,7 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
             MoveTo(guardData.patrolPoints[0].position, guardData.patrolSpeed);
         }
 
-        Logger.LogInfo($"Guard {gameObject.name}: Patrol started with {guardData.patrolPoints.Length} points");
+        MyLogger.LogInfo($"Guard {gameObject.name}: Patrol started with {guardData.patrolPoints.Length} points");
     }
 
     public void StopPatrol()
@@ -598,7 +580,7 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
             {
                 guardModel.UpdateMovementStatus(MovementStatus.Idle);
             }
-            Logger.LogInfo($"Guard {gameObject.name}: Patrol stopped");
+            MyLogger.LogInfo($"Guard {gameObject.name}: Patrol stopped");
         }
     }
 
@@ -618,11 +600,11 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
 
             guardData.patrolPoints = defaultPoints;
 
-            Logger.LogInfo($"Guard {gameObject.name}: Created default patrol points");
+            MyLogger.LogInfo($"Guard {gameObject.name}: Created default patrol points");
         }
     }
 
-    public void UpdatePatrolMovement(float deltaTime)
+    private void UpdatePatrolMovement()
     {
         if (currentMovementStatus != MovementStatus.Patrolling || guardData.patrolPoints == null || guardData.patrolPoints.Length == 0)
             return;
@@ -878,4 +860,23 @@ public class GuardController : NPCController, ICombat, IUpdatable, IAIMovementCo
     }
 
     #endregion
+
+    public void MyUpdate()
+    {
+        if (!IsAlive) return;
+
+        UpdateAISystem();
+        UpdateModelState();
+        UpdatePatrolMovement();
+    }
+
+    public void SubscribeUpdateService()
+    {
+        ServiceLocator.Get<IUpdateService>().AddUpdateListener(this);
+    }
+
+    public void UnsubscribeUpdateService()
+    {
+        ServiceLocator.Get<IUpdateService>().RemoveUpdateListener(this);
+    }
 }

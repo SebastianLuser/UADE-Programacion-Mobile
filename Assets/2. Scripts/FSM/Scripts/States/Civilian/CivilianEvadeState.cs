@@ -16,7 +16,7 @@ namespace Scripts.FSM.Base.StateMachine
                 civilian.SetCurrentMaxSpeed(civilian.EvadeSpeed);
 
                 if (civilian.EnableDebugLogs)
-                    Logger.LogInfo($"Civilian {civilian.name}: Entered Evade State - Evading for {civilian.EvadeTime:F2}s at speed {civilian.EvadeSpeed:F1}");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Entered Evade State - Evading for {civilian.EvadeTime:F2}s at speed {civilian.EvadeSpeed:F1}");
             }
         }
 
@@ -34,7 +34,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is Civilian civilian)
             {
                 if (civilian.EnableDebugLogs)
-                    Logger.LogInfo($"Civilian {civilian.name}: Exited Evade State - Timer expired, transitioning to Flee");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Exited Evade State - Timer expired, transitioning to Flee");
             }
         }
 

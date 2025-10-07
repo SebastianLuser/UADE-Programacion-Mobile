@@ -1,3 +1,4 @@
+using Services.MicroServices.BlackboardService;
 using UnityEngine;
 
 public class GuardModel : NPCModel

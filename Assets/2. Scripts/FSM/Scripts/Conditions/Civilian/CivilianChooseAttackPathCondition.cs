@@ -21,7 +21,7 @@ public class CivilianChooseAttackPathCondition : StateCondition
 
             if (civilian.EnableDebugLogs)
             {
-                Logger.LogInfo($"Civilian {civilian.name}: Roulette decision - Roll: {r:F3}, " +
+                MyLogger.LogInfo($"Civilian {civilian.name}: Roulette decision - Roll: {r:F3}, " +
                     $"Escape Weight: {civilian.EscapeWeight}, Attack Weight: {civilian.AttackWeight}, " +
                     $"Choose: {(chooseAttack ? "ATTACK" : "ESCAPE")}");
             }

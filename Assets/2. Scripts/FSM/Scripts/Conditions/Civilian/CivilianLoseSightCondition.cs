@@ -15,7 +15,7 @@ public class CivilianLoseSightCondition : StateCondition
             
             if (shouldAbort && civilian.EnableDebugLogs)
             {
-                Logger.LogInfo($"Civilian {civilian.name}: LoseSightCondition triggered abort - " +
+                MyLogger.LogInfo($"Civilian {civilian.name}: LoseSightCondition triggered abort - " +
                     $"LoseSight timer: {civilian.PursuitLoseSightTimer:F2}s, Grace: {civilian.AttackLoseSightGrace:F2}s");
             }
             

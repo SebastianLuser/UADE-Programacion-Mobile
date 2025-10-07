@@ -23,7 +23,7 @@ namespace Scripts.FSM.Base.StateMachine
                 civilian.SetAttackColor();
 
                 if (civilian.EnableDebugLogs)
-                    Logger.LogInfo($"Civilian {civilian.name}: Entered Attack Melee State - Starting windup phase");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Entered Attack Melee State - Starting windup phase");
             }
         }
 
@@ -35,7 +35,7 @@ namespace Scripts.FSM.Base.StateMachine
                 if (!civilian.HasLoS())
                 {
                     if (civilian.EnableDebugLogs)
-                        Logger.LogInfo($"Civilian {civilian.name}: Lost sight during attack, aborting");
+                        MyLogger.LogInfo($"Civilian {civilian.name}: Lost sight during attack, aborting");
                     
                     // Will transition to Idle
                     return;
@@ -64,7 +64,7 @@ namespace Scripts.FSM.Base.StateMachine
                 didHit = false;
 
                 if (civilian.EnableDebugLogs)
-                    Logger.LogInfo($"Civilian {civilian.name}: Exited Attack Melee State - Restoring original color");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Exited Attack Melee State - Restoring original color");
             }
         }
 
@@ -102,13 +102,13 @@ namespace Scripts.FSM.Base.StateMachine
                     // Windup phase
                     if (Mathf.FloorToInt(attackTimer * 10) != Mathf.FloorToInt((attackTimer - Time.deltaTime) * 10))
                     {
-                        Logger.LogInfo($"Civilian {civilian.name}: Windup phase - {attackTimer:F2}s / {windupEnd:F2}s");
+                        MyLogger.LogInfo($"Civilian {civilian.name}: Windup phase - {attackTimer:F2}s / {windupEnd:F2}s");
                     }
                 }
                 else if (attackTimer <= hitWindowEnd && !didHit)
                 {
                     // Hit window
-                    Logger.LogInfo($"Civilian {civilian.name}: Hit window active - {(attackTimer - windupEnd):F2}s / {civilian.AttackHitWin:F2}s");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Hit window active - {(attackTimer - windupEnd):F2}s / {civilian.AttackHitWin:F2}s");
                 }
             }
 
@@ -124,7 +124,7 @@ namespace Scripts.FSM.Base.StateMachine
                     didHit = true;
 
                     if (civilian.EnableDebugLogs)
-                        Logger.LogInfo($"Civilian {civilian.name}: HIT! Dealt {civilian.MeleeDamage} damage (distance: {distanceToPlayer:F2})");
+                        MyLogger.LogInfo($"Civilian {civilian.name}: HIT! Dealt {civilian.MeleeDamage} damage (distance: {distanceToPlayer:F2})");
                 }
             }
 
@@ -132,7 +132,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (attackTimer >= totalAttackTime)
             {
                 if (civilian.EnableDebugLogs)
-                    Logger.LogInfo($"Civilian {civilian.name}: Attack cycle complete after {attackTimer:F2}s");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Attack cycle complete after {attackTimer:F2}s");
                 
                 // Will transition to Idle via AttackCompleteCondition
             }

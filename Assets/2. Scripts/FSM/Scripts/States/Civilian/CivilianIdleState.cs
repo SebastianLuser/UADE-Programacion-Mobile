@@ -16,7 +16,7 @@ namespace Scripts.FSM.Base.StateMachine
                 civilian.SetCurrentMaxSpeed(civilian.WalkSpeed);
 
                 if (civilian.EnableDebugLogs)
-                    Logger.LogInfo($"Civilian {civilian.name}: Entered Idle State - Will idle for {civilian.IdleSecondsAfterSafe} seconds");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Entered Idle State - Will idle for {civilian.IdleSecondsAfterSafe} seconds");
             }
         }
 
@@ -46,7 +46,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is Civilian civilian)
             {
                 if (civilian.EnableDebugLogs)
-                    Logger.LogInfo($"Civilian {civilian.name}: Exited Idle State");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Exited Idle State");
             }
         }
 

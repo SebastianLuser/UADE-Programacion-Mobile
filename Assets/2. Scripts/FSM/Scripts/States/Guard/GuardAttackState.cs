@@ -11,7 +11,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Entered Attack State - Engaging player");
+                MyLogger.LogDebug($"Guard {guard.name}: Entered Attack State - Engaging player");
             }
         }
 
@@ -27,7 +27,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Exited Attack State");
+                MyLogger.LogDebug($"Guard {guard.name}: Exited Attack State");
             }
         }
 

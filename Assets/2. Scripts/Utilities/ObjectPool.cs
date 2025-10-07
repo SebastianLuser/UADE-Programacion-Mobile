@@ -68,7 +68,7 @@ public class ObjectPool<T> where T : Component
         {
             if (TotalCount >= maxSize)
             {
-                Logger.LogWarning($"ObjectPool<{typeof(T).Name}>: Creating object beyond max size!");
+                MyLogger.LogWarning($"ObjectPool<{typeof(T).Name}>: Creating object beyond max size!");
             }
             obj = UnityEngine.Object.Instantiate(prefab, parent);
             obj.name = $"{prefab.name}_Pooled_{TotalCount}";
@@ -94,7 +94,7 @@ public class ObjectPool<T> where T : Component
         
         if (!activeObjects.Contains(obj))
         {
-            Logger.LogWarning($"ObjectPool<{typeof(T).Name}>: Trying to return object that wasn't from this pool!");
+            MyLogger.LogWarning($"ObjectPool<{typeof(T).Name}>: Trying to return object that wasn't from this pool!");
             return;
         }
         

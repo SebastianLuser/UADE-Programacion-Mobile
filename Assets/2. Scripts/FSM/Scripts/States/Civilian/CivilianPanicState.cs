@@ -11,7 +11,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is CivilianController civilian)
             {
                 civilian.StartPanicking();
-                Logger.LogDebug($"Civilian {civilian.name}: Entered Panic State");
+                MyLogger.LogDebug($"Civilian {civilian.name}: Entered Panic State");
             }
         }
 
@@ -27,7 +27,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is CivilianController civilian)
             {
-                Logger.LogDebug($"Civilian {civilian.name}: Exited Panic State");
+                MyLogger.LogDebug($"Civilian {civilian.name}: Exited Panic State");
             }
         }
     }

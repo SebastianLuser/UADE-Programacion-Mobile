@@ -18,7 +18,7 @@ public class MainCharacter : Character, ICombat
         
         if (rb == null)
         {
-            Logger.LogError($"{gameObject.name}: Rigidbody component required for MainCharacter2!");
+            MyLogger.LogError($"{gameObject.name}: Rigidbody component required for MainCharacter2!");
         }
     }
     
@@ -52,7 +52,7 @@ public class MainCharacter : Character, ICombat
     {
         if (BulletData == null)
         {
-            Logger.LogWarning($"{gameObject.name}: BulletData not assigned, cannot shoot!");
+            MyLogger.LogWarning($"{gameObject.name}: BulletData not assigned, cannot shoot!");
             return;
         }
         
