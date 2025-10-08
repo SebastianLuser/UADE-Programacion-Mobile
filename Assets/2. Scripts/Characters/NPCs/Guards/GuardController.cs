@@ -5,6 +5,7 @@ using Services.MicroServices.BlackboardService;
 using Game.AI.Steering;
 using Scripts.FSM.Models;
 using Services;
+using Services.MicroServices.PoolObjectsService;
 using Services.MicroServices.UpdateService;
 using Unity.Assertions;
 
@@ -42,6 +43,8 @@ public class GuardController : NPCController, ICombat, IAIMovementController, IU
     // Callbacks
     public System.Action OnMovementComplete { get; set; }
     public System.Action OnMovementBlocked { get; set; }
+    
+    private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
 
     protected override void InitializeComponents()
     {
@@ -162,7 +165,7 @@ public class GuardController : NPCController, ICombat, IAIMovementController, IU
         return model.RuntimeState.stateTimer >= characterData.shootCooldown;
     }
 
-    private void CreateBullet(Vector3 direction)
+    private void CreateBullet(Vector3 p_direction)
     {
         if (guardData?.bulletData == null)
         {
@@ -170,12 +173,17 @@ public class GuardController : NPCController, ICombat, IAIMovementController, IU
             return;
         }
 
-        var poolService = ServiceLocator.Get<ObjectPoolService>();
-        if (poolService != null)
-        {
-            Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            poolService.GetBullet(spawnPosition, direction, guardData.bulletData.speed, true);
-        }
+        
+        var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
+        var l_bullet = PoolObjectsService.GetOrCreateObject(guardData.bulletData.Prefab);
+        l_bullet.OnDeactivate += OnDeactivateBulletHandler;
+        l_bullet.InitializeBullet(guardData.bulletData, l_spawnPosition, p_direction);
+    }
+
+    private static void OnDeactivateBulletHandler(BulletObject p_bullet)
+    {
+        p_bullet.OnDeactivate -= OnDeactivateBulletHandler;
+        PoolObjectsService.ReturnObject(p_bullet);
     }
 
     public bool PlayerInAttackRange()

@@ -1,82 +1,94 @@
+using System;
+using ScriptableObjects.Bullets;
+using Services;
+using Services.MicroServices.UpdateService;
 using UnityEngine;
 
-public class BulletObject : MonoBehaviour, IPoolable
+[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(Renderer))]
+public class BulletObject : MonoBehaviour, IUpdateListener
 {
-    private BulletLogic bulletLogic;
-    private Rigidbody rb;
-    private Renderer bulletRenderer;
+    private BulletData m_bulletData;
+    private Vector3 m_direction;
+    private float m_timer;
+    private bool m_isActive;
+
+    private Rigidbody m_rb;
+    private Renderer m_bulletRenderer;
+
+    public event Action<BulletObject> OnDeactivate;
     
+    private static IUpdateService UpdateService => ServiceLocator.Get<IUpdateService>();
+
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
-        bulletRenderer = GetComponent<Renderer>();
-        bulletLogic = new BulletLogic(this);
+        m_rb = GetComponent<Rigidbody>();
+        m_bulletRenderer = GetComponent<Renderer>();
     }
-    
-    public void InitializeBullet(Vector3 shootDirection, float damage, object pool = null, bool isEnemyBullet = false)
+
+    public void InitializeBullet(BulletData p_bulletData, Vector3 p_spawnPoint, Vector3 p_shootDirection)
     {
-        bulletLogic?.Initialize(shootDirection, damage, pool, isEnemyBullet);
+        transform.position = p_spawnPoint;
+        
+        gameObject.layer = m_bulletData.Layer;
+        m_bulletData = p_bulletData;
+        m_direction = p_shootDirection.normalized;
+        m_timer = 0f;
+        m_isActive = true;
+        
+        m_rb.useGravity = m_bulletData.UseGravity;
+        m_rb.linearVelocity = m_direction * m_bulletData.Speed;
+        m_bulletRenderer.material.color = m_bulletData.Color;
+
+        SubscribeUpdateService();
+        
+        gameObject.SetActive(true);
     }
-    
-    public void SetVelocity(Vector3 velocity)
+
+    private void OnTriggerEnter(Collider p_other)
     {
-        if (rb != null)
+        if (!m_isActive)
+            return;
+
+        if (!p_other.TryGetComponent<ICharacter>(out var l_character))
+            return;
+
+        if (l_character.GameObject == gameObject)
+            return;
+
+        l_character.TakeDamage(m_bulletData.Damage);
+        Deactivate();
+    }
+
+    private void Deactivate()
+    {
+        m_rb.linearVelocity = Vector3.zero;
+        m_rb.angularVelocity = Vector3.zero;
+        
+        UnsubscribeUpdateService();
+        
+        gameObject.SetActive(false);
+        OnDeactivate?.Invoke(this);
+    }
+
+    public void MyUpdate()
+    {
+        if (!m_isActive) return;
+
+        m_timer += Time.deltaTime;
+        if (m_timer >= m_bulletData.Lifetime)
         {
-            rb.linearVelocity = velocity;
+            Deactivate();
         }
     }
-    
-    public void SetColor(Color color)
+
+    public void SubscribeUpdateService()
     {
-        if (bulletRenderer != null && bulletRenderer.material != null)
-        {
-            bulletRenderer.material.color = color;
-        }
+        UpdateService.AddUpdateListener(this);
     }
-    
-    public void Reset()
+
+    public void UnsubscribeUpdateService()
     {
-        if (rb != null)
-        {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-        }
+        UpdateService.RemoveUpdateListener(this);
     }
-    
-    private void OnTriggerEnter(Collider other)
-    {
-        bulletLogic?.OnTriggerEnter(other);
-    }
-    
-    private void OnDisable()
-    {
-        bulletLogic?.Reset();
-    }
-    
-    public BulletLogic GetLogic()
-    {
-        return bulletLogic;
-    }
-    
-    #region IPoolable Implementation
-    
-    public void OnPoolGet()
-    {
-        // Reset state when retrieved from pool
-        Reset();
-    }
-    
-    public void OnPoolReturn()
-    {
-        // Clean up when returning to pool
-        Reset();
-    }
-    
-    public void OnPoolDestroy()
-    {
-        // Cleanup when pool is destroyed
-        bulletLogic?.Reset();
-    }
-    
-    #endregion
 }

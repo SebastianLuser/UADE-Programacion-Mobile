@@ -1,3 +1,6 @@
+using ScriptableObjects.Bullets;
+using Services;
+using Services.MicroServices.PoolObjectsService;
 using UnityEngine;
 
 public class MainCharacter : Character, ICombat
@@ -9,7 +12,9 @@ public class MainCharacter : Character, ICombat
     private Vector3 lastMoveDirection;
     
     private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData.rotationSpeed;
-    private BulletDataSO BulletData => mainCharacterData?.bulletData;
+    private BulletData BulletData => mainCharacterData?.bulletData;
+
+    private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
     
     protected override void Awake()
     {
@@ -48,39 +53,25 @@ public class MainCharacter : Character, ICombat
         return Time.time >= lastShootTime + characterData.shootCooldown;
     }
     
-    private void CreateBullet(Vector3 direction)
+    private void CreateBullet(Vector3 p_direction)
     {
         if (BulletData == null)
         {
             MyLogger.LogWarning($"{gameObject.name}: BulletData not assigned, cannot shoot!");
             return;
         }
-        
-        var poolService = ServiceLocator.Get<ObjectPoolService>();
-        if (poolService != null)
-        {
-            Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            poolService.GetBullet(spawnPosition, direction, BulletData.speed, false);
-        }
-        else
-        {
-            // Fallback creation
-            GameObject bulletObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            bulletObj.name = "PlayerBullet";
-            bulletObj.transform.position = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            bulletObj.transform.localScale = BulletData.scale;
-            
-            var bulletRb = bulletObj.AddComponent<Rigidbody>();
-            bulletRb.useGravity = BulletData.useGravity;
-            
-            var bulletCollider = bulletObj.GetComponent<Collider>();
-            bulletCollider.isTrigger = BulletData.isTrigger;
-            
-            var bulletObject = bulletObj.AddComponent<BulletObject>();
-            bulletObject.InitializeBullet(direction, BulletData.speed, null);
-        }
+        var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
+        var l_bullet = PoolObjectsService.GetOrCreateObject(BulletData.Prefab);
+        l_bullet.OnDeactivate += OnDeactivateBulletHandler;
+        l_bullet.InitializeBullet(BulletData, l_spawnPosition, p_direction);
     }
-    
+
+    private static void OnDeactivateBulletHandler(BulletObject p_bullet)
+    {
+        p_bullet.OnDeactivate -= OnDeactivateBulletHandler;
+        PoolObjectsService.ReturnObject(p_bullet);
+    }
+
     public void HandleInput(Vector2 movementInput, Vector3 shootDirection)
     {
         Vector3 movement = new Vector3(movementInput.x, 0, movementInput.y);

@@ -1,6 +1,7 @@
 using UnityEngine;
 using Scripts.FSM.Models;
 using System.Collections.Generic;
+using ScriptableObjects.Bullets;
 using Scripts.FSM.Base.StateMachine;
 
 [CreateAssetMenu(fileName = "GuardData", menuName = "Game Data/Guard Data")]
@@ -9,7 +10,7 @@ public class GuardDataSO : NPCDataSO
     [Header("Guard Combat")]
     [field: SerializeField] public float attackRange { get; private set; } = 2f;
     [field: SerializeField] public float chaseSpeed { get; private set; } = 4f;
-    [field: SerializeField] public BulletDataSO bulletData { get; private set; }
+    [field: SerializeField] public BulletData bulletData { get; private set; }
 
     [Header("FSM Patrol Settings")]
     [field: SerializeField] public int loopsToIdle { get; private set; } = 3;

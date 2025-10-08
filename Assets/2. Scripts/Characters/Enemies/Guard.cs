@@ -4,6 +4,7 @@ using Game.AI.Steering;
 using Scripts.FSM.Base.StateMachine;
 using Scripts.FSM.Models;
 using System.Collections.Generic;
+using ScriptableObjects.Bullets;
 using Services.MicroServices.BlackboardService;
 using Services;
 using Services.MicroServices.PoolObjectsService;
@@ -24,6 +25,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float searchTime = 5f;
     [SerializeField] private float baseRotationSpeed = 2f;
     [SerializeField] private Transform[] patrolPoints;
+    [SerializeField] private BulletData bulletData;
 
     [Header("FSM Patrol Settings")]
     [SerializeField] private int loopsToIdle = 3;
@@ -146,7 +148,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public float SlowingDistance => slowingDistance;
     public Vector3 CurrentVelocity => _vel;
     
-    private static IPoolObjectsService PoolService => ServiceLocator.Get<IPoolObjectsService>();
+    private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
     
     // MEJORA: Improved player detection using new AI system
     public bool CanSeePlayer()
@@ -617,14 +619,20 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         }
     }
     
-    private void CreateBullet(Vector3 direction)
+    private void CreateBullet(Vector3 p_direction)
     {
-        var l_bulletObject = PoolService.GetOrCreateObject(new BulletObject());
-        
-        Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-        l_bulletObject.InitializeBullet(spawnPosition, direction, 15f, true);
+        var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
+        var l_bullet = PoolObjectsService.GetOrCreateObject(bulletData.Prefab);
+        l_bullet.OnDeactivate += OnDeactivateBulletHandler;
+        l_bullet.InitializeBullet(bulletData, l_spawnPosition, p_direction);
     }
-    
+
+    private void OnDeactivateBulletHandler(BulletObject p_bullet)
+    {
+        p_bullet.OnDeactivate -= OnDeactivateBulletHandler;
+        PoolObjectsService.ReturnObject(p_bullet);
+    }
+
     #region AI System Integration
     
     public Transform GetModelTransform()
