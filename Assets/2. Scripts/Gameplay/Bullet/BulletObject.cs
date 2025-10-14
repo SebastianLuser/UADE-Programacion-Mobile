@@ -30,7 +30,6 @@ public class BulletObject : MonoBehaviour, IUpdateListener
     {
         transform.position = p_spawnPoint;
         
-        gameObject.layer = m_bulletData.Layer;
         m_bulletData = p_bulletData;
         m_direction = p_shootDirection.normalized;
         m_timer = 0f;
@@ -69,6 +68,11 @@ public class BulletObject : MonoBehaviour, IUpdateListener
         
         gameObject.SetActive(false);
         OnDeactivate?.Invoke(this);
+    }
+
+    private void OnDestroy()
+    {
+        UnsubscribeUpdateService();
     }
 
     public void MyUpdate()

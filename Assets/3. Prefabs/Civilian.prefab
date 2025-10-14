@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 7334342890094295658}
   - component: {fileID: 5530342794880807582}
   - component: {fileID: 3235429135408269940}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Capsule
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -125,7 +125,9 @@ GameObject:
   - component: {fileID: 3626126602017014991}
   - component: {fileID: 8139127855138544854}
   - component: {fileID: 7910034802265952309}
-  m_Layer: 0
+  - component: {fileID: 2787530440254539783}
+  - component: {fileID: 2455480742055487471}
+  m_Layer: 8
   m_Name: Civilian
   m_TagString: Civilian
   m_Icon: {fileID: 0}
@@ -250,3 +252,66 @@ MonoBehaviour:
   useDecisionTree: 1
   enableDebugLogs: 1
   canAttack: 0
+--- !u!114 &2787530440254539783
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5023397492663896809}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edcc045ebe5b906459e9128a7e35c3b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerDetector
+  config:
+    detectionRange: 7.2
+    fieldOfView: 75
+    fovAngle: 75
+    eyeHeight: 1.6
+    detectionHeight: 1.6
+    updateRate: 0.12
+    useCache: 1
+    raycastDensity: 3
+    smoothTime: 0.5
+    peripheralThreshold: 0.8
+    partialThreshold: 0.6
+    clearThreshold: 0.3
+    immediateThreshold: 0.1
+    usePeripheralVision: 1
+    peripheralMultiplier: 0.5
+    useLightingAffection: 0
+    useNoiseDection: 0
+    obstacleLayerMask:
+      serializedVersion: 2
+      m_Bits: 1
+    playerLayerMask:
+      serializedVersion: 2
+      m_Bits: 64
+    playerTag: Player
+  personalityType: 1
+  autoConfigureFromPersonality: 1
+  useFrameCaching: 1
+  maxCacheFrames: 3
+  showDebugRays: 1
+  showGizmos: 1
+  enableDetectionLogs: 0
+  showDetectionInfo: 1
+--- !u!114 &2455480742055487471
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5023397492663896809}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6591ade87e542bd40ac6ab0185ea3a5e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CivilianDecisionTreeRunner
+  evaluationInterval: 0.15
+  alertChanceWhenNoLoS: 0.5
+  resumeSuggestion: Idle
+  alertCooldown: 2
+  postHitFleeTime: 1.2
+  debugDT: 1

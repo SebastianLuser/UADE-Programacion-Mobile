@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Services.MicroServices.BlackboardService;
 using Services.MicroServices.EventsServices;
+using Services.MicroServices.GameStateService;
 using Services.MicroServices.PersistanceService;
 using Services.MicroServices.PoolObjectsService;
 using Services.MicroServices.UpdateService;
@@ -41,6 +42,7 @@ namespace Services
             Register<IUserDataService, UserDataService>();
             Register<IUpdateService, UpdateService>();
             Register<IPoolObjectsService, PoolObjectsService>();
+            Register<IGameStateService, GameStateService>();
             Register<IBlackboardService, BlackboardService>(true);
         }
 

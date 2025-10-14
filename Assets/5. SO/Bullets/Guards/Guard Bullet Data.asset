@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10a721b7239043db8c0df40cff4b3508, type: 3}
+  m_Name: Guard Bullet Data
+  m_EditorClassIdentifier: Assembly-CSharp::ScriptableObjects.Bullets.BulletData
+  <Prefab>k__BackingField: {fileID: 3499885524630990997, guid: 05dba19c08d7e7b4aa7bbf69e8ac5a4a,
+    type: 3}
+  <Speed>k__BackingField: 10
+  <Damage>k__BackingField: 25
+  <Lifetime>k__BackingField: 5
+  <Layer>k__BackingField:
+    serializedVersion: 2
+    m_Bits: 1024
+  <Color>k__BackingField: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  <UseGravity>k__BackingField: 0

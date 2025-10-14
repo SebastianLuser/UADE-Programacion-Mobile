@@ -14,6 +14,7 @@ public class AIContext : MonoBehaviour, IAIContext
     [Header("AI Configuration")]
     [SerializeField] private AIPersonalityType personalityType = AIPersonalityType.Conservative;
     [SerializeField] private string primaryTargetTag = "Player";
+    [SerializeField] private PlayerDetector playerDetector;
     
     [Header("Performance")]
     [SerializeField] private bool enableCaching = true;
@@ -23,7 +24,6 @@ public class AIContext : MonoBehaviour, IAIContext
     [SerializeField] private bool enableDebugLogs = false;
     
     // Component references
-    private IPlayerDetector playerDetector;
     private IAIMovementController movementController;
     
     // Cache system
@@ -49,10 +49,6 @@ public class AIContext : MonoBehaviour, IAIContext
     private void Awake()
     {
         InitializeComponents();
-    }
-    
-    private void Start()
-    {
         InitializeBlackboardConnection();
     }
     
@@ -70,7 +66,6 @@ public class AIContext : MonoBehaviour, IAIContext
     
     private void InitializeComponents()
     {
-        playerDetector = GetComponent<IPlayerDetector>();
         Assert.IsNotNull(playerDetector);
         
         movementController = GetComponent<IAIMovementController>();
