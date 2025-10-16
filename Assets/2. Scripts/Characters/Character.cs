@@ -27,7 +27,7 @@ public abstract class Character : MonoBehaviour, ICharacter2
         else
         {
             currentHealth = 100f;
-            Logger.LogWarning($"{gameObject.name}: No CharacterDataSO assigned, using default values");
+            MyLogger.LogWarning($"{gameObject.name}: No CharacterDataSO assigned, using default values");
         }
         
         isAlive = true;

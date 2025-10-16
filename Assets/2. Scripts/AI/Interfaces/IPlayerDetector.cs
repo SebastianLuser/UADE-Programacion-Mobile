@@ -1,3 +1,4 @@
+using Services.MicroServices.BlackboardService;
 using UnityEngine;
 
 /// <summary>
@@ -86,4 +87,7 @@ public interface IPlayerDetector
     /// MEJORA: Obtener información de debug para visualización en editor
     /// </summary>
     (Vector3 position, float range, float fov, bool hasLOS) GetDebugInfo();
+
+    public void SetPersonalityType(AIPersonalityType p_newPersonality);
+    public DetectionResult GetCurrentDetectionResult();
 }

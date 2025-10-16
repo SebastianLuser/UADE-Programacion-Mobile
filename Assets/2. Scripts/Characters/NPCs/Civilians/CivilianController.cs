@@ -44,7 +44,7 @@ public class CivilianController : NPCController
     public void StartPanicking()
     {
         model?.RuntimeState.ResetStateTimer();
-        Logger.LogDebug($"{gameObject.name}: Started panicking!");
+        MyLogger.LogDebug($"{gameObject.name}: Started panicking!");
     }
 
     public void FleeFromPlayer()
@@ -63,7 +63,7 @@ public class CivilianController : NPCController
     {
         model?.RuntimeState.ResetStateTimer();
         StopMovement();
-        Logger.LogDebug($"{gameObject.name}: Calmed down");
+        MyLogger.LogDebug($"{gameObject.name}: Calmed down");
     }
 
     protected override void UpdateDetection()

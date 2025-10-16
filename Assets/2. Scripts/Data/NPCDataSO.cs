@@ -1,3 +1,4 @@
+using Services.MicroServices.BlackboardService;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NPCData", menuName = "Game Data/NPC Data")]

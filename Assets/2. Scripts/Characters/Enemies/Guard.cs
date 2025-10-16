@@ -1,11 +1,18 @@
+using System;
 using UnityEngine;
 using Game.AI.Steering;
 using Scripts.FSM.Base.StateMachine;
 using Scripts.FSM.Models;
 using System.Collections.Generic;
+using ScriptableObjects.Bullets;
+using Services.MicroServices.BlackboardService;
+using Services;
+using Services.MicroServices.PoolObjectsService;
+using Services.MicroServices.UpdateService;
+using Unity.Assertions;
 
 //todo revisar pasar a MVC
-public class Guard : BaseCharacter, IUpdatable, IUseFsm
+public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 {
     //todo utilizar scriptable object
     [Header("Guard Settings")]
@@ -18,6 +25,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     [SerializeField] private float searchTime = 5f;
     [SerializeField] private float baseRotationSpeed = 2f;
     [SerializeField] private Transform[] patrolPoints;
+    [SerializeField] private BulletData bulletData;
 
     [Header("FSM Patrol Settings")]
     [SerializeField] private int loopsToIdle = 3;
@@ -56,7 +64,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     
     // AI System components
     private AIContext aiContext;
-    private IBlackboard blackboard;
+    private IBlackboardService m_blackboardService;
     private IPlayerDetector playerDetector;
 
     // Steering components
@@ -130,7 +138,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     
     // AI System access
     public AIContext AIContext => aiContext;
-    public IBlackboard Blackboard => blackboard;
+    public IBlackboardService BlackboardService => m_blackboardService;
     public AIPersonalityType PersonalityType => personalityType;
 
     // Steering Physics access
@@ -139,6 +147,8 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     public float MaxSpeed => maxSpeed;
     public float SlowingDistance => slowingDistance;
     public Vector3 CurrentVelocity => _vel;
+    
+    private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
     
     // MEJORA: Improved player detection using new AI system
     public bool CanSeePlayer()
@@ -155,9 +165,9 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     // MEJORA: Get advanced detection information
     public DetectionResult GetDetectionResult()
     {
-        if (enableNewAISystem && playerDetector is PlayerDetector detector)
+        if (enableNewAISystem && playerDetector != null)
         {
-            return detector.GetCurrentDetectionResult();
+            return playerDetector.GetCurrentDetectionResult();
         }
         
         return CanSeePlayerLegacy() ? DetectionResult.Clear : DetectionResult.None;
@@ -184,8 +194,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         InitializeAISystem();
         SetupPatrolPoints();
         
-        var updateManager = ServiceLocator.Get<UpdateManager>();
-        updateManager?.RegisterUpdatable(this);
+        SubscribeUpdateService();
         
         // Start patrolling after a frame to ensure everything is initialized
         StartCoroutine(StartPatrolAfterFrame());
@@ -194,42 +203,8 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     private System.Collections.IEnumerator StartPatrolAfterFrame()
     {
         yield return null; // Wait one frame
-        Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Starting patrol after frame delay");
-        
-        // Try to register with UpdateManager again (in case it wasn't available during Awake)
-        var updateManager = ServiceLocator.Get<UpdateManager>();
-        if (updateManager != null)
-        {
-            updateManager.RegisterUpdatable(this);
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Successfully registered with UpdateManager");
-        }
-        else
-        {
-            Logger.LogWarning($"[PATROL DEBUG] {gameObject.name}: UpdateManager still not available, starting coroutine to wait for it");
-            StartCoroutine(WaitForUpdateManager());
-        }
         
         StartPatrol();
-    }
-    
-    private System.Collections.IEnumerator WaitForUpdateManager()
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(0.5f); // Check every half second
-            
-            var updateManager = ServiceLocator.Get<UpdateManager>();
-            if (updateManager != null)
-            {
-                updateManager.RegisterUpdatable(this);
-                Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Successfully registered with UpdateManager after waiting");
-                break;
-            }
-            else
-            {
-                Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Still waiting for UpdateManager...");
-            }
-        }
     }
     
     private void InitializeAISystem()
@@ -238,27 +213,18 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         {
             // Initialize AI Context
             aiContext = gameObject.GetComponent<AIContext>();
-            if (aiContext == null)
-            {
-                aiContext = gameObject.AddComponent<AIContext>();
-                Logger.LogInfo($"Guard {gameObject.name}: Added AIContext component");
-            }
+            Assert.IsNotNull(aiContext);
 
             // Get blackboard service
-            blackboard = ServiceLocator.Get<IBlackboard>();
-            if (blackboard == null)
+            m_blackboardService = ServiceLocator.Get<IBlackboardService>();
+            if (m_blackboardService == null)
             {
-                Logger.LogWarning($"Guard {gameObject.name}: Blackboard service not available yet");
+                MyLogger.LogWarning($"Guard {gameObject.name}: Blackboard service not available yet");
             }
 
             // Get player detector
             playerDetector = gameObject.GetComponent<IPlayerDetector>();
-            if (playerDetector == null)
-            {
-                var detectorComponent = gameObject.AddComponent<PlayerDetector>();
-                playerDetector = detectorComponent;
-                Logger.LogInfo($"Guard {gameObject.name}: Added PlayerDetector component");
-            }
+            Assert.IsNotNull(playerDetector);
 
             // Configure personality
             if (aiContext != null)
@@ -275,7 +241,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         if (maxSpeed < chaseSpeed)
         {
             maxSpeed = chaseSpeed * 1.2f; // Give some headroom
-            Logger.LogInfo($"Guard {gameObject.name}: Adjusted maxSpeed to {maxSpeed} to match chaseSpeed");
+            MyLogger.LogInfo($"Guard {gameObject.name}: Adjusted maxSpeed to {maxSpeed} to match chaseSpeed");
         }
 
         // Initialize FSM
@@ -287,11 +253,11 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         if (useFSM && stateDataList != null && stateDataList.Count > 0)
         {
             stateMachine = new StateMachine(stateDataList, this);
-            Logger.LogInfo($"Guard {gameObject.name}: FSM initialized with {stateDataList.Count} states");
+            MyLogger.LogInfo($"Guard {gameObject.name}: FSM initialized with {stateDataList.Count} states");
         }
         else
         {
-            Logger.LogWarning($"Guard {gameObject.name}: FSM not initialized - useFSM: {useFSM}, stateDataList count: {stateDataList?.Count ?? 0}");
+            MyLogger.LogWarning($"Guard {gameObject.name}: FSM not initialized - useFSM: {useFSM}, stateDataList count: {stateDataList?.Count ?? 0}");
         }
     }
     
@@ -305,9 +271,9 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         yield return null;
         
         // Ensure blackboard connection is established
-        if (enableNewAISystem && blackboard == null)
+        if (enableNewAISystem && m_blackboardService == null)
         {
-            blackboard = ServiceLocator.Get<IBlackboard>();
+            m_blackboardService = ServiceLocator.Get<IBlackboardService>();
         }
         
         // Find player if not set
@@ -323,27 +289,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     
     public void OnUpdate(float deltaTime)
     {
-        if (!isAlive) return;
-
-        // Add debug log with reduced frequency to avoid spam
-        if (Time.frameCount % 60 == 0) // Log every 60 frames (about once per second at 60fps)
-        {
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: OnUpdate is being called - Frame {Time.frameCount}");
-        }
-
-        UpdateAISystem(deltaTime);
-
-        // Run FSM if enabled, otherwise use legacy movement system
-        if (useFSM && stateMachine != null)
-        {
-            stateMachine.RunStateMachine();
-            // In FSM mode, states handle their own timers - don't auto-increment
-        }
-        else
-        {
-            UpdateMovementSystem(deltaTime);
-            stateTimer += deltaTime; // Keep timer for conditions in legacy mode
-        }
+        
     }
     
     private void UpdateMovementSystem(float deltaTime)
@@ -354,7 +300,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
             // Only log once per second when blocked to avoid spam
             if (Time.frameCount % 60 == 0)
             {
-                Logger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Movement blocked - isPaused: {isMovementPaused}, CanMove: {CanMove()}");
+                MyLogger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Movement blocked - isPaused: {isMovementPaused}, CanMove: {CanMove()}");
             }
             return;
         }
@@ -368,7 +314,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
             // Only log steering updates occasionally
             if (Time.frameCount % 30 == 0)
             {
-                Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Following steering target to {currentDestination}");
+                MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Following steering target to {currentDestination}");
             }
         }
         
@@ -378,14 +324,14 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
             // Only log detailed patrol info every 2 seconds to reduce spam
             if (Time.frameCount % 120 == 0)
             {
-                Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Currently patrolling - currentIndex: {currentPatrolIndex}, patrolPoints.Length: {(patrolPoints?.Length ?? 0)}");
-                Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Current position: {transform.position}, Current destination: {currentDestination}");
-                Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: isActivelyPatrolling: {isActivelyPatrolling}, MovementStatus: {currentMovementStatus}");
+                MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Currently patrolling - currentIndex: {currentPatrolIndex}, patrolPoints.Length: {(patrolPoints?.Length ?? 0)}");
+                MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Current position: {transform.position}, Current destination: {currentDestination}");
+                MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: isActivelyPatrolling: {isActivelyPatrolling}, MovementStatus: {currentMovementStatus}");
                 
                 if (patrolPoints != null && patrolPoints.Length > currentPatrolIndex)
                 {
-                    Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Target patrol point: {patrolPoints[currentPatrolIndex].position}");
-                    Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Distance to target: {Vector3.Distance(transform.position, patrolPoints[currentPatrolIndex].position):F2}");
+                    MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Target patrol point: {patrolPoints[currentPatrolIndex].position}");
+                    MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Distance to target: {Vector3.Distance(transform.position, patrolPoints[currentPatrolIndex].position):F2}");
                 }
             }
         }
@@ -393,12 +339,12 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         // Check if destination reached for patrol logic
         if (isActivelyPatrolling && patrolPoints != null && patrolPoints.Length > 0 && HasReachedDestination())
         {
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Reached patrol point {currentPatrolIndex}, moving to next");
+            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Reached patrol point {currentPatrolIndex}, moving to next");
             // Move to next patrol point
             currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
             if (patrolPoints.Length > 0)
             {
-                Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Moving to patrol point {currentPatrolIndex} at {patrolPoints[currentPatrolIndex].position}");
+                MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Moving to patrol point {currentPatrolIndex} at {patrolPoints[currentPatrolIndex].position}");
                 MoveTo(patrolPoints[currentPatrolIndex].position, patrolSpeed);
             }
         }
@@ -412,8 +358,8 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
             // Debug steering calculation
             if (Time.frameCount % 60 == 0)
             {
-                Logger.LogInfo($"[STEERING CALC] Pos: {transform.position}, Target: {currentDestination}, Vel: {_vel}, TargetSpeed: {targetSpeed}");
-                Logger.LogInfo($"[STEERING CALC] Calculated steering: {steering}");
+                MyLogger.LogInfo($"[STEERING CALC] Pos: {transform.position}, Target: {currentDestination}, Vel: {_vel}, TargetSpeed: {targetSpeed}");
+                MyLogger.LogInfo($"[STEERING CALC] Calculated steering: {steering}");
             }
 
             ApplySteering(steering);
@@ -432,49 +378,47 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         // Check movement constraints
         if (hasMovementConstraints && !movementConstraints.Contains(transform.position))
         {
-            Logger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Movement constrained at position {transform.position}");
+            MyLogger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Movement constrained at position {transform.position}");
             currentMovementStatus = MovementStatus.Constrained;
             OnMovementBlocked?.Invoke();
             return;
         }
     }
     
-    private void UpdateAISystem(float deltaTime)
+    private void UpdateAISystem()
     {
-        if (enableNewAISystem && blackboard != null && player != null)
+        if (enableNewAISystem && m_blackboardService != null && player != null)
         {
             // Update blackboard with current player information
-            blackboard.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
-            blackboard.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
+            m_blackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
+            m_blackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
             
             // Update last known position if we can see the player
             if (CanSeePlayer())
             {
                 lastKnownPlayerPosition = player.position;
-                blackboard.SetValue(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION, lastKnownPlayerPosition);
+                m_blackboardService.SetValue(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION, lastKnownPlayerPosition);
             }
             
             // Update detection information
             var detectionResult = GetDetectionResult();
-            blackboard.SetValue($"Guard_{gameObject.GetInstanceID()}_DetectionLevel", detectionResult.level);
-            blackboard.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.level > PlayerDetectionLevel.None);
+            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_DetectionLevel", detectionResult.level);
+            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.level > PlayerDetectionLevel.None);
         }
     }
-    
-    protected override void OnDeath()
+
+    private void OnDisable()
     {
-        var updateManager = ServiceLocator.Get<UpdateManager>();
-        updateManager?.UnregisterUpdatable(this);
-        base.OnDeath();
+        UnsubscribeUpdateService();
     }
-    
+
     private void SetupPatrolPoints()
     {
-        Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: SetupPatrolPoints called");
+        MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: SetupPatrolPoints called");
         
         if (patrolPoints == null || patrolPoints.Length == 0)
         {
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: No patrol points assigned, creating default ones");
+            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: No patrol points assigned, creating default ones");
             patrolPoints = new Transform[2];
             
             GameObject point1 = new GameObject("PatrolPoint1");
@@ -485,20 +429,20 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
             point2.transform.position = transform.position + Vector3.back * 5f;
             patrolPoints[1] = point2.transform;
             
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Created patrol points at {point1.transform.position} and {point2.transform.position}");
+            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Created patrol points at {point1.transform.position} and {point2.transform.position}");
         }
         else
         {
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Using {patrolPoints.Length} existing patrol points");
+            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Using {patrolPoints.Length} existing patrol points");
             for (int i = 0; i < patrolPoints.Length; i++)
             {
                 if (patrolPoints[i] != null)
                 {
-                    Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Patrol point {i}: {patrolPoints[i].position}");
+                    MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Patrol point {i}: {patrolPoints[i].position}");
                 }
                 else
                 {
-                    Logger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Patrol point {i} is null!");
+                    MyLogger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Patrol point {i} is null!");
                 }
             }
         }
@@ -506,11 +450,11 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     
     public void StartPatrol()
     {
-        Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: StartPatrol called");
+        MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: StartPatrol called");
         
         if (patrolPoints == null || patrolPoints.Length == 0)
         {
-            Logger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Cannot start patrol - no patrol points assigned");
+            MyLogger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Cannot start patrol - no patrol points assigned");
             return;
         }
         
@@ -520,12 +464,12 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         currentMovementMode = MovementMode.Walk;
         isActivelyPatrolling = true;  // Set patrol flag
         
-        Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Starting patrol with {patrolPoints.Length} points, moving to point 0");
+        MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Starting patrol with {patrolPoints.Length} points, moving to point 0");
         
         // Move to first patrol point
         MoveTo(patrolPoints[currentPatrolIndex].position, patrolSpeed);
         
-        Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Patrol started successfully");
+        MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Patrol started successfully");
     }
     
     public void StopPatrol()
@@ -534,7 +478,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         {
             isActivelyPatrolling = false;
             currentMovementStatus = MovementStatus.Idle;
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Patrol stopped");
+            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Patrol stopped");
         }
     }
     
@@ -610,8 +554,8 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         if (Time.frameCount % 30 == 0)
         {
             float effectiveDeltaTime = Mathf.Max(Time.deltaTime, 0.016f);
-            Logger.LogInfo($"[STEERING DEBUG] {gameObject.name}: Vel: {_vel.magnitude:F2}, AvoidedVel: {avoidedVel.magnitude:F2}, MaxSpeed: {maxSpeed}");
-            Logger.LogInfo($"[STEERING DEBUG] Raw steering: {steering.magnitude:F2}, DeltaTime: {Time.deltaTime:F4}, Effective: {effectiveDeltaTime:F4}, Movement: {(avoidedVel * effectiveDeltaTime).magnitude:F4}");
+            MyLogger.LogInfo($"[STEERING DEBUG] {gameObject.name}: Vel: {_vel.magnitude:F2}, AvoidedVel: {avoidedVel.magnitude:F2}, MaxSpeed: {maxSpeed}");
+            MyLogger.LogInfo($"[STEERING DEBUG] Raw steering: {steering.magnitude:F2}, DeltaTime: {Time.deltaTime:F4}, Effective: {effectiveDeltaTime:F4}, Movement: {(avoidedVel * effectiveDeltaTime).magnitude:F4}");
         }
     }
 
@@ -649,7 +593,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
             // Only log this occasionally if it's being called repeatedly
             if (Time.frameCount % 120 == 0)
             {
-                Logger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Move called but not alive");
+                MyLogger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Move called but not alive");
             }
             return;
         }
@@ -668,43 +612,27 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         CreateBullet(direction);
         
         // MEJORA: Update blackboard with combat information
-        if (enableNewAISystem && blackboard != null)
+        if (enableNewAISystem && m_blackboardService != null)
         {
-            blackboard.SetValue($"Guard_{gameObject.GetInstanceID()}_LastShootTime", lastShootTime);
-            blackboard.SetValue($"Guard_{gameObject.GetInstanceID()}_ShootDirection", direction);
+            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_LastShootTime", lastShootTime);
+            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_ShootDirection", direction);
         }
     }
     
-    private void CreateBullet(Vector3 direction)
+    private void CreateBullet(Vector3 p_direction)
     {
-        var poolService = ServiceLocator.Get<ObjectPoolService>();
-        if (poolService != null)
-        {
-            Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            poolService.GetBullet(spawnPosition, direction, 15f, true);
-        }
-        else
-        {
-            // Fallback to creating bullet manually if service not available
-            GameObject bulletObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            bulletObj.name = "EnemyBullet";
-            bulletObj.transform.position = transform.position + Vector3.up * 0.5f + direction * 0.8f;
-            bulletObj.transform.localScale = Vector3.one * 0.2f;
-            
-            var renderer = bulletObj.GetComponent<Renderer>();
-            renderer.material.color = Color.red;
-            
-            var bulletRb = bulletObj.AddComponent<Rigidbody>();
-            bulletRb.useGravity = false;
-            
-            var bulletCollider = bulletObj.GetComponent<Collider>();
-            bulletCollider.isTrigger = true;
-            
-            var bulletObject = bulletObj.AddComponent<BulletObject>();
-            bulletObject.InitializeBullet(direction, 15f, null, true);
-        }
+        var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
+        var l_bullet = PoolObjectsService.GetOrCreateObject(bulletData.Prefab);
+        l_bullet.OnDeactivate += OnDeactivateBulletHandler;
+        l_bullet.InitializeBullet(bulletData, l_spawnPosition, p_direction);
     }
-    
+
+    private void OnDeactivateBulletHandler(BulletObject p_bullet)
+    {
+        p_bullet.OnDeactivate -= OnDeactivateBulletHandler;
+        PoolObjectsService.ReturnObject(p_bullet);
+    }
+
     #region AI System Integration
     
     public Transform GetModelTransform()
@@ -717,10 +645,10 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         player = p_target;
         
         // Update AI system when target changes
-        if (enableNewAISystem && blackboard != null && player != null)
+        if (enableNewAISystem && m_blackboardService != null && player != null)
         {
-            blackboard.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
-            blackboard.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
+            m_blackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
+            m_blackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
         }
     }
     
@@ -784,11 +712,11 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     // MEJORA: Extended IAIMovementController methods
     public void MoveTo(Vector3 target, float speed)
     {
-        Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: MoveTo called - Target: {target}, Speed: {speed}, CanMove: {CanMove()}");
+        MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: MoveTo called - Target: {target}, Speed: {speed}, CanMove: {CanMove()}");
 
         if (!CanMove())
         {
-            Logger.LogWarning($"[PATROL DEBUG] {gameObject.name}: MoveTo blocked - CanMove returned false");
+            MyLogger.LogWarning($"[PATROL DEBUG] {gameObject.name}: MoveTo blocked - CanMove returned false");
             return;
         }
 
@@ -799,7 +727,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         // Check constraints
         if (hasMovementConstraints && !movementConstraints.Contains(target))
         {
-            Logger.LogWarning($"[PATROL DEBUG] {gameObject.name}: MoveTo constrained - target outside bounds");
+            MyLogger.LogWarning($"[PATROL DEBUG] {gameObject.name}: MoveTo constrained - target outside bounds");
             currentMovementStatus = MovementStatus.Constrained;
             OnMovementBlocked?.Invoke();
             return;
@@ -823,7 +751,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
 
         ApplySteering(steering);
 
-        Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: MoveTo using steering - Destination: {currentDestination}, Status: {currentMovementStatus}");
+        MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: MoveTo using steering - Destination: {currentDestination}, Status: {currentMovementStatus}");
     }
     
     public void Flee(Vector3 fromPosition, float speed)
@@ -869,7 +797,7 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
             // Only log this occasionally as it might be checked frequently
             if (Time.frameCount % 120 == 0)
             {
-                Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: HasReachedDestination - Status is Idle, returning true");
+                MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: HasReachedDestination - Status is Idle, returning true");
             }
             return true;
         }
@@ -880,13 +808,13 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
         // Only log distance checks when close to destination or occasionally
         if (reached || Time.frameCount % 120 == 0)
         {
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: HasReachedDestination - Distance: {distanceToDestination:F2}, Reached: {reached}, Status: {currentMovementStatus}");
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Current pos: {transform.position}, Destination: {currentDestination}");
+            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: HasReachedDestination - Distance: {distanceToDestination:F2}, Reached: {reached}, Status: {currentMovementStatus}");
+            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Current pos: {transform.position}, Destination: {currentDestination}");
         }
         
         if (reached && currentMovementStatus == MovementStatus.Moving)
         {
-            Logger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Destination reached, changing status to Idle");
+            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Destination reached, changing status to Idle");
             currentMovementStatus = MovementStatus.Idle;
             OnMovementComplete?.Invoke();
         }
@@ -1299,4 +1227,39 @@ public class Guard : BaseCharacter, IUpdatable, IUseFsm
     // GetModelTransform, SetTargetTransform, and GetTargetTransform are already implemented above
 
     #endregion
+
+    public void MyUpdate()
+    {
+        if (!isAlive) return;
+
+        // Add debug log with reduced frequency to avoid spam
+        if (Time.frameCount % 60 == 0) // Log every 60 frames (about once per second at 60fps)
+        {
+            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: OnUpdate is being called - Frame {Time.frameCount}");
+        }
+
+        UpdateAISystem();
+
+        // Run FSM if enabled, otherwise use legacy movement system
+        if (useFSM && stateMachine != null)
+        {
+            stateMachine.RunStateMachine();
+            // In FSM mode, states handle their own timers - don't auto-increment
+        }
+        else
+        {
+            UpdateMovementSystem(Time.deltaTime);
+            stateTimer += Time.deltaTime; // Keep timer for conditions in legacy mode
+        }
+    }
+
+    public void SubscribeUpdateService()
+    {
+        ServiceLocator.Get<IUpdateService>().AddUpdateListener(this);
+    }
+
+    public void UnsubscribeUpdateService()
+    {
+        ServiceLocator.Get<IUpdateService>().RemoveUpdateListener(this);
+    }
 }

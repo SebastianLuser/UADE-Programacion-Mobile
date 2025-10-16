@@ -33,36 +33,36 @@ public class CivilianView : NPCView
     public void PlayPanicAnimation()
     {
         // TODO: Implement panic animation
-        Logger.LogDebug($"{gameObject.name}: Playing panic animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing panic animation");
     }
 
     public void PlayFleeAnimation()
     {
         // TODO: Implement flee animation
-        Logger.LogDebug($"{gameObject.name}: Playing flee animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing flee animation");
     }
 
     public void PlayNormalAnimation()
     {
         // TODO: Implement normal/calm animation
-        Logger.LogDebug($"{gameObject.name}: Playing normal animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing normal animation");
     }
 
     public void PlayIdleAnimation()
     {
         // TODO: Implement idle animation
-        Logger.LogDebug($"{gameObject.name}: Playing idle animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing idle animation");
     }
 
     public void ShowFearEffect()
     {
         // TODO: Implement fear visual effect (particles, color change, etc.)
-        Logger.LogDebug($"{gameObject.name}: Showing fear effect");
+        MyLogger.LogDebug($"{gameObject.name}: Showing fear effect");
     }
 
     public void HideFearEffect()
     {
         // TODO: Hide fear visual effect
-        Logger.LogDebug($"{gameObject.name}: Hiding fear effect");
+        MyLogger.LogDebug($"{gameObject.name}: Hiding fear effect");
     }
 }

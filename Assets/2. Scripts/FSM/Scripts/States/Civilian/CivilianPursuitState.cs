@@ -16,7 +16,7 @@ namespace Scripts.FSM.Base.StateMachine
                 civilian.SetCurrentMaxSpeed(civilian.PursueSpeed);
 
                 if (civilian.EnableDebugLogs)
-                    Logger.LogInfo($"Civilian {civilian.name}: Entered Pursuit State - Chasing at speed {civilian.PursueSpeed:F1}");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Entered Pursuit State - Chasing at speed {civilian.PursueSpeed:F1}");
             }
         }
 
@@ -37,7 +37,7 @@ namespace Scripts.FSM.Base.StateMachine
                 civilian.PursuitLoseSightTimer = 0f;
                 
                 if (civilian.EnableDebugLogs)
-                    Logger.LogInfo($"Civilian {civilian.name}: Exited Pursuit State - LoseSight timer: {civilian.PursuitLoseSightTimer:F2}s");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Exited Pursuit State - LoseSight timer: {civilian.PursuitLoseSightTimer:F2}s");
             }
         }
 

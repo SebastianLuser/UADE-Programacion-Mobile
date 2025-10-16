@@ -1,3 +1,4 @@
+using Services.MicroServices.BlackboardService;
 using UnityEngine;
 
 /// <summary>
@@ -274,7 +275,7 @@ public class GameTuningSO : ScriptableObject
         clearThreshold *= preset.alertnessMultiplier;
         immediateThreshold *= preset.alertnessMultiplier;
         
-        Logger.LogInfo($"Applied difficulty preset: {preset.name}");
+        MyLogger.LogInfo($"Applied difficulty preset: {preset.name}");
     }
     
     #endregion
@@ -361,7 +362,7 @@ public class GameTuningSO : ScriptableObject
         normalPreset = DifficultyPreset.NormalDefault();
         hardPreset = DifficultyPreset.HardDefault();
         
-        Logger.LogInfo("GameTuningSO: Reset to default values");
+        MyLogger.LogInfo("GameTuningSO: Reset to default values");
     }
     
     [ContextMenu("Print Current Configuration")]

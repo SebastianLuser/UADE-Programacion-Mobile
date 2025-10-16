@@ -198,7 +198,7 @@ GameObject:
   - component: {fileID: 3666670831284652762}
   - component: {fileID: 8705301200526539023}
   - component: {fileID: 2297584105871717742}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3403,7 +3403,7 @@ GameObject:
   - component: {fileID: 7974031069288633096}
   - component: {fileID: 8274297526304220722}
   - component: {fileID: 8130667464440236858}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Arms
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3895,7 +3895,7 @@ GameObject:
   - component: {fileID: 3584163710842385796}
   - component: {fileID: 263493424743578771}
   - component: {fileID: 8291938363959529201}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Arms
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4729,7 +4729,7 @@ Transform:
   m_GameObject: {fileID: 6392384228353329271}
   serializedVersion: 2
   m_LocalRotation: {x: 0.51684314, y: 7.962617e-15, z: -7.064373e-15, w: 0.8560802}
-  m_LocalPosition: {x: -9.57451, y: 11, z: -9.55918}
+  m_LocalPosition: {x: -13.84351, y: 11.10029, z: 18.98164}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

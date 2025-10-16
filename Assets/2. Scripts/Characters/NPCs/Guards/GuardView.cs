@@ -1,6 +1,8 @@
+using Services;
+using Services.MicroServices.UpdateService;
 using UnityEngine;
 
-public class GuardView : NPCView, IUpdatable
+public class GuardView : NPCView, IUpdateListener
 {
     public bool IsActive => gameObject.activeInHierarchy && guardController != null && guardController.IsAlive;
 
@@ -33,52 +35,12 @@ public class GuardView : NPCView, IUpdatable
             originalMaterial = guardRenderer.material;
         }
 
-        RegisterWithUpdateManager();
-    }
-
-    private void RegisterWithUpdateManager()
-    {
-        var updateManager = ServiceLocator.Get<UpdateManager>();
-        if (updateManager != null)
-        {
-            updateManager.RegisterUpdatable(this);
-            Logger.LogInfo($"GuardView {gameObject.name}: Registered with UpdateManager");
-        }
-        else
-        {
-            Logger.LogWarning($"GuardView {gameObject.name}: UpdateManager not available yet, will retry");
-            StartCoroutine(WaitForUpdateManagerRegistration());
-        }
-    }
-
-    private System.Collections.IEnumerator WaitForUpdateManagerRegistration()
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(0.5f);
-
-            var updateManager = ServiceLocator.Get<UpdateManager>();
-            if (updateManager != null)
-            {
-                updateManager.RegisterUpdatable(this);
-                Logger.LogInfo($"GuardView {gameObject.name}: Successfully registered with UpdateManager after waiting");
-                break;
-            }
-        }
-    }
-
-    public void OnUpdate(float deltaTime)
-    {
-        UpdateAdvancedVisuals();
-        UpdateAnimationBasedOnState();
-        UpdateDebugVisuals();
+        SubscribeUpdateService();
     }
 
     private void OnDestroy()
     {
-        // Unregister from UpdateManager
-        var updateManager = ServiceLocator.Get<UpdateManager>();
-        updateManager?.UnregisterUpdatable(this);
+        UnsubscribeUpdateService();
     }
 
     protected override float GetCurrentMoveSpeed()
@@ -229,56 +191,56 @@ public class GuardView : NPCView, IUpdatable
 
     public void PlayAttackAnimation()
     {
-        Logger.LogDebug($"{gameObject.name}: Playing attack animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing attack animation");
         // TODO: Implement actual animation trigger
         // animator?.SetTrigger("Attack");
     }
 
     public void PlayChaseAnimation()
     {
-        Logger.LogDebug($"{gameObject.name}: Playing chase animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing chase animation");
         // TODO: Implement actual animation trigger
         // animator?.SetBool("IsChasing", true);
     }
 
     public void PlayPatrolAnimation()
     {
-        Logger.LogDebug($"{gameObject.name}: Playing patrol animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing patrol animation");
         // TODO: Implement actual animation trigger
         // animator?.SetBool("IsPatrolling", true);
     }
 
     public void PlaySearchAnimation()
     {
-        Logger.LogDebug($"{gameObject.name}: Playing search animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing search animation");
         // TODO: Implement actual animation trigger
         // animator?.SetBool("IsSearching", true);
     }
 
     public void PlayIdleAnimation()
     {
-        Logger.LogDebug($"{gameObject.name}: Playing idle animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing idle animation");
         // TODO: Implement actual animation trigger
         // animator?.SetBool("IsIdle", true);
     }
 
     public void PlayAlertAnimation()
     {
-        Logger.LogDebug($"{gameObject.name}: Playing alert animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing alert animation");
         // TODO: Implement actual animation trigger
         // animator?.SetBool("IsAlert", true);
     }
 
     public void PlayWalkAnimation()
     {
-        Logger.LogDebug($"{gameObject.name}: Playing walk animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing walk animation");
         // TODO: Implement actual animation trigger
         // animator?.SetBool("IsWalking", true);
     }
 
     public void PlayFleeAnimation()
     {
-        Logger.LogDebug($"{gameObject.name}: Playing flee animation");
+        MyLogger.LogDebug($"{gameObject.name}: Playing flee animation");
         // TODO: Implement actual animation trigger
         // animator?.SetBool("IsFleeing", true);
     }
@@ -295,19 +257,19 @@ public class GuardView : NPCView, IUpdatable
         switch (level)
         {
             case PlayerDetectionLevel.Peripheral:
-                Logger.LogDebug($"{gameObject.name}: Showing peripheral detection indicator");
+                MyLogger.LogDebug($"{gameObject.name}: Showing peripheral detection indicator");
                 // TODO: Show small indicator
                 break;
             case PlayerDetectionLevel.Partial:
-                Logger.LogDebug($"{gameObject.name}: Showing partial detection indicator");
+                MyLogger.LogDebug($"{gameObject.name}: Showing partial detection indicator");
                 // TODO: Show medium indicator
                 break;
             case PlayerDetectionLevel.Clear:
-                Logger.LogDebug($"{gameObject.name}: Showing clear detection indicator");
+                MyLogger.LogDebug($"{gameObject.name}: Showing clear detection indicator");
                 // TODO: Show strong indicator
                 break;
             case PlayerDetectionLevel.Immediate:
-                Logger.LogDebug($"{gameObject.name}: Showing immediate detection indicator");
+                MyLogger.LogDebug($"{gameObject.name}: Showing immediate detection indicator");
                 // TODO: Show critical indicator
                 break;
         }
@@ -320,17 +282,17 @@ public class GuardView : NPCView, IUpdatable
     {
         if (threatLevel > 0.7f)
         {
-            Logger.LogDebug($"{gameObject.name}: Showing high threat indicator");
+            MyLogger.LogDebug($"{gameObject.name}: Showing high threat indicator");
             // TODO: Red indicator
         }
         else if (threatLevel > 0.4f)
         {
-            Logger.LogDebug($"{gameObject.name}: Showing medium threat indicator");
+            MyLogger.LogDebug($"{gameObject.name}: Showing medium threat indicator");
             // TODO: Yellow indicator
         }
         else if (threatLevel > 0.1f)
         {
-            Logger.LogDebug($"{gameObject.name}: Showing low threat indicator");
+            MyLogger.LogDebug($"{gameObject.name}: Showing low threat indicator");
             // TODO: Green indicator
         }
     }
@@ -383,12 +345,12 @@ public class GuardView : NPCView, IUpdatable
         if (speed > guardController.GuardData.chaseSpeed * 0.8f)
         {
             // Show fast movement effects
-            Logger.LogDebug($"{gameObject.name}: Fast movement effects (speed: {speed:F1})");
+            MyLogger.LogDebug($"{gameObject.name}: Fast movement effects (speed: {speed:F1})");
         }
         else if (speed > guardController.GuardData.patrolSpeed * 0.8f)
         {
             // Show normal movement effects
-            Logger.LogDebug($"{gameObject.name}: Normal movement effects (speed: {speed:F1})");
+            MyLogger.LogDebug($"{gameObject.name}: Normal movement effects (speed: {speed:F1})");
         }
 
         // Mode-specific effects
@@ -468,4 +430,21 @@ public class GuardView : NPCView, IUpdatable
     }
 
     #endregion
+
+    public void MyUpdate()
+    {
+        UpdateAdvancedVisuals();
+        UpdateAnimationBasedOnState();
+        UpdateDebugVisuals();
+    }
+
+    public void SubscribeUpdateService()
+    {
+        ServiceLocator.Get<IUpdateService>().AddUpdateListener(this);
+    }
+
+    public void UnsubscribeUpdateService()
+    {
+        ServiceLocator.Get<IUpdateService>().RemoveUpdateListener(this);
+    }
 }

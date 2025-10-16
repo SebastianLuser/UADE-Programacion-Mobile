@@ -1,4 +1,6 @@
 using System.Collections;
+using Services.MicroServices.BlackboardService;
+using Services;
 using UnityEngine;
 
 /// <summary>
@@ -30,25 +32,26 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     [SerializeField] private bool showDetectionInfo = true;
     
     // Core detection state
-    private DetectionResult lastDetectionResult = DetectionResult.None;
-    private Transform cachedPlayerTransform;
-    private IBlackboard blackboard;
+    private DetectionResult m_lastDetectionResult = DetectionResult.None;
+    private Transform m_cachedPlayerTransform;
     
     // Performance caching
-    private int lastUpdateFrame = -1;
-    private DetectionResult cachedResult = DetectionResult.None;
+    private int m_lastUpdateFrame = -1;
+    private DetectionResult m_cachedResult = DetectionResult.None;
     
     // Runtime tracking
-    private Vector3 lastKnownPlayerPosition = Vector3.zero;
-    private float lastSeenTime = -1f;
-    private PlayerDetectionLevel previousDetectionLevel = PlayerDetectionLevel.None;
+    private Vector3 m_lastKnownPlayerPosition = Vector3.zero;
+    private float m_lastSeenTime = -1f;
+    private PlayerDetectionLevel m_previousDetectionLevel = PlayerDetectionLevel.None;
     
     // Coroutine management
-    private Coroutine detectionCoroutine;
+    private Coroutine m_detectionCoroutine;
     
     // Debug info
-    private string lastBlockingObject = "";
-    private Color currentGizmoColor = Color.yellow;
+    private string m_lastBlockingObject = "";
+    private Color m_currentGizmoColor = Color.yellow;
+    
+    private static IBlackboardService BlackboardService => ServiceLocator.Get<IBlackboardService>();
     
     #region Unity Lifecycle
     
@@ -86,15 +89,6 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     
     private void Initialize()
     {
-        // Get blackboard service
-        blackboard = ServiceLocator.Get<IBlackboard>();
-        if (blackboard == null)
-        {
-            Logger.LogError($"PlayerDetector on {gameObject.name}: Blackboard service not found! Detection will not work properly.");
-            enabled = false;
-            return;
-        }
-        
         // Find player reference
         FindPlayerReference();
         
@@ -105,32 +99,32 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
         }
         
         if (enableDetectionLogs)
-            Logger.LogInfo($"PlayerDetector on {gameObject.name}: Initialized with personality {personalityType}");
+            MyLogger.LogInfo($"PlayerDetector on {gameObject.name}: Initialized with personality {personalityType}");
     }
     
     private void FindPlayerReference()
     {
         // First try to get from blackboard
-        cachedPlayerTransform = blackboard?.GetValue<Transform>(BlackboardKeys.PLAYER_TRANSFORM);
+        m_cachedPlayerTransform = BlackboardService.GetValue<Transform>(BlackboardKeys.PLAYER_TRANSFORM);
         
         // Fallback to finding by tag
-        if (cachedPlayerTransform == null)
+        if (m_cachedPlayerTransform) 
+            return;
+        
+        var l_playerObject = GameObject.FindGameObjectWithTag(config.playerTag);
+        if (l_playerObject)
         {
-            var playerObject = GameObject.FindGameObjectWithTag(config.playerTag);
-            if (playerObject != null)
-            {
-                cachedPlayerTransform = playerObject.transform;
+            m_cachedPlayerTransform = l_playerObject.transform;
                 
-                // Update blackboard with found player
-                blackboard?.SetValue(BlackboardKeys.PLAYER_TRANSFORM, cachedPlayerTransform);
+            // Update blackboard with found player
+            BlackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, m_cachedPlayerTransform);
                 
-                if (enableDetectionLogs)
-                    Logger.LogInfo($"PlayerDetector: Found player by tag '{config.playerTag}'");
-            }
-            else
-            {
-                Logger.LogWarning($"PlayerDetector on {gameObject.name}: Player not found with tag '{config.playerTag}'");
-            }
+            if (enableDetectionLogs)
+                MyLogger.LogInfo($"PlayerDetector: Found player by tag '{config.playerTag}'");
+        }
+        else
+        {
+            MyLogger.LogWarning($"PlayerDetector on {gameObject.name}: Player not found with tag '{config.playerTag}'");
         }
     }
     
@@ -138,17 +132,17 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     {
         // Configuración automática basada en personalidad
         // Esto permite balancing centralizado sin modificar cada prefab
-        var newConfig = DetectionConfig.GetDefault(personalityType);
+        var l_newConfig = DetectionConfig.GetDefault(personalityType);
         
         // Preserve any manual overrides that make sense
-        newConfig.obstacleLayerMask = config.obstacleLayerMask;
-        newConfig.playerLayerMask = config.playerLayerMask;
-        newConfig.playerTag = config.playerTag;
+        l_newConfig.obstacleLayerMask = config.obstacleLayerMask;
+        l_newConfig.playerLayerMask = config.playerLayerMask;
+        l_newConfig.playerTag = config.playerTag;
         
-        config = newConfig;
+        config = l_newConfig;
         
         if (enableDetectionLogs)
-            Logger.LogInfo($"PlayerDetector: Applied {personalityType} personality config");
+            MyLogger.LogInfo($"PlayerDetector: Applied {personalityType} personality config");
     }
     
     #endregion
@@ -157,18 +151,18 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     
     private void StartDetectionCoroutine()
     {
-        if (detectionCoroutine == null)
+        if (m_detectionCoroutine == null)
         {
-            detectionCoroutine = StartCoroutine(DetectionUpdateCoroutine());
+            m_detectionCoroutine = StartCoroutine(DetectionUpdateCoroutine());
         }
     }
     
     private void StopDetectionCoroutine()
     {
-        if (detectionCoroutine != null)
+        if (m_detectionCoroutine != null)
         {
-            StopCoroutine(detectionCoroutine);
-            detectionCoroutine = null;
+            StopCoroutine(m_detectionCoroutine);
+            m_detectionCoroutine = null;
         }
     }
     
@@ -187,132 +181,132 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     
     private void UpdateDetection()
     {
-        if (cachedPlayerTransform == null)
+        if (!m_cachedPlayerTransform)
         {
             FindPlayerReference();
             return;
         }
         
         // Perform detection
-        var currentResult = PerformDetection(cachedPlayerTransform);
+        var l_currentResult = PerformDetection(m_cachedPlayerTransform);
         
         // Check for level changes
-        if (currentResult.level != previousDetectionLevel)
+        if (l_currentResult.level != m_previousDetectionLevel)
         {
-            OnDetectionLevelChanged(previousDetectionLevel, currentResult.level);
-            previousDetectionLevel = currentResult.level;
+            OnDetectionLevelChanged(m_previousDetectionLevel, l_currentResult.level);
+            m_previousDetectionLevel = l_currentResult.level;
         }
         
         // Update blackboard if significant detection
-        if (currentResult.IsSignificant)
+        if (l_currentResult.IsSignificant)
         {
-            UpdateBlackboardWithDetection(currentResult);
+            UpdateBlackboardWithDetection(l_currentResult);
         }
         
         // Store result
-        lastDetectionResult = currentResult;
+        m_lastDetectionResult = l_currentResult;
         
         // Update gizmo color for visualization
-        UpdateGizmoColor(currentResult.level);
+        UpdateGizmoColor(l_currentResult.level);
     }
     
-    private DetectionResult PerformDetection(Transform player)
+    private DetectionResult PerformDetection(Transform p_player)
     {
         // Frame caching para performance
-        if (useFrameCaching && lastUpdateFrame == Time.frameCount)
+        if (useFrameCaching && m_lastUpdateFrame == Time.frameCount)
         {
-            return cachedResult;
+            return m_cachedResult;
         }
         
-        if (player == null)
+        if (!p_player)
         {
             return DetectionResult.None;
         }
         
         // Get positions
-        Vector3 eyePosition = GetEyePosition();
-        Vector3 playerPosition = player.position;
+        Vector3 l_eyePosition = GetEyePosition();
+        Vector3 l_playerPosition = p_player.position;
         
         // Calculate basic metrics
-        float distance = Vector3.Distance(eyePosition, playerPosition);
-        Vector3 directionToPlayer = (playerPosition - eyePosition).normalized;
-        float angle = Vector3.Angle(transform.forward, directionToPlayer);
+        float l_distance = Vector3.Distance(l_eyePosition, l_playerPosition);
+        Vector3 l_directionToPlayer = (l_playerPosition - l_eyePosition).normalized;
+        float l_angle = Vector3.Angle(transform.forward, l_directionToPlayer);
         
         // Check distance first (early exit)
-        if (distance > config.detectionRange)
+        if (l_distance > config.detectionRange)
         {
-            var result = new DetectionResult(
+            var l_result = new DetectionResult(
                 PlayerDetectionLevel.None, false, false, false,
-                distance, angle, lastKnownPlayerPosition, GetTimeSinceLastSeen(), ""
+                l_distance, l_angle, m_lastKnownPlayerPosition, GetTimeSinceLastSeen(), ""
             );
             
-            CacheResult(result);
-            return result;
+            CacheResult(l_result);
+            return l_result;
         }
         
         // Check field of view
-        bool inMainFOV = IsInFieldOfView(angle, config.fieldOfView);
-        bool inPeripheralFOV = config.usePeripheralVision && IsInFieldOfView(angle, 120f);
+        bool l_inMainFOV = IsInFieldOfView(l_angle, config.fieldOfView);
+        bool l_inPeripheralFOV = config.usePeripheralVision && IsInFieldOfView(l_angle, 120f);
         
-        if (!inMainFOV && !inPeripheralFOV)
+        if (!l_inMainFOV && !l_inPeripheralFOV)
         {
-            var result = new DetectionResult(
+            var l_result = new DetectionResult(
                 PlayerDetectionLevel.None, false, false, false,
-                distance, angle, lastKnownPlayerPosition, GetTimeSinceLastSeen(), ""
+                l_distance, l_angle, m_lastKnownPlayerPosition, GetTimeSinceLastSeen(), ""
             );
             
-            CacheResult(result);
-            return result;
+            CacheResult(l_result);
+            return l_result;
         }
         
         // Check line of sight
-        bool hasLineOfSight = CheckLineOfSight(eyePosition, playerPosition, out string blocker);
+        bool l_hasLineOfSight = CheckLineOfSight(l_eyePosition, l_playerPosition, out string l_blocker);
         
         // Determine detection level
-        PlayerDetectionLevel level = CalculateDetectionLevel(distance, angle, inMainFOV, inPeripheralFOV, hasLineOfSight);
+        PlayerDetectionLevel l_level = CalculateDetectionLevel(l_distance, l_angle, l_inMainFOV, l_inPeripheralFOV, l_hasLineOfSight);
         
         // Update tracking info if visible
-        if (hasLineOfSight)
+        if (l_hasLineOfSight)
         {
-            lastKnownPlayerPosition = playerPosition;
-            lastSeenTime = Time.time;
+            m_lastKnownPlayerPosition = l_playerPosition;
+            m_lastSeenTime = Time.time;
         }
         
-        var finalResult = new DetectionResult(
-            level, hasLineOfSight, inMainFOV || inPeripheralFOV, hasLineOfSight,
-            distance, angle, lastKnownPlayerPosition, GetTimeSinceLastSeen(), blocker
+        var l_finalResult = new DetectionResult(
+            l_level, l_hasLineOfSight, l_inMainFOV || l_inPeripheralFOV, l_hasLineOfSight,
+            l_distance, l_angle, m_lastKnownPlayerPosition, GetTimeSinceLastSeen(), l_blocker
         );
         
-        CacheResult(finalResult);
-        return finalResult;
+        CacheResult(l_finalResult);
+        return l_finalResult;
     }
     
-    private PlayerDetectionLevel CalculateDetectionLevel(float distance, float angle, bool inMainFOV, bool inPeripheralFOV, bool hasLineOfSight)
+    private PlayerDetectionLevel CalculateDetectionLevel(float p_distance, float p_angle, bool p_inMainFOV, bool p_inPeripheralFOV, bool p_hasLineOfSight)
     {
-        if (!hasLineOfSight)
+        if (!p_hasLineOfSight)
         {
             return PlayerDetectionLevel.None;
         }
         
         // Sistema gradual de detección para comportamientos más naturales
-        float maxRange = config.detectionRange;
-        float immediateRange = maxRange * 0.25f;
-        float clearRange = maxRange * 0.5f;
-        float partialRange = maxRange * 0.75f;
+        float l_maxRange = config.detectionRange;
+        float l_immediateRange = l_maxRange * 0.25f;
+        float l_clearRange = l_maxRange * 0.5f;
+        float l_partialRange = l_maxRange * 0.75f;
         
-        if (distance <= immediateRange && inMainFOV)
+        if (p_distance <= l_immediateRange && p_inMainFOV)
         {
             return PlayerDetectionLevel.Immediate;
         }
-        else if (distance <= clearRange && inMainFOV)
+        else if (p_distance <= l_clearRange && p_inMainFOV)
         {
             return PlayerDetectionLevel.Clear;
         }
-        else if (distance <= partialRange && inMainFOV)
+        else if (p_distance <= l_partialRange && p_inMainFOV)
         {
             return PlayerDetectionLevel.Partial;
         }
-        else if (inPeripheralFOV && distance <= maxRange * config.peripheralMultiplier)
+        else if (p_inPeripheralFOV && p_distance <= l_maxRange * config.peripheralMultiplier)
         {
             return PlayerDetectionLevel.Peripheral;
         }
@@ -324,94 +318,94 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     
     #region IPlayerDetector Implementation
     
-    public bool CanSeePlayer(Transform player)
+    public bool CanSeePlayer(Transform p_player)
     {
-        if (player == null) return false;
+        if (!p_player) return false;
         
-        var result = PerformDetection(player);
-        return result.canSeePlayer;
+        var l_result = PerformDetection(p_player);
+        return l_result.canSeePlayer;
     }
     
-    public float GetDistanceToPlayer(Transform player)
+    public float GetDistanceToPlayer(Transform p_player)
     {
-        if (player == null) return float.MaxValue;
+        if (p_player == null) return float.MaxValue;
         
-        return Vector3.Distance(GetEyePosition(), player.position);
+        return Vector3.Distance(GetEyePosition(), p_player.position);
     }
     
-    public bool IsPlayerInRange(Transform player, float range)
+    public bool IsPlayerInRange(Transform p_player, float p_range)
     {
-        return GetDistanceToPlayer(player) <= range;
+        return GetDistanceToPlayer(p_player) <= p_range;
     }
     
     public Vector3 GetLastKnownPlayerPosition()
     {
-        return lastKnownPlayerPosition;
+        return m_lastKnownPlayerPosition;
     }
     
     public float GetTimeSinceLastSeen()
     {
-        return lastSeenTime > 0 ? Time.time - lastSeenTime : float.MaxValue;
+        return m_lastSeenTime > 0 ? Time.time - m_lastSeenTime : float.MaxValue;
     }
     
-    public void SetDetectionParameters(float detectionRange, float fieldOfView, LayerMask obstacleLayerMask)
+    public void SetDetectionParameters(float p_detectionRange, float p_fieldOfView, LayerMask p_obstacleLayerMask)
     {
-        config.detectionRange = detectionRange;
-        config.fieldOfView = fieldOfView;
-        config.obstacleLayerMask = obstacleLayerMask;
+        config.detectionRange = p_detectionRange;
+        config.fieldOfView = p_fieldOfView;
+        config.obstacleLayerMask = p_obstacleLayerMask;
         
         if (enableDetectionLogs)
-            Logger.LogInfo($"PlayerDetector: Updated parameters - Range: {detectionRange}, FOV: {fieldOfView}");
+            MyLogger.LogInfo($"PlayerDetector: Updated parameters - Range: {p_detectionRange}, FOV: {p_fieldOfView}");
     }
     
-    public bool CanHearPlayer(Transform player, float noiseLevel = 1f)
+    public bool CanHearPlayer(Transform p_player, float p_noiseLevel = 1f)
     {
-        if (!config.useNoiseDection || player == null) return false;
+        if (!config.useNoiseDection || p_player == null) return false;
         
         // MEJORA: Implementación básica de detección auditiva
-        float hearingRange = config.detectionRange * 0.5f * noiseLevel;
-        return GetDistanceToPlayer(player) <= hearingRange;
+        float l_hearingRange = config.detectionRange * 0.5f * p_noiseLevel;
+        return GetDistanceToPlayer(p_player) <= l_hearingRange;
     }
     
-    public Vector3 GetPredictedPlayerPosition(float predictionTime = 1f)
+    public Vector3 GetPredictedPlayerPosition(float p_predictionTime = 1f)
     {
-        if (cachedPlayerTransform == null) return Vector3.zero;
+        if (m_cachedPlayerTransform == null) return Vector3.zero;
         
         // MEJORA: Predicción simple basada en velocidad del player
-        var playerRigidbody = cachedPlayerTransform.GetComponent<Rigidbody>();
-        if (playerRigidbody != null)
+        var l_playerRigidbody = m_cachedPlayerTransform.GetComponent<Rigidbody>();
+        if (l_playerRigidbody != null)
         {
-            return cachedPlayerTransform.position + playerRigidbody.linearVelocity * predictionTime;
+            return m_cachedPlayerTransform.position + l_playerRigidbody.linearVelocity * p_predictionTime;
         }
         
-        return cachedPlayerTransform.position;
+        return m_cachedPlayerTransform.position;
     }
     
-    public float GetAngleToPlayer(Transform player)
+    public float GetAngleToPlayer(Transform p_player)
     {
-        if (player == null) return 0f;
+        if (p_player == null) return 0f;
         
-        Vector3 directionToPlayer = (player.position - GetEyePosition()).normalized;
-        return Vector3.Angle(transform.forward, directionToPlayer);
+        Vector3 l_directionToPlayer = (p_player.position - GetEyePosition()).normalized;
+        return Vector3.Angle(transform.forward, l_directionToPlayer);
     }
     
-    public bool IsPlayerInFieldOfView(Transform player)
+    public bool IsPlayerInFieldOfView(Transform p_player)
     {
-        if (player == null) return false;
+        if (p_player == null) return false;
         
-        float angle = GetAngleToPlayer(player);
-        return IsInFieldOfView(angle, config.fieldOfView);
+        float l_angle = GetAngleToPlayer(p_player);
+        return IsInFieldOfView(l_angle, config.fieldOfView);
     }
     
     public void InvalidateCache()
     {
-        lastUpdateFrame = -1;
-        cachedResult = DetectionResult.None;
+        m_lastUpdateFrame = -1;
+        m_cachedResult = DetectionResult.None;
     }
     
     public (Vector3 position, float range, float fov, bool hasLOS) GetDebugInfo()
     {
-        return (GetEyePosition(), config.detectionRange, config.fieldOfView, lastDetectionResult.hasLineOfSight);
+        return (GetEyePosition(), config.detectionRange, config.fieldOfView, m_lastDetectionResult.hasLineOfSight);
     }
     
     #endregion
@@ -423,50 +417,50 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
         return transform.position + Vector3.up * config.eyeHeight;
     }
     
-    private bool IsInFieldOfView(float angle, float fieldOfView)
+    private bool IsInFieldOfView(float p_angle, float p_fieldOfView)
     {
-        return angle <= fieldOfView * 0.5f;
+        return p_angle <= p_fieldOfView * 0.5f;
     }
     
-    private bool CheckLineOfSight(Vector3 fromPosition, Vector3 toPosition, out string blocker)
+    private bool CheckLineOfSight(Vector3 p_fromPosition, Vector3 p_toPosition, out string p_blocker)
     {
         // AI Line of Sight
-        blocker = "";
+        p_blocker = "";
         
-        Vector3 direction = (toPosition - fromPosition).normalized;
-        float distance = Vector3.Distance(fromPosition, toPosition);
+        Vector3 l_direction = (p_toPosition - p_fromPosition).normalized;
+        float l_distance = Vector3.Distance(p_fromPosition, p_toPosition);
         
         // Main raycast
-        if (Physics.Raycast(fromPosition, direction, out RaycastHit hit, distance, config.obstacleLayerMask))
+        if (Physics.Raycast(p_fromPosition, l_direction, out RaycastHit l_hit, l_distance, config.obstacleLayerMask))
         {
             // Check if we hit the player (player might be on obstacle layer)
-            if (hit.collider.CompareTag(config.playerTag))
+            if (l_hit.collider.CompareTag(config.playerTag))
             {
                 return true;
             }
             
-            blocker = hit.collider.name;
-            lastBlockingObject = blocker;
+            p_blocker = l_hit.collider.name;
+            m_lastBlockingObject = p_blocker;
             return false;
         }
         
         // Additional raycast slightly upward for crouching players
-        Vector3 upperDirection = (toPosition + Vector3.up * 0.5f - fromPosition).normalized;
-        if (Physics.Raycast(fromPosition, upperDirection, distance, config.obstacleLayerMask))
+        Vector3 l_upperDirection = (p_toPosition + Vector3.up * 0.5f - p_fromPosition).normalized;
+        if (Physics.Raycast(p_fromPosition, l_upperDirection, l_distance, config.obstacleLayerMask))
         {
             return false;
         }
         
-        lastBlockingObject = "";
+        m_lastBlockingObject = "";
         return true;
     }
     
-    private void CacheResult(DetectionResult result)
+    private void CacheResult(DetectionResult p_result)
     {
         if (config.useCache)
         {
-            cachedResult = result;
-            lastUpdateFrame = Time.frameCount;
+            m_cachedResult = p_result;
+            m_lastUpdateFrame = Time.frameCount;
         }
     }
     
@@ -474,54 +468,52 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     
     #region Event Handling
     
-    private void OnDetectionLevelChanged(PlayerDetectionLevel previousLevel, PlayerDetectionLevel newLevel)
+    private void OnDetectionLevelChanged(PlayerDetectionLevel p_previousLevel, PlayerDetectionLevel p_newLevel)
     {
         if (enableDetectionLogs)
-            Logger.LogInfo($"PlayerDetector ({gameObject.name}): Detection level changed from {previousLevel} to {newLevel}");
+            MyLogger.LogInfo($"PlayerDetector ({gameObject.name}): Detection level changed from {p_previousLevel} to {p_newLevel}");
         
         // Notify blackboard of significant changes
-        if (newLevel >= PlayerDetectionLevel.Partial && previousLevel < PlayerDetectionLevel.Partial)
+        if (p_newLevel >= PlayerDetectionLevel.Partial && p_previousLevel < PlayerDetectionLevel.Partial)
         {
             // Player detected for first time
             NotifyBlackboardPlayerDetected();
         }
-        else if (newLevel < PlayerDetectionLevel.Partial && previousLevel >= PlayerDetectionLevel.Partial)
+        else if (p_newLevel < PlayerDetectionLevel.Partial && p_previousLevel >= PlayerDetectionLevel.Partial)
         {
             // Player lost
             NotifyBlackboardPlayerLost();
         }
         
         // Notify owner AI component
-        NotifyOwnerAI(previousLevel, newLevel);
+        NotifyOwnerAI(p_previousLevel, p_newLevel);
     }
     
-    private void UpdateBlackboardWithDetection(DetectionResult result)
+    private void UpdateBlackboardWithDetection(DetectionResult p_result)
     {
-        if (blackboard == null) return;
-        
-        blackboard.SetValue(BlackboardKeys.PLAYER_POSITION, result.lastKnownPosition);
-        blackboard.SetValue(BlackboardKeys.PLAYER_LAST_SEEN, result.lastKnownPosition);
-        blackboard.SetValue(BlackboardKeys.PLAYER_LAST_SEEN_TIME, Time.time);
+        BlackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, p_result.lastKnownPosition);
+        BlackboardService.SetValue(BlackboardKeys.PLAYER_LAST_SEEN, p_result.lastKnownPosition);
+        BlackboardService.SetValue(BlackboardKeys.PLAYER_LAST_SEEN_TIME, Time.time);
 
         // Minimum scope: Update last known position when player is detected
-        blackboard.SetValue(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION, result.lastKnownPosition);
+        BlackboardService.SetValue(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION, p_result.lastKnownPosition);
         
         // Update alert level based on detection
-        int currentAlertLevel = blackboard.GetValue<int>(BlackboardKeys.ALERT_LEVEL);
-        int suggestedAlertLevel = GetAlertLevelForDetection(result.level);
+        int l_currentAlertLevel = BlackboardService.GetValue<int>(BlackboardKeys.ALERT_LEVEL);
+        int l_suggestedAlertLevel = GetAlertLevelForDetection(p_result.level);
         
-        if (suggestedAlertLevel > currentAlertLevel)
+        if (l_suggestedAlertLevel > l_currentAlertLevel)
         {
-            blackboard.SetValue(BlackboardKeys.ALERT_LEVEL, suggestedAlertLevel);
-            blackboard.SetValue(BlackboardKeys.ALERT_POSITION, result.lastKnownPosition);
-            blackboard.SetValue(BlackboardKeys.ALERT_TIME, Time.time);
-            blackboard.SetValue(BlackboardKeys.LAST_ALERT_SOURCE, transform);
+            BlackboardService.SetValue(BlackboardKeys.ALERT_LEVEL, l_suggestedAlertLevel);
+            BlackboardService.SetValue(BlackboardKeys.ALERT_POSITION, p_result.lastKnownPosition);
+            BlackboardService.SetValue(BlackboardKeys.ALERT_TIME, Time.time);
+            BlackboardService.SetValue(BlackboardKeys.LAST_ALERT_SOURCE, transform);
         }
     }
     
-    private int GetAlertLevelForDetection(PlayerDetectionLevel detectionLevel)
+    private int GetAlertLevelForDetection(PlayerDetectionLevel p_detectionLevel)
     {
-        return detectionLevel switch
+        return p_detectionLevel switch
         {
             PlayerDetectionLevel.None => 0,
             PlayerDetectionLevel.Peripheral => 1,
@@ -534,18 +526,16 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     
     private void NotifyBlackboardPlayerDetected()
     {
-        if (blackboard == null) return;
-        
-        blackboard.SetValue(BlackboardKeys.PLAYER_DETECTED, true);
+        BlackboardService.SetValue(BlackboardKeys.PLAYER_DETECTED, true);
         
         // Add this detector to investigating list
-        var investigating = blackboard.GetValue<System.Collections.Generic.List<Transform>>(BlackboardKeys.GUARDS_INVESTIGATING) 
-                           ?? new System.Collections.Generic.List<Transform>();
+        var l_investigating = BlackboardService.GetValue<System.Collections.Generic.List<Transform>>(BlackboardKeys.GUARDS_INVESTIGATING) 
+                            ?? new System.Collections.Generic.List<Transform>();
         
-        if (!investigating.Contains(transform))
+        if (!l_investigating.Contains(transform))
         {
-            investigating.Add(transform);
-            blackboard.SetValue(BlackboardKeys.GUARDS_INVESTIGATING, investigating);
+            l_investigating.Add(transform);
+            BlackboardService.SetValue(BlackboardKeys.GUARDS_INVESTIGATING, l_investigating);
         }
     }
     
@@ -553,31 +543,30 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     {
         // Don't immediately update PLAYER_DETECTED to false - other AIs might still see player
         // Just remove this detector from investigating list
-        if (blackboard == null) return;
         
-        var investigating = blackboard.GetValue<System.Collections.Generic.List<Transform>>(BlackboardKeys.GUARDS_INVESTIGATING);
-        if (investigating != null && investigating.Contains(transform))
+        var l_investigating = BlackboardService.GetValue<System.Collections.Generic.List<Transform>>(BlackboardKeys.GUARDS_INVESTIGATING);
+        if (l_investigating != null && l_investigating.Contains(transform))
         {
-            investigating.Remove(transform);
-            blackboard.SetValue(BlackboardKeys.GUARDS_INVESTIGATING, investigating);
+            l_investigating.Remove(transform);
+            BlackboardService.SetValue(BlackboardKeys.GUARDS_INVESTIGATING, l_investigating);
         }
     }
     
-    private void NotifyOwnerAI(PlayerDetectionLevel previousLevel, PlayerDetectionLevel newLevel)
+    private void NotifyOwnerAI(PlayerDetectionLevel p_previousLevel, PlayerDetectionLevel p_newLevel)
     {
         // Notify Guard component if present
-        var guard = GetComponent<Guard>();
-        if (guard != null)
+        var l_guard = GetComponent<Guard>();
+        if (l_guard)
         {
-            guard.LastKnownPlayerPosition = lastKnownPlayerPosition;
+            l_guard.LastKnownPlayerPosition = m_lastKnownPlayerPosition;
         }
         
         // Could notify other AI components here as needed
     }
     
-    private void UpdateGizmoColor(PlayerDetectionLevel level)
+    private void UpdateGizmoColor(PlayerDetectionLevel p_level)
     {
-        currentGizmoColor = level switch
+        m_currentGizmoColor = p_level switch
         {
             PlayerDetectionLevel.None => Color.gray,
             PlayerDetectionLevel.Peripheral => Color.yellow,
@@ -614,88 +603,88 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     
     private void DrawDetectionRange()
     {
-        Vector3 eyePos = GetEyePosition();
+        Vector3 l_eyePos = GetEyePosition();
         
         // Main detection range
-        Gizmos.color = new Color(currentGizmoColor.r, currentGizmoColor.g, currentGizmoColor.b, 0.3f);
-        Gizmos.DrawWireSphere(eyePos, config.detectionRange);
+        Gizmos.color = new Color(m_currentGizmoColor.r, m_currentGizmoColor.g, m_currentGizmoColor.b, 0.3f);
+        Gizmos.DrawWireSphere(l_eyePos, config.detectionRange);
         
         // Peripheral range if enabled
         if (config.usePeripheralVision)
         {
             Gizmos.color = new Color(Color.cyan.r, Color.cyan.g, Color.cyan.b, 0.2f);
-            Gizmos.DrawWireSphere(eyePos, config.detectionRange * config.peripheralMultiplier);
+            Gizmos.DrawWireSphere(l_eyePos, config.detectionRange * config.peripheralMultiplier);
         }
     }
     
     private void DrawFieldOfView()
     {
-        Vector3 eyePos = GetEyePosition();
+        Vector3 l_eyePos = GetEyePosition();
         
         // Main field of view
-        Gizmos.color = currentGizmoColor;
-        float halfFOV = config.fieldOfView * 0.5f;
+        Gizmos.color = m_currentGizmoColor;
+        float l_halfFOV = config.fieldOfView * 0.5f;
         
-        Vector3 leftBoundary = Quaternion.AngleAxis(-halfFOV, Vector3.up) * transform.forward * config.detectionRange;
-        Vector3 rightBoundary = Quaternion.AngleAxis(halfFOV, Vector3.up) * transform.forward * config.detectionRange;
+        Vector3 l_leftBoundary = Quaternion.AngleAxis(-l_halfFOV, Vector3.up) * transform.forward * config.detectionRange;
+        Vector3 l_rightBoundary = Quaternion.AngleAxis(l_halfFOV, Vector3.up) * transform.forward * config.detectionRange;
         
-        Gizmos.DrawRay(eyePos, leftBoundary);
-        Gizmos.DrawRay(eyePos, rightBoundary);
+        Gizmos.DrawRay(l_eyePos, l_leftBoundary);
+        Gizmos.DrawRay(l_eyePos, l_rightBoundary);
         
         // Peripheral vision if enabled
         if (config.usePeripheralVision)
         {
             Gizmos.color = Color.cyan;
-            float peripheralHalf = 60f; // 120° total
-            Vector3 leftPeripheral = Quaternion.AngleAxis(-peripheralHalf, Vector3.up) * transform.forward * (config.detectionRange * config.peripheralMultiplier);
-            Vector3 rightPeripheral = Quaternion.AngleAxis(peripheralHalf, Vector3.up) * transform.forward * (config.detectionRange * config.peripheralMultiplier);
+            float l_peripheralHalf = 60f; // 120° total
+            Vector3 l_leftPeripheral = Quaternion.AngleAxis(-l_peripheralHalf, Vector3.up) * transform.forward * (config.detectionRange * config.peripheralMultiplier);
+            Vector3 l_rightPeripheral = Quaternion.AngleAxis(l_peripheralHalf, Vector3.up) * transform.forward * (config.detectionRange * config.peripheralMultiplier);
             
-            Gizmos.DrawRay(eyePos, leftPeripheral);
-            Gizmos.DrawRay(eyePos, rightPeripheral);
+            Gizmos.DrawRay(l_eyePos, l_leftPeripheral);
+            Gizmos.DrawRay(l_eyePos, l_rightPeripheral);
         }
     }
     
     private void DrawLineOfSight()
     {
-        if (cachedPlayerTransform == null) return;
+        if (m_cachedPlayerTransform == null) return;
         
-        Vector3 eyePos = GetEyePosition();
-        Vector3 playerPos = cachedPlayerTransform.position;
+        Vector3 l_eyePos = GetEyePosition();
+        Vector3 l_playerPos = m_cachedPlayerTransform.position;
         
         // Line to player
-        Gizmos.color = lastDetectionResult.hasLineOfSight ? Color.green : Color.red;
-        Gizmos.DrawLine(eyePos, playerPos);
+        Gizmos.color = m_lastDetectionResult.hasLineOfSight ? Color.green : Color.red;
+        Gizmos.DrawLine(l_eyePos, l_playerPos);
         
         // Last known position
-        if (lastKnownPlayerPosition != Vector3.zero)
+        if (m_lastKnownPlayerPosition != Vector3.zero)
         {
             Gizmos.color = Color.orange;
-            Gizmos.DrawWireSphere(lastKnownPlayerPosition, 0.5f);
+            Gizmos.DrawWireSphere(m_lastKnownPlayerPosition, 0.5f);
             
             // Line to last known position
             Gizmos.color = new Color(Color.orange.r, Color.orange.g, Color.orange.b, 0.5f);
-            Gizmos.DrawLine(eyePos, lastKnownPlayerPosition);
+            Gizmos.DrawLine(l_eyePos, m_lastKnownPlayerPosition);
         }
     }
     
     private void DrawDetailedDebugInfo()
     {
-        Vector3 eyePos = GetEyePosition();
+        Vector3 l_eyePos = GetEyePosition();
         
         // Eye position
         Gizmos.color = Color.white;
-        Gizmos.DrawWireSphere(eyePos, 0.1f);
-        Gizmos.DrawLine(transform.position, eyePos);
+        Gizmos.DrawWireSphere(l_eyePos, 0.1f);
+        Gizmos.DrawLine(transform.position, l_eyePos);
         
         // Forward direction
         Gizmos.color = Color.blue;
-        Gizmos.DrawRay(eyePos, transform.forward * 2f);
+        Gizmos.DrawRay(l_eyePos, transform.forward * 2f);
         
         // Detection level indicators
         if (Application.isPlaying)
         {
-            Gizmos.color = currentGizmoColor;
-            Gizmos.DrawWireCube(eyePos + Vector3.up * 0.5f, Vector3.one * 0.2f);
+            Gizmos.color = m_currentGizmoColor;
+            Gizmos.DrawWireCube(l_eyePos + Vector3.up * 0.5f, Vector3.one * 0.2f);
         }
     }
     
@@ -706,18 +695,18 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     [ContextMenu("Test Detection")]
     private void TestDetection()
     {
-        if (cachedPlayerTransform != null)
+        if (m_cachedPlayerTransform != null)
         {
-            var result = PerformDetection(cachedPlayerTransform);
+            var l_result = PerformDetection(m_cachedPlayerTransform);
             Debug.Log($"=== DETECTION TEST RESULTS ===");
-            Debug.Log($"Detection Level: {result.level}");
-            Debug.Log($"Can See Player: {result.canSeePlayer}");
-            Debug.Log($"In Field of View: {result.inFieldOfView}");
-            Debug.Log($"Has Line of Sight: {result.hasLineOfSight}");
-            Debug.Log($"Distance: {result.distance:F2}");
-            Debug.Log($"Angle: {result.angle:F1}°");
-            Debug.Log($"Blocked By: {result.blockedBy}");
-            Debug.Log($"Time Since Last Seen: {result.timeSinceLastSeen:F1}s");
+            Debug.Log($"Detection Level: {l_result.level}");
+            Debug.Log($"Can See Player: {l_result.canSeePlayer}");
+            Debug.Log($"In Field of View: {l_result.inFieldOfView}");
+            Debug.Log($"Has Line of Sight: {l_result.hasLineOfSight}");
+            Debug.Log($"Distance: {l_result.distance:F2}");
+            Debug.Log($"Angle: {l_result.angle:F1}°");
+            Debug.Log($"Blocked By: {l_result.blockedBy}");
+            Debug.Log($"Time Since Last Seen: {l_result.timeSinceLastSeen:F1}s");
         }
         else
         {
@@ -728,10 +717,10 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     [ContextMenu("Force Player Detection")]
     private void ForcePlayerDetection()
     {
-        if (cachedPlayerTransform != null)
+        if (m_cachedPlayerTransform != null)
         {
-            lastKnownPlayerPosition = cachedPlayerTransform.position;
-            lastSeenTime = Time.time;
+            m_lastKnownPlayerPosition = m_cachedPlayerTransform.position;
+            m_lastSeenTime = Time.time;
             OnDetectionLevelChanged(PlayerDetectionLevel.None, PlayerDetectionLevel.Clear);
             Debug.Log("Forced player detection!");
         }
@@ -740,10 +729,10 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     [ContextMenu("Reset Detection State")]
     private void ResetDetectionState()
     {
-        lastDetectionResult = DetectionResult.None;
-        lastKnownPlayerPosition = Vector3.zero;
-        lastSeenTime = -1f;
-        previousDetectionLevel = PlayerDetectionLevel.None;
+        m_lastDetectionResult = DetectionResult.None;
+        m_lastKnownPlayerPosition = Vector3.zero;
+        m_lastSeenTime = -1f;
+        m_previousDetectionLevel = PlayerDetectionLevel.None;
         InvalidateCache();
         Debug.Log("Detection state reset!");
     }
@@ -757,7 +746,7 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     /// </summary>
     public DetectionResult GetCurrentDetectionResult()
     {
-        return lastDetectionResult;
+        return m_lastDetectionResult;
     }
     
     /// <summary>
@@ -765,7 +754,7 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     /// </summary>
     public PlayerDetectionLevel GetDetectionLevel()
     {
-        return lastDetectionResult.level;
+        return m_lastDetectionResult.level;
     }
     
     /// <summary>
@@ -773,15 +762,15 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     /// </summary>
     public bool HasSignificantDetection()
     {
-        return lastDetectionResult.IsSignificant;
+        return m_lastDetectionResult.IsSignificant;
     }
     
     /// <summary>
     /// MEJORA: Runtime configuration of personality
     /// </summary>
-    public void SetPersonalityType(AIPersonalityType newPersonality)
+    public void SetPersonalityType(AIPersonalityType p_newPersonality)
     {
-        personalityType = newPersonality;
+        personalityType = p_newPersonality;
         if (autoConfigureFromPersonality)
         {
             ApplyPersonalityConfig();

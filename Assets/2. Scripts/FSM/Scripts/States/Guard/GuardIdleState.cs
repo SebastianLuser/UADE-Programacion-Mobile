@@ -16,7 +16,7 @@ namespace Scripts.FSM.Base.StateMachine
                 // Reset patrol loops for next patrol cycle
                 guard.CurrentPatrolLoops = 0;
 
-                Logger.LogDebug($"Guard {guard.name}: Entered Idle State - Will idle for {guard.IdleSeconds} seconds");
+                MyLogger.LogDebug($"Guard {guard.name}: Entered Idle State - Will idle for {guard.IdleSeconds} seconds");
             }
         }
 
@@ -37,7 +37,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Exited Idle State - Returning to patrol");
+                MyLogger.LogDebug($"Guard {guard.name}: Exited Idle State - Returning to patrol");
             }
         }
     }

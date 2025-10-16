@@ -32,7 +32,7 @@ public abstract class  NPCController : Character, IUseFsm
 
         if (view == null)
         {
-            Logger.LogError($"{gameObject.name}: NPCView component required for NPCController!");
+            MyLogger.LogError($"{gameObject.name}: NPCView component required for NPCController!");
         }
         else
         {
@@ -60,7 +60,7 @@ public abstract class  NPCController : Character, IUseFsm
         }
         else
         {
-            Logger.LogWarning($"{gameObject.name}: No state data assigned to NPCController!");
+            MyLogger.LogWarning($"{gameObject.name}: No state data assigned to NPCController!");
         }
     }
 

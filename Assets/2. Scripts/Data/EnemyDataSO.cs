@@ -1,10 +1,11 @@
+using ScriptableObjects.Bullets;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "EnemyData", menuName = "Game Data/Enemy Data")]
 public class EnemyDataSO : CharacterDataSO
 {
     [Header("Enemy Specific")]
-    public BulletDataSO bulletData;
+    public BulletData bulletData;
     
     [Header("AI")]
     public float detectionRange = 10f;

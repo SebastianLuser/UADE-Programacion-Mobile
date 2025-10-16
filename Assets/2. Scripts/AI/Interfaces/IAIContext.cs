@@ -1,3 +1,4 @@
+using Services.MicroServices.BlackboardService;
 using UnityEngine;
 
 /// <summary>
@@ -17,7 +18,7 @@ public interface IAIContext
     /// <summary>
     /// Gets access to the shared blackboard system
     /// </summary>
-    IBlackboard GetBlackboard();
+    IBlackboardService GetBlackboard();
     
     /// <summary>
     /// Checks if the player is currently visible to this AI

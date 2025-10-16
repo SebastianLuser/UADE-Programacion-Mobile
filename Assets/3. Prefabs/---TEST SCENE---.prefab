@@ -1,55 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &198327340283786999
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 698428952734881700}
-  - component: {fileID: 1880112470800049839}
-  m_Layer: 0
-  m_Name: GameManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &698428952734881700
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 198327340283786999}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -20.98916, y: 0.23566, z: 35.50869}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 227450207137609683}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1880112470800049839
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 198327340283786999}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 13385ea2c59e3a3468b9499ad7e48543, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  autoInitialize: 1
-  managerPrefabs: []
-  updateManager: {fileID: 2853928930455552977}
-  levelManager: {fileID: 559071708894395188}
-  gameStateManager: {fileID: 3031053812008491296}
-  aiSystemInitializer: {fileID: 7078573331751638788}
 --- !u!1 &1762826720998151377
 GameObject:
   m_ObjectHideFlags: 0
@@ -96,50 +46,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
   groundScale: {x: 10, y: 1, z: 10}
   groundColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
---- !u!1 &2301436422206978673
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1466166703225094205}
-  - component: {fileID: 3031053812008491296}
-  m_Layer: 0
-  m_Name: GameStateManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1466166703225094205
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2301436422206978673}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -20.98916, y: 0.23566, z: 35.50869}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 227450207137609683}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3031053812008491296
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2301436422206978673}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d3ff61c12db0872498ec9d45112a6be3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GameStateManager
 --- !u!1 &3265662404189084590
 GameObject:
   m_ObjectHideFlags: 0
@@ -169,12 +75,9 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 698428952734881700}
   - {fileID: 7783565367080317063}
   - {fileID: 7477554282969335330}
-  - {fileID: 1466166703225094205}
   - {fileID: 6146961739356595122}
-  - {fileID: 3996102525731870670}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3287836725321969333
@@ -225,8 +128,6 @@ MonoBehaviour:
   playerTag: Player
   enableAIDebugging: 0
   aiUpdateFrequency: 1
-  blackboardPrefab: {fileID: 0}
-  createBlackboardIfMissing: 1
   playerTransform: {fileID: 0}
   subscribeToPlayerMovement: 1
 --- !u!1 &3812485216127675220
@@ -238,7 +139,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7783565367080317063}
-  - component: {fileID: 2853928930455552977}
+  - component: {fileID: 3874111282271208384}
   m_Layer: 0
   m_Name: UpdateManager
   m_TagString: Untagged
@@ -261,7 +162,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 227450207137609683}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2853928930455552977
+--- !u!114 &3874111282271208384
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -270,58 +171,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 3812485216127675220}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a4b7ec36cc13b5498bf235f8903f10e, type: 3}
+  m_Script: {fileID: 11500000, guid: d45428c595e6454d9c0fac4c429be2aa, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UpdateManager
---- !u!1 &6763590943157103578
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3996102525731870670}
-  - component: {fileID: 1833814411410264050}
-  m_Layer: 0
-  m_Name: BlackBoard
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3996102525731870670
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6763590943157103578}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -19.32346, y: 0, z: 29.902668}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 227450207137609683}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1833814411410264050
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6763590943157103578}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37153378348c33b4c86a98f6a352ad16, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Blackboard
-  enableDebugLogs: 1
-  showInInspector: 1
-  cleanupInterval: 30
-  maxPanicAreas: 10
-  maxAIPositions: 50
-  useMinimumScope: 0
-  enableAdvancedFeatures: 0
-  debugEntries: []
+  m_EditorClassIdentifier: Assembly-CSharp::Services.MicroServices.UpdateService.UpdateServiceObject
