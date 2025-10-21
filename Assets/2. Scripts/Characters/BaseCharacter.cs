@@ -42,7 +42,7 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     public virtual void TakeDamage(float damage)
     {
         if (!isAlive) return;
-        
+
         currentHealth -= damage;
         if (currentHealth <= 0f)
         {

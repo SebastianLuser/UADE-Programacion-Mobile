@@ -155,6 +155,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     {
         InitializeComponents();
         SubscribeUpdateService();
+        base.Awake();
     }
 
     private void Start()
