@@ -125,6 +125,30 @@ namespace Scripts.FSM.Base.StateMachine
 
         public void AddState(StateData p_data) => m_allStatesData.Add(p_data);
         
+        /// <summary>
+        /// Change state by state name (for external requests like Decision Tree)
+        /// </summary>
+        /// <param name="stateName">Name of the state to change to</param>
+        /// <returns>True if state change was successful</returns>
+        public bool ChangeStateByName(string stateName)
+        {
+            if (string.IsNullOrEmpty(stateName) || m_allStatesData == null)
+                return false;
+
+            // Find state by name
+            var targetState = m_allStatesData.FirstOrDefault(state => 
+                state.State != null && 
+                state.State.StateName != null && 
+                state.State.StateName.Equals(stateName, StringComparison.OrdinalIgnoreCase));
+
+            if (targetState?.State == null)
+                return false;
+
+            // Change to the found state
+            ChangeState(targetState.State.GetType());
+            return true;
+        }
+        
         public void ClearStates()
         {
             if (m_allStatesData == null)

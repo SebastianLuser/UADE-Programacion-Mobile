@@ -1,5 +1,6 @@
 using Scripts.FSM.Models;
 using UnityEngine;
+using Game.AI.Steering;
 
 namespace Scripts.FSM.Base.StateMachine
 {
@@ -10,7 +11,8 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Entered Patrol State");
+                InitializePatrolling(guard);
+                MyLogger.LogDebug($"Guard {guard.name}: Entered Patrol State - Starting patrol loop {guard.CurrentPatrolLoops}");
             }
         }
 
@@ -18,7 +20,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                MoveTowardsPatrolPoint(guard);
+                PerformPatrolMovement(guard);
             }
         }
 
@@ -26,24 +28,96 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Exited Patrol State");
+                MyLogger.LogDebug($"Guard {guard.name}: Exited Patrol State - Completed {guard.CurrentPatrolLoops} loops");
             }
         }
 
-        private void MoveTowardsPatrolPoint(Guard guard)
+        private void InitializePatrolling(Guard guard)
+        {
+            if (guard.PatrolPoints == null || guard.PatrolPoints.Length == 0) return;
+
+            // Reset reached flag
+            guard.HasReachedCurrentPatrolPoint = false;
+
+            // Ensure valid patrol index
+            if (guard.CurrentPatrolIndex < 0 || guard.CurrentPatrolIndex >= guard.PatrolPoints.Length)
+            {
+                guard.CurrentPatrolIndex = 0;
+                guard.PatrolDirection = true;
+            }
+        }
+
+        private void PerformPatrolMovement(Guard guard)
         {
             if (guard.PatrolPoints == null || guard.PatrolPoints.Length == 0) return;
 
             var currentPatrolPoint = guard.PatrolPoints[guard.CurrentPatrolIndex];
             if (currentPatrolPoint == null) return;
 
-            Vector3 direction = (currentPatrolPoint.position - guard.transform.position).normalized;
-            direction.y = 0;
+            // Use Steering.Arrive for smooth movement with deceleration
+            Vector3 steering = Steering.Arrive(
+                guard.transform.position,
+                currentPatrolPoint.position,
+                guard.CurrentVelocity,
+                guard.PatrolSpeed,
+                guard.SlowingDistance
+            );
 
-            if (direction.magnitude > 0.1f)
+            guard.ApplySteering(steering);
+
+            // Check if reached current patrol point
+            float distanceToTarget = Vector3.Distance(guard.transform.position, currentPatrolPoint.position);
+            if (distanceToTarget <= 1.5f) // Arrival threshold
             {
-                guard.Move(direction.normalized * guard.PatrolSpeed);
+                if (!guard.HasReachedCurrentPatrolPoint)
+                {
+                    guard.HasReachedCurrentPatrolPoint = true;
+                    MoveToNextPatrolPoint(guard);
+                }
             }
+        }
+
+        private void MoveToNextPatrolPoint(Guard guard)
+        {
+            if (guard.PatrolPoints.Length <= 1) return;
+
+            int lastIndex = guard.PatrolPoints.Length - 1;
+
+            // Ping-pong logic: 0..N..0
+            if (guard.PatrolDirection) // Moving forward (0->N)
+            {
+                if (guard.CurrentPatrolIndex >= lastIndex)
+                {
+                    // Reached end, reverse direction
+                    guard.PatrolDirection = false;
+                    guard.CurrentPatrolIndex = lastIndex - 1;
+                    guard.CurrentPatrolLoops++;
+                }
+                else
+                {
+                    guard.CurrentPatrolIndex++;
+                }
+            }
+            else // Moving backward (N->0)
+            {
+                if (guard.CurrentPatrolIndex <= 0)
+                {
+                    // Reached start, reverse direction
+                    guard.PatrolDirection = true;
+                    guard.CurrentPatrolIndex = 1;
+                    guard.CurrentPatrolLoops++;
+                }
+                else
+                {
+                    guard.CurrentPatrolIndex--;
+                }
+            }
+
+            guard.HasReachedCurrentPatrolPoint = false;
+
+            MyLogger.LogDebug($"Guard {guard.name}: Moving to patrol point {guard.CurrentPatrolIndex}, " +
+                          $"Direction: {(guard.PatrolDirection ? "Forward" : "Backward")}, " +
+                          $"Loops: {guard.CurrentPatrolLoops}");
         }
     }
 }

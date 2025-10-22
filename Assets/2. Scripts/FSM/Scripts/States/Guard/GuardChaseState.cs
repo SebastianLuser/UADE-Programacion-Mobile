@@ -10,7 +10,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Entered Chase State");
+                MyLogger.LogDebug($"Guard {guard.name}: Entered Chase State");
                 if (guard.GetTargetTransform() != null)
                 {
                     guard.LastKnownPlayerPosition = guard.GetTargetTransform().position;
@@ -30,7 +30,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Exited Chase State");
+                MyLogger.LogDebug($"Guard {guard.name}: Exited Chase State");
             }
         }
 

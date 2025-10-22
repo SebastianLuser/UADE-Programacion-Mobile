@@ -1,3 +1,4 @@
+using Services.MicroServices.BlackboardService;
 using Scripts.FSM.Models;
 using UnityEngine;
 
@@ -11,7 +12,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is Guard guard)
             {
                 guard.StateTimer = 0f;
-                Logger.LogDebug($"Guard {guard.name}: Entered Search State - Looking for player at {guard.LastKnownPlayerPosition}");
+                MyLogger.LogDebug($"Guard {guard.name}: Entered Search State - Looking for player at {guard.LastKnownPlayerPosition}");
             }
         }
 
@@ -27,16 +28,27 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Logger.LogDebug($"Guard {guard.name}: Exited Search State");
+                MyLogger.LogDebug($"Guard {guard.name}: Exited Search State");
             }
         }
 
         private void SearchForPlayer(Guard guard)
         {
-            Vector3 direction = (guard.LastKnownPlayerPosition - guard.transform.position).normalized;
+            // Minimum scope: Get last known position from blackboard for coordination
+            Vector3 targetPosition = guard.LastKnownPlayerPosition;
+            if (guard.BlackboardService != null)
+            {
+                Vector3 blackboardPosition = guard.BlackboardService.GetValue<Vector3>(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION);
+                if (blackboardPosition != Vector3.zero)
+                {
+                    targetPosition = blackboardPosition;
+                }
+            }
+
+            Vector3 direction = (targetPosition - guard.transform.position).normalized;
             direction.y = 0;
 
-            float distanceToLastKnown = Vector3.Distance(guard.transform.position, guard.LastKnownPlayerPosition);
+            float distanceToLastKnown = Vector3.Distance(guard.transform.position, targetPosition);
             
             if (distanceToLastKnown > 1f && direction.magnitude > 0.1f)
             {

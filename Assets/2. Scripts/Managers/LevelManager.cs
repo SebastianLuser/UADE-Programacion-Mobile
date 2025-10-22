@@ -1,6 +1,7 @@
+using System;
 using UnityEngine;
 
-public class LevelManager : BaseManager
+public class LevelManager : MonoBehaviour
 {
     [Header("Scene Settings")]
     [SerializeField] private Vector3 groundScale = new Vector3(10f, 1f, 10f);
@@ -8,23 +9,43 @@ public class LevelManager : BaseManager
     
     private GameObject ground;
     
-    protected override void OnInitialize()
+    public static LevelManager Instance { get; private set; }
+
+    private void Awake()
+    {
+        if (!Instance)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
+    protected void OnInitialize()
     {
         SetupScene();
-        ServiceLocator.Register<LevelManager>(this);
+        //ServiceLocator.Register<LevelManager>(this);
     }
     
     private void SetupScene()
     {
-        CreateGround();
-        Logger.LogInfo("Scene setup completed");
+        //CreateGround();
+        MyLogger.LogInfo("Scene setup completed");
     }
     
     private void CreateGround()
     {
         if (ground != null)
         {
-            Logger.LogWarning("Ground already exists!");
+            MyLogger.LogWarning("Ground already exists!");
             return;
         }
         
@@ -58,12 +79,12 @@ public class LevelManager : BaseManager
         }
     }
     
-    protected override void OnShutdown()
+    protected void OnShutdown()
     {
         if (ground != null)
         {
             Destroy(ground);
         }
-        ServiceLocator.Unregister<LevelManager>();
+        //ServiceLocator.Unregister<LevelManager>();
     }
 }
