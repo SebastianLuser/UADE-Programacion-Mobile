@@ -52,9 +52,21 @@ public class PlayerCollector : MonoBehaviour, ICollector
     {
         _totalPoints += points;
 
+        // Analytics Event 1: Item collected
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogItemCollected(points, _totalPoints);
+        }
+
         if (!_canEscape && _totalPoints >= escapeThreshold)
         {
             _canEscape = true;
+
+            // Analytics Event 2: Escape unlocked
+            if (UGS_Analytics.Instance != null)
+            {
+                UGS_Analytics.Instance.LogEscapeUnlocked(_totalPoints);
+            }
         }
 
         UpdatePointsDisplay();
@@ -140,6 +152,12 @@ public class PlayerCollector : MonoBehaviour, ICollector
     private void Die()
     {
         Debug.Log("Player died! Restarting game...");
+
+        // Analytics Event 3: Player death
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogPlayerDeath(_totalPoints, _currentHealth);
+        }
 
         if (!string.IsNullOrEmpty(sceneToRestart))
         {
