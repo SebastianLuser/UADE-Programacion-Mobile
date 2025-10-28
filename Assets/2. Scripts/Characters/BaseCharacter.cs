@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 
 //todo delete private 
-public abstract class BaseCharacter : MonoBehaviour, ICharacter
+public abstract class BaseCharacter : MonoBehaviour, ICharacter, IDamageable
 {
     [SerializeField] protected CharacterDataSO characterData;
     

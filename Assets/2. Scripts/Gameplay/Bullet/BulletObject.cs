@@ -50,14 +50,14 @@ public class BulletObject : MonoBehaviour, IUpdateListener
         if (!m_isActive)
             return;
 
-        if (!p_other.TryGetComponent<BaseCharacter>(out var l_character))
+        if (!p_other.TryGetComponent<IDamageable>(out var l_character))
             return;
 
         if (l_character.GameObject == gameObject)
             return;
 
-//        l_character.TakeDamage(m_bulletData.Damage);
-        l_character.TakeDamage(25f);
+
+        l_character.TakeDamage(m_bulletData.Damage);
         Deactivate();
     }
 

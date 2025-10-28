@@ -153,9 +153,9 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     private void Awake()
     {
+        base.Awake();
         InitializeComponents();
         SubscribeUpdateService();
-        base.Awake();
     }
 
     private void Start()
@@ -295,7 +295,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         if (player == null) return;
 
         // Try to get player health component
-        var playerHealth = player.GetComponent<ICharacter>();
+        var playerHealth = player.GetComponent<IDamageable>();
         if (playerHealth != null)
         {
             playerHealth.TakeDamage(meleeDamage);

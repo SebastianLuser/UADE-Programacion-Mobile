@@ -14,6 +14,11 @@ public class PlayerTouchMovement : MonoBehaviour
 
     private Finger MovementFinger;
     private Vector2 MovementAmount;
+    
+    [SerializeField]
+    private MainCharacter mainCharacter; // Reference to the MainCharacter script
+
+    private Finger TapFinger;
 
     private void OnEnable()
     {
@@ -68,6 +73,17 @@ public class PlayerTouchMovement : MonoBehaviour
             Joystick.gameObject.SetActive(false);
             MovementAmount = Vector2.zero;
         }
+        else if (LostFinger == TapFinger)
+        {
+            // Call shoot method
+            if (mainCharacter != null)
+            {
+                Vector3 shootDirection = mainCharacter.transform.forward;
+                mainCharacter.Shoot(shootDirection);
+            }
+
+            TapFinger = null;
+        }
     }
 
     private void HandleFingerDown(Finger TouchedFinger)
@@ -79,6 +95,10 @@ public class PlayerTouchMovement : MonoBehaviour
             Joystick.gameObject.SetActive(true);
             Joystick.RectTransform.sizeDelta = JoystickSize;
             Joystick.RectTransform.anchoredPosition = ClampStartPosition(TouchedFinger.screenPosition);
+        }
+        else if (TouchedFinger.screenPosition.x > Screen.width / 2f) // Right side of screen for shooting
+        {
+            TapFinger = TouchedFinger;
         }
     }
 

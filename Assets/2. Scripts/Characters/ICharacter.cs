@@ -7,6 +7,4 @@ public interface ICharacter
     void Initialize();
     void Move(Vector3 direction);
     void Shoot(Vector3 direction);
-    void TakeDamage(float damage);
-    bool IsAlive { get; }
 }
