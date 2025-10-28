@@ -43,6 +43,10 @@ public class PlayerTouchMovement : MonoBehaviour
             Vector2 knobPosition;
             float maxMovement = JoystickSize.x / 2f;
             ETouch.Touch currentTouch = MovedFinger.currentTouch;
+            if (!IsValidVector2(currentTouch.screenPosition))
+            {
+                return;
+            }
 
             if (Vector2.Distance(
                     currentTouch.screenPosition,
@@ -88,15 +92,22 @@ public class PlayerTouchMovement : MonoBehaviour
 
     private void HandleFingerDown(Finger TouchedFinger)
     {
-        if (MovementFinger == null && TouchedFinger.screenPosition.x <= Screen.width / 2f)
+        float halfScreenWidth = Screen.width / 2f;
+
+        if (!TryGetScreenPosition(TouchedFinger, out Vector2 screenPosition))
+        {
+            return;
+        }
+
+        if (MovementFinger == null && screenPosition.x <= halfScreenWidth)
         {
             MovementFinger = TouchedFinger;
             MovementAmount = Vector2.zero;
             Joystick.gameObject.SetActive(true);
             Joystick.RectTransform.sizeDelta = JoystickSize;
-            Joystick.RectTransform.anchoredPosition = ClampStartPosition(TouchedFinger.screenPosition);
+            Joystick.RectTransform.anchoredPosition = ClampStartPosition(screenPosition);
         }
-        else if (TouchedFinger.screenPosition.x > Screen.width / 2f) // Right side of screen for shooting
+        else if (screenPosition.x > halfScreenWidth) // Right side of screen for shooting
         {
             TapFinger = TouchedFinger;
         }
@@ -133,26 +144,48 @@ public class PlayerTouchMovement : MonoBehaviour
         Player.Move(scaledMovement);
     }
 
-    private void OnGUI()
+    private bool TryGetScreenPosition(Finger finger, out Vector2 screenPosition)
     {
-        GUIStyle labelStyle = new GUIStyle()
+        screenPosition = Vector2.zero;
+
+        if (finger == null)
         {
-            fontSize = 24,
-            normal = new GUIStyleState()
-            {
-                textColor = Color.white
-            }
-        };
-        if (MovementFinger != null)
-        {
-            GUI.Label(new Rect(10, 35, 500, 20), $"Finger Start Position: {MovementFinger.currentTouch.startScreenPosition}", labelStyle);
-            GUI.Label(new Rect(10, 65, 500, 20), $"Finger Current Position: {MovementFinger.currentTouch.screenPosition}", labelStyle);
-        }
-        else
-        {
-            GUI.Label(new Rect(10, 35, 500, 20), "No Current Movement Touch", labelStyle);
+            return false;
         }
 
-        GUI.Label(new Rect(10, 10, 500, 20), $"Screen Size ({Screen.width}, {Screen.height})", labelStyle);
+        if (IsValidVector2(finger.screenPosition))
+        {
+            screenPosition = finger.screenPosition;
+            return true;
+        }
+
+        var touch = finger.currentTouch;
+        bool touchValid = touch.touchId >= 0;
+        if (touchValid)
+        {
+            if (IsValidVector2(touch.screenPosition))
+            {
+                screenPosition = touch.screenPosition;
+                return true;
+            }
+
+            if (IsValidVector2(touch.startScreenPosition))
+            {
+                screenPosition = touch.startScreenPosition;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsValidVector2(Vector2 value)
+    {
+        return IsFinite(value.x) && IsFinite(value.y);
+    }
+
+    private bool IsFinite(float value)
+    {
+        return !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }
