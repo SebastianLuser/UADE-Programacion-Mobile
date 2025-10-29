@@ -1,7 +1,8 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using TMPro;
-using UnityEngine.UI;
+using Services;
+using Services.MicroServices.EventsServices;
+using Services.MicroServices.EventsServices.CustomEvents;
+using Services.MicroServices.GameStateService;
 
 /// <summary>
 /// Escape zone that activates when player can escape and handles scene restart
@@ -11,15 +12,6 @@ public class EscapeZone : MonoBehaviour
     [Header("Zone Settings")]
     [SerializeField] private GameObject escapePlane;
     [SerializeField] private Material greenMaterial;
-
-    [Header("UI Settings")]
-    [SerializeField] private TMP_Text scoreText;
-    [SerializeField] private Button restartButton;
-    [SerializeField] private GameObject escapeUI;
-    [SerializeField] private string scoreFormat = "Final Score: {0}";
-
-    [Header("Scene Settings")]
-    [SerializeField] private string sceneToLoad;
 
     private PlayerCollector _playerCollector;
     private Renderer _planeRenderer;
@@ -38,15 +30,6 @@ public class EscapeZone : MonoBehaviour
             }
         }
 
-        if (escapeUI != null)
-        {
-            escapeUI.SetActive(false);
-        }
-
-        if (restartButton != null)
-        {
-            restartButton.onClick.AddListener(RestartGame);
-        }
     }
 
     void Update()
@@ -82,37 +65,20 @@ public class EscapeZone : MonoBehaviour
     void OnTriggerExit(Collider other)
     {
         var playerCollector = other.GetComponent<PlayerCollector>();
-        if (playerCollector != null)
-        {
-            if (escapeUI != null)
-            {
-                escapeUI.SetActive(false);
-            }
-        }
+        // No-op now that we use global results UI
     }
 
     private void ShowEscapeUI(PlayerCollector playerCollector)
     {
-        if (escapeUI != null)
+        var playerMovement = playerCollector.GetComponent<PlayerTouchMovement>();
+        if (playerMovement)
         {
-            escapeUI.SetActive(true);
+            playerMovement.enabled = false;
+        }
 
-            if (scoreText != null)
-            {
-                scoreText.text = string.Format(scoreFormat, playerCollector.TotalPoints);
-            }
-        }
-    }
+        playerCollector.gameObject.SetActive(false);
 
-    private void RestartGame()
-    {
-        if (!string.IsNullOrEmpty(sceneToLoad))
-        {
-            SceneManager.LoadScene(sceneToLoad);
-        }
-        else
-        {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        }
+        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(true, playerCollector.TotalPoints));
+        ServiceLocator.Get<IGameStateService>().ChangeState(GameState.Victory);
     }
 }

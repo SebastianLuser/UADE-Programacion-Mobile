@@ -1,5 +1,8 @@
+using Services;
+using Services.MicroServices.EventsServices;
+using Services.MicroServices.EventsServices.CustomEvents;
+using Services.MicroServices.GameStateService;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
@@ -21,7 +24,6 @@ public class PlayerCollector : MonoBehaviour, ICollector
     [SerializeField] private Slider healthBar;
     [SerializeField] private int maxHealth = 100;
     [SerializeField] private int bulletDamage = 20;
-    [SerializeField] private string sceneToRestart;
 
     private int _totalPoints = 0;
     private bool _canEscape = false;
@@ -139,15 +141,17 @@ public class PlayerCollector : MonoBehaviour, ICollector
     /// </summary>
     private void Die()
     {
-        Debug.Log("Player died! Restarting game...");
+        Debug.Log("Player died! Showing results...");
 
-        if (!string.IsNullOrEmpty(sceneToRestart))
+        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints));
+        ServiceLocator.Get<IGameStateService>().ChangeState(GameState.GameOver);
+
+        var playerMovement = GetComponent<PlayerTouchMovement>();
+        if (playerMovement)
         {
-            SceneManager.LoadScene(sceneToRestart);
+            playerMovement.enabled = false;
         }
-        else
-        {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        }
+
+        gameObject.SetActive(false);
     }
 }
