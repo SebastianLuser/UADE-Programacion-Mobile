@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 
 //todo delete private 
-public abstract class BaseCharacter : MonoBehaviour, ICharacter
+public abstract class BaseCharacter : MonoBehaviour, ICharacter, IDamageable
 {
     [SerializeField] protected CharacterDataSO characterData;
     
@@ -42,7 +42,7 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     public virtual void TakeDamage(float damage)
     {
         if (!isAlive) return;
-        
+
         currentHealth -= damage;
         if (currentHealth <= 0f)
         {

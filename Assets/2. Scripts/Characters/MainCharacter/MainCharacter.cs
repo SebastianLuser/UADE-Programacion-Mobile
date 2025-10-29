@@ -1,9 +1,10 @@
+using System;
 using ScriptableObjects.Bullets;
 using Services;
 using Services.MicroServices.PoolObjectsService;
 using UnityEngine;
 
-public class MainCharacter : Character, ICombat
+public class MainCharacter : BaseCharacter, ICombat
 {
     [SerializeField] private MainCharacterDataSO mainCharacterData;
     
@@ -15,7 +16,7 @@ public class MainCharacter : Character, ICombat
     private BulletData BulletData => mainCharacterData?.bulletData;
 
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
-    
+
     protected override void Awake()
     {
         base.Awake();
@@ -40,7 +41,7 @@ public class MainCharacter : Character, ICombat
         }
     }
     
-    public void Shoot(Vector3 direction)
+    public override void Shoot(Vector3 direction)
     {
         if (!isAlive || !CanShoot()) return;
         

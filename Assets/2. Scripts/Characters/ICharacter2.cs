@@ -6,6 +6,4 @@ public interface ICharacter2
     Transform Transform { get; }
     void Initialize();
     void Move(Vector3 direction);
-    void TakeDamage(float damage);
-    bool IsAlive { get; }
 }
