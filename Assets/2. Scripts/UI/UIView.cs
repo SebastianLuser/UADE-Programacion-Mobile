@@ -21,14 +21,14 @@ namespace _2._Scripts.UI
         public virtual void Show()
         {
             mainPanel.interactable = true;
-            mainPanel.blocksRaycasts = false;
+            mainPanel.blocksRaycasts = true;
             mainPanel.alpha = 1;
         }
         
         public virtual void Hide()
         {
             mainPanel.interactable = false;
-            mainPanel.blocksRaycasts = true;
+            mainPanel.blocksRaycasts = false;
             mainPanel.alpha = 0;
         }
     }

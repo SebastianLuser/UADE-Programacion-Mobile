@@ -1,4 +1,6 @@
-using Unity.Assertions;
+using Services;
+using Services.MicroServices.GameStateService;
+using UnityEngine.Assertions;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -7,6 +9,9 @@ namespace _2._Scripts.UI.MainMenu.Play
     public class PlayPresenter : UIPresenter
     {
         [SerializeField] private string mainUIName = "Main";
+        [SerializeField] private string gameplaySceneName = "DemoProto";
+        
+        private IGameStateService m_gameStateService;
         private PlayView m_playView;
 
         public override void Initialize()
@@ -14,6 +19,8 @@ namespace _2._Scripts.UI.MainMenu.Play
             base.Initialize();
             m_playView = uiView as PlayView;
             Assert.IsNotNull(m_playView);
+            
+            m_gameStateService = ServiceLocator.Get<IGameStateService>();
         }
 
         public override void Show()
@@ -37,13 +44,15 @@ namespace _2._Scripts.UI.MainMenu.Play
             m_playView.OnBackClicked -= OnBackClickedHandler;
         }
 
-        private static void OnStartClickedHandler()
+        private void OnStartClickedHandler()
         {
-            SceneManager.LoadScene("DemoProto");
+            m_gameStateService?.ChangeState(GameState.Playing);
+            SceneManager.LoadScene(gameplaySceneName);
         }
         
         private void OnBackClickedHandler()
         {
+            Hide();
             panelsController.ShowUI(mainUIName);
         }
     }
