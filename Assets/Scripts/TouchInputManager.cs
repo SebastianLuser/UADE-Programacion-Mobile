@@ -31,6 +31,11 @@ public class TouchInputManager : MonoBehaviour
         {
             EnhancedTouchSupport.Enable();
         }
+        
+#if UNITY_EDITOR || UNITY_STANDALONE
+        if (!TouchSimulation.instance.enabled)
+            TouchSimulation.Enable();
+#endif
     }
 
     private void OnDestroy()

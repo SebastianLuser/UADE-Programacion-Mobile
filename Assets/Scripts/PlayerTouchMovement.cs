@@ -22,6 +22,7 @@ public class PlayerTouchMovement : MonoBehaviour
 
     private void OnEnable()
     {
+        EnhancedTouchSupport.Enable();
         ETouch.Touch.onFingerDown += HandleFingerDown;
         ETouch.Touch.onFingerUp += HandleLoseFinger;
         ETouch.Touch.onFingerMove += HandleFingerMove;
@@ -32,6 +33,7 @@ public class PlayerTouchMovement : MonoBehaviour
         ETouch.Touch.onFingerDown -= HandleFingerDown;
         ETouch.Touch.onFingerUp -= HandleLoseFinger;
         ETouch.Touch.onFingerMove -= HandleFingerMove;
+        EnhancedTouchSupport.Disable();
     }
 
     private void HandleFingerMove(Finger MovedFinger)
