@@ -23,11 +23,13 @@ public class PlayerCollector : MonoBehaviour, ICollector
     [Header("Health Settings")]
     [SerializeField] private Slider healthBar;
     [SerializeField] private int maxHealth = 100;
-    [SerializeField] private int bulletDamage = 20;
 
     private int _totalPoints = 0;
     private bool _canEscape = false;
     private int _currentHealth;
+    private bool _isDead;
+    private MainCharacter _mainCharacter;
+    private PlayerTouchMovement _playerMovement;
 
     /// <summary>
     /// Total points collected (read-only)
@@ -41,7 +43,20 @@ public class PlayerCollector : MonoBehaviour, ICollector
 
     void Start()
     {
-        _currentHealth = maxHealth;
+        _mainCharacter = GetComponent<MainCharacter>();
+        _playerMovement = GetComponent<PlayerTouchMovement>();
+        _isDead = false;
+
+        if (_mainCharacter != null)
+        {
+            maxHealth = Mathf.Max(1, Mathf.RoundToInt(_mainCharacter.MaxHealth));
+            _currentHealth = Mathf.Clamp(Mathf.RoundToInt(_mainCharacter.CurrentHealth), 0, maxHealth);
+        }
+        else
+        {
+            _currentHealth = maxHealth;
+        }
+
         UpdateHealthBar();
         UpdatePointsDisplay();
     }
@@ -99,29 +114,22 @@ public class PlayerCollector : MonoBehaviour, ICollector
             return;
         }
 
-        // Check for bullet collision
-        //if (other.CompareTag("EnemyBullet") || other.name.Contains("Bullet") || other.name.Contains("bullet"))
-        if (other.name.Contains("Bullet") || other.name.Contains("bullet"))
-        {
-            TakeDamage(bulletDamage);
-            Destroy(other.gameObject);
-        }
     }
 
-    /// <summary>
-    /// Take damage and update health bar
-    /// </summary>
-    /// <param name="damage">Amount of damage to take</param>
-    private void TakeDamage(int damage)
+    public void SyncHealth(float currentHealth, float maxHealthValue)
     {
-        _currentHealth -= damage;
-        _currentHealth = Mathf.Max(0, _currentHealth);
+        if (_isDead)
+        {
+            return;
+        }
+
+        maxHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealthValue));
+        _currentHealth = Mathf.Clamp(Mathf.RoundToInt(currentHealth), 0, maxHealth);
 
         UpdateHealthBar();
-
         if (_currentHealth <= 0)
         {
-            Die();
+            HandleDeath();
         }
     }
 
@@ -139,17 +147,23 @@ public class PlayerCollector : MonoBehaviour, ICollector
     /// <summary>
     /// Handle player death and restart game
     /// </summary>
-    private void Die()
+    public void HandleDeath()
     {
-        Debug.Log("Player died! Showing results...");
+        if (_isDead)
+        {
+            return;
+        }
+
+        _isDead = true;
+        _currentHealth = 0;
+        UpdateHealthBar();
 
         ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.GameOver);
 
-        var playerMovement = GetComponent<PlayerTouchMovement>();
-        if (playerMovement)
+        if (_playerMovement)
         {
-            playerMovement.enabled = false;
+            _playerMovement.enabled = false;
         }
 
         gameObject.SetActive(false);

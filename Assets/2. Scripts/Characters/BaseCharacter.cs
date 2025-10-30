@@ -13,6 +13,8 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter, IDamageable
     public GameObject GameObject => gameObject;
     public Transform Transform => transform;
     public bool IsAlive => isAlive;
+    public float CurrentHealth => currentHealth;
+    public float MaxHealth => characterData != null ? characterData.maxHealth : 100f;
     
     protected virtual void Awake()
     {

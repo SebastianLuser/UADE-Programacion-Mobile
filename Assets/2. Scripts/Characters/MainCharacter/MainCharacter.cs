@@ -11,7 +11,8 @@ public class MainCharacter : BaseCharacter, ICombat
     private float lastShootTime;
     private Rigidbody rb;
     private Vector3 lastMoveDirection;
-    
+    private PlayerCollector playerCollector;
+
     private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData.rotationSpeed;
     private BulletData BulletData => mainCharacterData?.bulletData;
 
@@ -21,6 +22,7 @@ public class MainCharacter : BaseCharacter, ICombat
     {
         base.Awake();
         rb = GetComponent<Rigidbody>();
+        playerCollector = GetComponent<PlayerCollector>();
         
         if (rb == null)
         {
@@ -92,5 +94,30 @@ public class MainCharacter : BaseCharacter, ICombat
             Quaternion targetRotation = Quaternion.LookRotation(direction);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, RotationSpeed * Time.deltaTime);
         }
+    }
+
+    public override void TakeDamage(float damage)
+    {
+        if (!isAlive) return;
+
+        currentHealth -= damage;
+        playerCollector?.SyncHealth(currentHealth, MaxHealth);
+
+        if (currentHealth <= 0f)
+        {
+            isAlive = false;
+            OnDeath();
+        }
+    }
+
+    protected override void OnDeath()
+    {
+        if (playerCollector != null)
+        {
+            playerCollector.HandleDeath();
+            return;
+        }
+
+        base.OnDeath();
     }
 }
