@@ -1,6 +1,7 @@
 using UnityEngine;
 using Unity.Cinemachine;
 using UnityEngine.Splines;
+using UnityEngine.UI;
 using System.Collections;
 
 [DefaultExecutionOrder(1000)]
@@ -8,28 +9,43 @@ using System.Collections;
 [RequireComponent(typeof(CinemachineSplineDolly))]
 public class TutorialSplineSequence : MonoBehaviour
 {
+    [Header("Targets y Splines")]
     public Transform lookAtTarget;
     public SplineContainer firstSpline;
     public SplineContainer nextSpline;
 
-    public GameObject canvasToDisable;
+    [Header("UI del Tutorial")]
+    public GameObject tutorialUIRoot;
+    public Image blackScreen;
+    public float fadeCloseSeconds = 0.35f;
+    public float fadeOpenSeconds  = 0.35f;
 
+    [Header("Canvases de gameplay a ocultar mientras corre")]
+    public GameObject[] canvasToDisable;
+
+    [Header("Tiempos")]
     public float firstLegSeconds = 10f;
     public float secondLegSeconds = 10f;
 
     public enum EasingType { Linear, EaseIn, EaseOut, EaseInOut, SmoothStep }
     public EasingType easingType = EasingType.Linear;
 
+    [Header("Prioridades")]
     public int startPriority = 50;
-    public int endPriority = 9;
+    public int endPriority   = 9;
+
+    [Header("Debug")]
     public bool debugLog = false;
 
     CinemachineCamera cam;
     CinemachineSplineDolly dolly;
     CinemachineRotationComposer rot;
+
     Coroutine seq;
     bool driving;
     float targetPosKnot;
+    bool alreadySeenTutorial;
+    bool skipping;
 
     void Awake()
     {
@@ -41,13 +57,34 @@ public class TutorialSplineSequence : MonoBehaviour
         cam.LookAt = null;
 
         if (firstSpline) dolly.Spline = firstSpline;
+        
+        if (blackScreen) blackScreen.fillAmount = 0f;
+        if (tutorialUIRoot) tutorialUIRoot.SetActive(true);
     }
 
     void Start()
     {
-        cam.Priority.Value = startPriority;
-        canvasToDisable.SetActive(false);
-        PlayTutorial();
+        if (!alreadySeenTutorial)
+        {
+            cam.Priority.Value = startPriority;
+            SetGameplayCanvasActive(false);
+            PlayTutorial();
+        }
+        else
+        {
+            if (tutorialUIRoot) tutorialUIRoot.SetActive(false);
+        }
+    }
+
+    void SetGameplayCanvasActive(bool active)
+    {
+        foreach (var go in canvasToDisable)
+            if (go) go.SetActive(active);
+    }
+    
+    public void OnSkipButton()
+    {
+        if (!skipping) StartCoroutine(SkipRoutine());
     }
 
     public void PlayTutorial()
@@ -62,13 +99,13 @@ public class TutorialSplineSequence : MonoBehaviour
 
         float endA = Mathf.Min(4f, MaxKnotInclusive(dolly.Spline));
         yield return MoveKnotRange(0f, endA, Mathf.Max(0.01f, firstLegSeconds));
-
+        
         if (lookAtTarget)
         {
             cam.LookAt = lookAtTarget;
             if (rot) rot.enabled = true;
         }
-
+        
         if (nextSpline)
         {
             dolly.Spline = nextSpline;
@@ -76,34 +113,57 @@ public class TutorialSplineSequence : MonoBehaviour
             yield return null;
 
             if (!ValidateSpline(nextSpline, "segundo")) yield break;
-
-            float endB = Mathf.Min(4f, MaxKnotInclusive(nextSpline));
-            yield return MoveKnotRange(4f, 0f, Mathf.Max(0.01f, secondLegSeconds));
+            
+            float toB = 0f;
+            yield return MoveKnotRange(4f, toB, Mathf.Max(0.01f, secondLegSeconds));
         }
 
+        EndTutorialAndReturnToGameplay();
+    }
+    
+    IEnumerator SkipRoutine()
+    {
+        skipping = true;
+        
+        yield return FadeBlack(0f, 1f, fadeCloseSeconds);
+        
+        if (seq != null) StopCoroutine(seq);
+        EndTutorialAndReturnToGameplay();
+        
+        yield return FadeBlack(1f, 0f, fadeOpenSeconds);
+        
+        if (tutorialUIRoot) tutorialUIRoot.SetActive(false);
+        SetGameplayCanvasActive(true);
+
+        skipping = false;
+    }
+
+    void EndTutorialAndReturnToGameplay()
+    {
+        driving = false;
         if (rot) rot.enabled = false;
         cam.LookAt = null;
         cam.Priority.Value = endPriority;
-
-        driving = false;
-        seq = null;
-        
-        canvasToDisable.SetActive(true);
+        alreadySeenTutorial = true;
+        if (!skipping)
+        {
+            SetGameplayCanvasActive(true);
+            if (tutorialUIRoot) tutorialUIRoot.SetActive(false);
+        }
     }
-
+    
     IEnumerator MoveKnotRange(float fromKnot, float toKnot, float seconds)
     {
         driving = true;
         targetPosKnot = fromKnot;
-
-        // esperar a que haya deltaTime (>0) por si la escena arranca pausada
+        
         yield return null;
         int guard = 0;
         while (Time.deltaTime == 0f && Time.unscaledDeltaTime == 0f && guard++ < 120)
             yield return null;
 
         float elapsed = 0f;
-        while (elapsed < seconds)
+        while (elapsed < seconds && !skipping)
         {
             float dt = Time.deltaTime;
             if (dt <= 0f) dt = Time.unscaledDeltaTime;
@@ -123,13 +183,31 @@ public class TutorialSplineSequence : MonoBehaviour
         targetPosKnot = toKnot;
     }
 
+    IEnumerator FadeBlack(float from, float to, float seconds)
+    {
+        if (!blackScreen || seconds <= 0f) yield break;
+        
+        if (tutorialUIRoot && !tutorialUIRoot.activeSelf) tutorialUIRoot.SetActive(true);
+
+        float t = 0f;
+        blackScreen.fillAmount = from;
+        while (t < seconds)
+        {
+            t += Time.unscaledDeltaTime;
+            float u = Mathf.Clamp01(t / seconds);
+            blackScreen.fillAmount = Mathf.Lerp(from, to, u);
+            yield return null;
+        }
+        blackScreen.fillAmount = to;
+    }
+
     float EvaluateEasing(float u)
     {
         switch (easingType)
         {
             default:
             case EasingType.Linear:     return u;
-            case EasingType.SmoothStep: return u * u * (3f - 2f * u); // smootherstep básico
+            case EasingType.SmoothStep: return u * u * (3f - 2f * u);
             case EasingType.EaseIn:     return u * u;
             case EasingType.EaseOut:    return 1f - (1f - u) * (1f - u);
             case EasingType.EaseInOut:  return (u < 0.5f) ? 2f * u * u : 1f - Mathf.Pow(-2f * u + 2f, 2f) / 2f;
