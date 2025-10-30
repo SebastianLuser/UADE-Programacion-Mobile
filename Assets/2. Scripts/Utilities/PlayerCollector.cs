@@ -25,6 +25,10 @@ public class PlayerCollector : MonoBehaviour, ICollector
     [SerializeField] private Slider healthBar;
     [SerializeField] private int maxHealth = 100;
 
+    [SerializeField] private GameObject ragdoll;
+    [SerializeField] private GameObject armL;
+    [SerializeField] private GameObject armR;
+
     private int _totalPoints = 0;
     private bool _canEscape = false;
     private int _currentHealth;
@@ -167,6 +171,11 @@ public class PlayerCollector : MonoBehaviour, ICollector
             _playerMovement.enabled = false;
         }
 
-        gameObject.SetActive(false);
+        GetComponent<MeshCollider>().enabled = false;
+        GetComponent<MeshRenderer>().enabled = false;
+        armR.SetActive(false);
+        armL.SetActive(false);
+        
+        ragdoll.SetActive(true);
     }
 }

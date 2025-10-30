@@ -115,9 +115,6 @@ public class MainCharacter : BaseCharacter, ICombat
         if (playerCollector != null)
         {
             playerCollector.HandleDeath();
-            return;
         }
-
-        base.OnDeath();
     }
 }
