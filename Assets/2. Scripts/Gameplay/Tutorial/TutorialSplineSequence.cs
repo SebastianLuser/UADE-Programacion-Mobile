@@ -36,8 +36,9 @@ public class TutorialSplineSequence : MonoBehaviour
 
     [Header("Debug")]  
     public bool debugLog = false;
-
-    public CinemachineBrain cmBrain;
+    
+    [Header("Gameplay Camera Follow")]
+    [SerializeField] private CameraFollowController followController;
 
     CinemachineCamera cam;
     CinemachineSplineDolly dolly;
@@ -62,6 +63,9 @@ public class TutorialSplineSequence : MonoBehaviour
         
         if (blackScreen) blackScreen.fillAmount = 0f;
         if (tutorialUIRoot) tutorialUIRoot.SetActive(true);
+        
+        if (followController) followController.enabled = false;
+        cam.enabled = true;
     }
 
     void Start()
@@ -121,8 +125,6 @@ public class TutorialSplineSequence : MonoBehaviour
         }
 
         EndTutorialAndReturnToGameplay();
-
-        cmBrain.enabled = false;
     }
     
     IEnumerator SkipRoutine()
@@ -140,7 +142,6 @@ public class TutorialSplineSequence : MonoBehaviour
         SetGameplayCanvasActive(true);
 
         skipping = false;
-        cmBrain.enabled = false;
     }
 
     void EndTutorialAndReturnToGameplay()
@@ -148,7 +149,14 @@ public class TutorialSplineSequence : MonoBehaviour
         driving = false;
         if (rot) rot.enabled = false;
         cam.LookAt = null;
-        cam.Priority.Value = endPriority;
+        
+        if (followController)
+        {
+            followController.enabled = true;
+            followController.SnapToTarget();   // <- clave para evitar la espera
+        }
+        
+        if (cam) cam.enabled = false;
         alreadySeenTutorial = true;
         if (!skipping)
         {

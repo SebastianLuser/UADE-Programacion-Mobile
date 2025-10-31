@@ -96,6 +96,19 @@ public class CameraFollowController : MonoBehaviour
 
             transform.position = newPosition;
     }
+    
+    
+    public void SnapToTarget()
+    {
+        if (target == null || cameraData == null) return;
+        velocity = Vector3.zero;
+        previousVelocity = Vector3.zero;
+        isFirstFrame = true;
+        
+        Vector3 calculatedOffset = GetCalculatedOffset(cameraData.offset);
+        transform.position = target.position + calculatedOffset;
+        transform.rotation = Quaternion.Euler(cameraData.fixedRotationAngles);
+    }
 
     private void UpdateRotation()
     {

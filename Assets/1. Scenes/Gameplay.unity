@@ -7421,7 +7421,7 @@ MonoBehaviour:
   startPriority: 50
   endPriority: 9
   debugLog: 0
-  cmBrain: {fileID: 6392384228250093082}
+  followController: {fileID: 6392384228250093081}
 --- !u!114 &465834643
 MonoBehaviour:
   m_ObjectHideFlags: 0
