@@ -12,12 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d99693a306f64e42b49ccd9d4d08ee0, type: 3}
   m_Name: Isometric
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollowDataSO
-  <offset>k__BackingField: {x: 0, y: 0, z: -9}
-  <offsetSpace>k__BackingField: 0
-  <useSmoothDamp>k__BackingField: 1
+  <offset>k__BackingField: {x: 3, y: 0, z: -8}
   <smoothTime>k__BackingField: 0.6
-  <maxFollowSpeed>k__BackingField: 70
+  <maxFollowSpeed>k__BackingField: 50
   <maxAcceleration>k__BackingField: 100
-  <maxDistanceFromIdeal>k__BackingField: 10
-  <lerpSpeed>k__BackingField: 0.1
+  <maxDistanceFromIdeal>k__BackingField: 12
   <fixedRotationAngles>k__BackingField: {x: 70, y: 0, z: 0}

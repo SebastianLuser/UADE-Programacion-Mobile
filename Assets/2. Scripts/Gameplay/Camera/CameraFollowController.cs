@@ -17,16 +17,13 @@ public class CameraFollowController : MonoBehaviour
     private Vector3 velocity = Vector3.zero;
     private Vector3 previousVelocity = Vector3.zero;
     private bool isFirstFrame = true;
-
+    
     private void Start()
     {
-        if (target == null || cameraData == null)
-            return;
+        if (target == null || cameraData == null) return;
 
-        // Establecer rotación fija inmediatamente
         transform.rotation = Quaternion.Euler(cameraData.fixedRotationAngles);
 
-        // Calcular y establecer posición ideal inmediatamente
         Vector3 calculatedOffset = GetCalculatedOffset(cameraData.offset);
         transform.position = target.position + calculatedOffset;
     }
@@ -38,6 +35,7 @@ public class CameraFollowController : MonoBehaviour
             return;
 
         UpdatePosition();
+        UpdateRotation();
     }
 
     /// <summary>
@@ -45,11 +43,13 @@ public class CameraFollowController : MonoBehaviour
     /// </summary>
     private Vector3 GetCalculatedOffset(Vector3 p_offset)
     {
-            // Usar el offset relativo a la rotación fija de la cámara
-            Quaternion cameraRotation = Quaternion.Euler(cameraData.fixedRotationAngles);
-            return cameraRotation * p_offset;
+        Quaternion camRot = Quaternion.Euler(cameraData.fixedRotationAngles);
+        Vector3 forward = camRot * Vector3.forward;
+        float distance = Mathf.Abs(p_offset.z); // usar z como distancia
+        return -forward * distance;             // sin X/Y para mantener centrado
     }
 
+    
     private void UpdatePosition()
     {
         // 1. Calcular offset según el espacio configurado
@@ -108,6 +108,11 @@ public class CameraFollowController : MonoBehaviour
 
             // Aplicar la nueva posición
             transform.position = newPosition;
-        
     }
+    
+    private void UpdateRotation()
+    {
+        transform.rotation = Quaternion.Euler(cameraData.fixedRotationAngles);
+    }
+
 }

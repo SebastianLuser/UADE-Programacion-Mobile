@@ -18,7 +18,7 @@ public class CameraFollowDataSO : ScriptableObject
 {
     [Header("Position Settings")]
     [field: SerializeField] public Vector3 offset { get; private set; } = new Vector3(0f, 0f, -8f);
-    [field: SerializeField, Range(0.05f, 1f)] public float smoothTime { get; private set; } = 0.15f;
+    [field: SerializeField, Range(0.05f, 1f)] public float smoothTime { get; private set; } = 0.25f;
     [field: SerializeField, Range(10f, 200f)] public float maxFollowSpeed { get; private set; } = 80f;
     [field: SerializeField, Range(10f, 200f)] public float maxAcceleration { get; private set; } = 50f;
     [field: SerializeField, Range(0.5f, 20f)] public float maxDistanceFromIdeal { get; private set; } = 3f;
