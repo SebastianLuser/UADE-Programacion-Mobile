@@ -13,7 +13,6 @@ public class CameraFollowController : MonoBehaviour
     [Header("Target")]
     [SerializeField] private Transform target;
 
-    // Variables privadas para SmoothDamp
     private Vector3 velocity = Vector3.zero;
     private Vector3 previousVelocity = Vector3.zero;
     private bool isFirstFrame = true;
@@ -30,7 +29,6 @@ public class CameraFollowController : MonoBehaviour
 
     private void LateUpdate()
     {
-        // Validar que el target y cameraData no sean null
         if (target == null || cameraData == null)
             return;
 
@@ -45,8 +43,8 @@ public class CameraFollowController : MonoBehaviour
     {
         Quaternion camRot = Quaternion.Euler(cameraData.fixedRotationAngles);
         Vector3 forward = camRot * Vector3.forward;
-        float distance = Mathf.Abs(p_offset.z); // usar z como distancia
-        return -forward * distance;             // sin X/Y para mantener centrado
+        float distance = Mathf.Abs(p_offset.z);
+        return -forward * distance;
     }
 
     
@@ -59,8 +57,6 @@ public class CameraFollowController : MonoBehaviour
         Vector3 idealPosition = target.position + calculatedOffset;
 
         // 3. Mover la cámara hacia la posición ideal con suavizado
-        // La cámara SIEMPRE converge a idealPosition, solo toma tiempo
-            // Calcular nueva posición con SmoothDamp
             Vector3 newPosition = Vector3.SmoothDamp(
                 transform.position,
                 idealPosition,
@@ -73,40 +69,31 @@ public class CameraFollowController : MonoBehaviour
             // 4. Limitar la aceleración para evitar movimientos bruscos iniciales
             if (!isFirstFrame)
             {
-                // Calcular el cambio de velocity (aceleración)
                 Vector3 acceleration = (velocity - previousVelocity) / Time.deltaTime;
 
-                // Si la aceleración supera el límite, clampearla
                 if (acceleration.magnitude > cameraData.maxAcceleration)
                 {
                     acceleration = acceleration.normalized * cameraData.maxAcceleration;
 
-                    // Recalcular velocity con la aceleración limitada
                     velocity = previousVelocity + acceleration * Time.deltaTime;
 
-                    // Recalcular posición con el velocity limitado
                     newPosition = transform.position + velocity * Time.deltaTime;
                 }
             }
 
-            // Guardar velocity para el siguiente frame
             previousVelocity = velocity;
             isFirstFrame = false;
 
             // 5. Limitar la distancia máxima desde la posición ideal
-            // Esto evita que la cámara se aleje demasiado del jugador
             float distanceFromIdeal = Vector3.Distance(newPosition, idealPosition);
             if (distanceFromIdeal > cameraData.maxDistanceFromIdeal)
             {
-                // Clampear la posición para que esté dentro del radio permitido
                 Vector3 directionToIdeal = (idealPosition - newPosition).normalized;
                 newPosition = idealPosition - directionToIdeal * cameraData.maxDistanceFromIdeal;
 
-                // Ajustar velocity para reflejar el clamp
                 velocity = (newPosition - transform.position) / Time.deltaTime;
             }
 
-            // Aplicar la nueva posición
             transform.position = newPosition;
     }
     
