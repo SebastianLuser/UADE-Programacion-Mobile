@@ -16,7 +16,6 @@ public class CameraFollowController : MonoBehaviour
     // Variables privadas para SmoothDamp
     private Vector3 velocity = Vector3.zero;
     private Vector3 previousVelocity = Vector3.zero;
-    private Vector3 previousIdealPosition;
     private bool isFirstFrame = true;
 
     private void Start()
@@ -28,8 +27,7 @@ public class CameraFollowController : MonoBehaviour
         transform.rotation = Quaternion.Euler(cameraData.fixedRotationAngles);
 
         // Calcular y establecer posición ideal inmediatamente
-        Quaternion cameraRotation = Quaternion.Euler(cameraData.fixedRotationAngles);
-        Vector3 calculatedOffset = cameraRotation * cameraData.offset;
+        Vector3 calculatedOffset = GetCalculatedOffset(cameraData.offset);
         transform.position = target.position + calculatedOffset;
     }
 
@@ -42,104 +40,74 @@ public class CameraFollowController : MonoBehaviour
         UpdatePosition();
     }
 
+    /// <summary>
+    /// Calcula el offset en world space según el espacio configurado.
+    /// </summary>
+    private Vector3 GetCalculatedOffset(Vector3 p_offset)
+    {
+            // Usar el offset relativo a la rotación fija de la cámara
+            Quaternion cameraRotation = Quaternion.Euler(cameraData.fixedRotationAngles);
+            return cameraRotation * p_offset;
+    }
+
     private void UpdatePosition()
     {
-        // 1. Calcular offset relativo a la rotación fija de la cámara
-        Quaternion cameraRotation = Quaternion.Euler(cameraData.fixedRotationAngles);
-        Vector3 calculatedOffset = cameraRotation * cameraData.offset;
+        // 1. Calcular offset según el espacio configurado
+        Vector3 calculatedOffset = GetCalculatedOffset(cameraData.offset);
 
         // 2. Calcular posición IDEAL (donde la cámara SIEMPRE debe terminar)
         Vector3 idealPosition = target.position + calculatedOffset;
 
-        // 3. Mover la cámara hacia la posición ideal con suavizado SmoothDamp
+        // 3. Mover la cámara hacia la posición ideal con suavizado
         // La cámara SIEMPRE converge a idealPosition, solo toma tiempo
+            // Calcular nueva posición con SmoothDamp
+            Vector3 newPosition = Vector3.SmoothDamp(
+                transform.position,
+                idealPosition,
+                ref velocity,
+                cameraData.smoothTime,
+                cameraData.maxFollowSpeed,
+                Time.deltaTime
+            );
 
-        // Calcular nueva posición con SmoothDamp
-        Vector3 newPosition = Vector3.SmoothDamp(
-            transform.position,
-            idealPosition,
-            ref velocity,
-            cameraData.smoothTime,
-            cameraData.maxFollowSpeed,
-            Time.deltaTime
-        );
-
-        // 4. Limitar la aceleración para evitar movimientos bruscos iniciales
-        if (!isFirstFrame)
-        {
-            // Calcular el cambio de velocity (aceleración)
-            Vector3 acceleration = (velocity - previousVelocity) / Time.deltaTime;
-
-            // Si la aceleración supera el límite, clampearla
-            if (acceleration.magnitude > cameraData.maxAcceleration)
+            // 4. Limitar la aceleración para evitar movimientos bruscos iniciales
+            if (!isFirstFrame)
             {
-                acceleration = acceleration.normalized * cameraData.maxAcceleration;
+                // Calcular el cambio de velocity (aceleración)
+                Vector3 acceleration = (velocity - previousVelocity) / Time.deltaTime;
 
-                // Recalcular velocity con la aceleración limitada
-                velocity = previousVelocity + acceleration * Time.deltaTime;
+                // Si la aceleración supera el límite, clampearla
+                if (acceleration.magnitude > cameraData.maxAcceleration)
+                {
+                    acceleration = acceleration.normalized * cameraData.maxAcceleration;
 
-                // Recalcular posición con el velocity limitado
-                newPosition = transform.position + velocity * Time.deltaTime;
+                    // Recalcular velocity con la aceleración limitada
+                    velocity = previousVelocity + acceleration * Time.deltaTime;
+
+                    // Recalcular posición con el velocity limitado
+                    newPosition = transform.position + velocity * Time.deltaTime;
+                }
             }
-        }
 
-        // Guardar velocity para el siguiente frame
-        previousVelocity = velocity;
-        isFirstFrame = false;
+            // Guardar velocity para el siguiente frame
+            previousVelocity = velocity;
+            isFirstFrame = false;
 
-        // 5. Limitar la distancia máxima desde la posición ideal
-        // Esto evita que la cámara se aleje demasiado del jugador
-        float distanceFromIdeal = Vector3.Distance(newPosition, idealPosition);
-        if (distanceFromIdeal > cameraData.maxDistanceFromIdeal)
-        {
-            // Clampear la posición para que esté dentro del radio permitido
-            Vector3 directionToIdeal = (idealPosition - newPosition).normalized;
-            newPosition = idealPosition - directionToIdeal * cameraData.maxDistanceFromIdeal;
+            // 5. Limitar la distancia máxima desde la posición ideal
+            // Esto evita que la cámara se aleje demasiado del jugador
+            float distanceFromIdeal = Vector3.Distance(newPosition, idealPosition);
+            if (distanceFromIdeal > cameraData.maxDistanceFromIdeal)
+            {
+                // Clampear la posición para que esté dentro del radio permitido
+                Vector3 directionToIdeal = (idealPosition - newPosition).normalized;
+                newPosition = idealPosition - directionToIdeal * cameraData.maxDistanceFromIdeal;
 
-            // Ajustar velocity para reflejar el clamp
-            velocity = (newPosition - transform.position) / Time.deltaTime;
-        }
+                // Ajustar velocity para reflejar el clamp
+                velocity = (newPosition - transform.position) / Time.deltaTime;
+            }
 
-        // Aplicar la nueva posición
-        transform.position = newPosition;
+            // Aplicar la nueva posición
+            transform.position = newPosition;
+        
     }
-
-    /// <summary>
-    /// Asigna un nuevo objetivo para que la cámara lo siga.
-    /// </summary>
-    public void SetTarget(Transform p_newTarget)
-    {
-        target = p_newTarget;
-
-        // Resetear variables para evitar saltos bruscos al cambiar de objetivo
-        velocity = Vector3.zero;
-        previousVelocity = Vector3.zero;
-        previousIdealPosition = Vector3.zero;
-        isFirstFrame = true;
-
-        // Reposicionar inmediatamente al nuevo target
-        if (p_newTarget != null && cameraData != null)
-        {
-            transform.rotation = Quaternion.Euler(cameraData.fixedRotationAngles);
-            Quaternion cameraRotation = Quaternion.Euler(cameraData.fixedRotationAngles);
-            Vector3 calculatedOffset = cameraRotation * cameraData.offset;
-            transform.position = p_newTarget.position + calculatedOffset;
-        }
-    }
-
-    /// <summary>
-    /// Cambia el perfil de configuración de la cámara en runtime.
-    /// Útil para cambiar entre diferentes comportamientos de cámara.
-    /// </summary>
-    public void SetCameraData(CameraFollowDataSO p_newCameraData)
-    {
-        cameraData = p_newCameraData;
-
-        // Resetear velocity al cambiar de perfil
-        velocity = Vector3.zero;
-    }
-
-    // Propiedades públicas de solo lectura
-    public Transform Target => target;
-    public CameraFollowDataSO CameraData => cameraData;
 }
