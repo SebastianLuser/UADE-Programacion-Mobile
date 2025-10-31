@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6fc42c7531604e1aa8197ce6565b464b, type: 3}
   m_Name: CameraFollowData
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollowDataSO
-  <offset>k__BackingField: {x: 0, y: 0, z: -8}
+  <offset>k__BackingField: {x: 0, y: 0, z: 8}
   <smoothTime>k__BackingField: 0.6
   <maxFollowSpeed>k__BackingField: 50
   <maxAcceleration>k__BackingField: 100

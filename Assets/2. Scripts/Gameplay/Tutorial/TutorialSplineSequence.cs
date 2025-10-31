@@ -17,15 +17,15 @@ public class TutorialSplineSequence : MonoBehaviour
     [Header("UI del Tutorial")]
     public GameObject tutorialUIRoot;
     public Image blackScreen;
-    public float fadeCloseSeconds = 0.35f;
-    public float fadeOpenSeconds  = 0.35f;
+    public float fadeCloseSeconds = 0.15f;
+    public float fadeOpenSeconds  = 0.5f;
 
     [Header("Canvases de gameplay a ocultar mientras corre")]
     public GameObject[] canvasToDisable;
 
     [Header("Tiempos")]
-    public float firstLegSeconds = 10f;
-    public float secondLegSeconds = 10f;
+    public float firstLegSeconds = 15f;
+    public float secondLegSeconds = 7f;
 
     public enum EasingType { Linear, EaseIn, EaseOut, EaseInOut, SmoothStep }
     public EasingType easingType = EasingType.Linear;
@@ -34,7 +34,7 @@ public class TutorialSplineSequence : MonoBehaviour
     public int startPriority = 50;
     public int endPriority   = 9;
 
-    [Header("Debug")]
+    [Header("Debug")]  
     public bool debugLog = false;
 
     public CinemachineBrain cmBrain;
