@@ -37,6 +37,8 @@ public class TutorialSplineSequence : MonoBehaviour
     [Header("Debug")]
     public bool debugLog = false;
 
+    public CinemachineBrain cmBrain;
+
     CinemachineCamera cam;
     CinemachineSplineDolly dolly;
     CinemachineRotationComposer rot;
@@ -119,6 +121,8 @@ public class TutorialSplineSequence : MonoBehaviour
         }
 
         EndTutorialAndReturnToGameplay();
+
+        cmBrain.enabled = false;
     }
     
     IEnumerator SkipRoutine()
@@ -136,6 +140,7 @@ public class TutorialSplineSequence : MonoBehaviour
         SetGameplayCanvasActive(true);
 
         skipping = false;
+        cmBrain.enabled = false;
     }
 
     void EndTutorialAndReturnToGameplay()
