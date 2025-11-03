@@ -174,7 +174,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
         m_root = new QuestionNode(
             () => {
                 bool l_hasLoS = m_civilian.HasLoS();
-                Debug.Log($"ROOT DECISION: HasLoS = {l_hasLoS}");
+                //Debug.Log($"ROOT DECISION: HasLoS = {l_hasLoS}");
                 return l_hasLoS;
             },
             l_visibleDecisionNode,

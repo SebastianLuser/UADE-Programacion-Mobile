@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 
 //todo delete private 
-public abstract class BaseCharacter : MonoBehaviour, ICharacter
+public abstract class BaseCharacter : MonoBehaviour, ICharacter, IDamageable
 {
     [SerializeField] protected CharacterDataSO characterData;
     
@@ -13,6 +13,8 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     public GameObject GameObject => gameObject;
     public Transform Transform => transform;
     public bool IsAlive => isAlive;
+    public float CurrentHealth => currentHealth;
+    public float MaxHealth => characterData != null ? characterData.maxHealth : 100f;
     
     protected virtual void Awake()
     {
@@ -42,7 +44,7 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter
     public virtual void TakeDamage(float damage)
     {
         if (!isAlive) return;
-        
+
         currentHealth -= damage;
         if (currentHealth <= 0f)
         {

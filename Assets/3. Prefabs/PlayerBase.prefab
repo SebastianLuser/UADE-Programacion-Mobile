@@ -25,8 +25,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 967257827513156226}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.51684326, y: 5.818388e-15, z: -3.5127494e-15, w: 0.85608006}
-  m_LocalPosition: {x: -9.57451, y: 11, z: -9.55918}
+  m_LocalRotation: {x: 0.51684314, y: -0.000000033591498, z: 0.00000002028027, w: 0.8560801}
+  m_LocalPosition: {x: -2.6689997, y: 7.795, z: -1.5591812}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -198,6 +198,7 @@ GameObject:
   - component: {fileID: 3666670831284652762}
   - component: {fileID: 8705301200526539023}
   - component: {fileID: 2297584105871717742}
+  - component: {fileID: 7073220179049577520}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -213,9 +214,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1283332809827454111}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -9.57451, y: 1, z: -4.5591803}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0.00000050663937, z: -0, w: 1}
+  m_LocalPosition: {x: -2.669, y: -2.205, z: 3.4408188}
+  m_LocalScale: {x: 0.61993, y: 0.61993, z: 0.61993}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6517533302771489380}
@@ -3230,7 +3231,7 @@ MonoBehaviour:
   m_PreserveMeshAssetOnDestroy: 0
   assetGuid: 
   m_Mesh: {fileID: 0}
-  m_VersionIndex: 771
+  m_VersionIndex: 780
   m_IsSelectable: 1
   m_SelectedFaces: 
   m_SelectedEdges: []
@@ -3355,6 +3356,7 @@ MonoBehaviour:
   JoystickSize: {x: 300, y: 300}
   Joystick: {fileID: 8152703037042314289}
   Player: {fileID: 8705301200526539023}
+  mainCharacter: {fileID: 7073220179049577520}
 --- !u!195 &8705301200526539023
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -3389,6 +3391,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e31057ef324a04478bb4f7d469b3cdc0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &7073220179049577520
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1283332809827454111}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02f11facdf00a164bb00a91dc42ea027, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MainCharacter
+  characterData: {fileID: 11400000, guid: bffa5f6ea800fe6498addf62fbe2b66f, type: 2}
+  mainCharacterData: {fileID: 11400000, guid: 42946e771724b1541976c212bb212fc7, type: 2}
 --- !u!1 &2934201452997937228
 GameObject:
   m_ObjectHideFlags: 0
@@ -3661,7 +3677,7 @@ MonoBehaviour:
   m_PreserveMeshAssetOnDestroy: 0
   assetGuid: 
   m_Mesh: {fileID: 0}
-  m_VersionIndex: 1666
+  m_VersionIndex: 1675
   m_IsSelectable: 1
   m_SelectedFaces: 
   m_SelectedEdges: []
@@ -4153,7 +4169,7 @@ MonoBehaviour:
   m_PreserveMeshAssetOnDestroy: 0
   assetGuid: 
   m_Mesh: {fileID: 0}
-  m_VersionIndex: 1663
+  m_VersionIndex: 1672
   m_IsSelectable: 1
   m_SelectedFaces: 
   m_SelectedEdges: []
@@ -4548,7 +4564,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
+  m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -4728,8 +4744,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6392384228353329271}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.51684314, y: 7.962617e-15, z: -7.064373e-15, w: 0.8560802}
-  m_LocalPosition: {x: -13.84351, y: 11.10029, z: 18.98164}
+  m_LocalRotation: {x: 0.51684314, y: -0.000000033591498, z: 0.00000002028027, w: 0.8560801}
+  m_LocalPosition: {x: -2.6689997, y: 7.795, z: -1.5591812}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4887,7 +4903,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 1
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2631777712641506883
 Transform:
   m_ObjectHideFlags: 0
