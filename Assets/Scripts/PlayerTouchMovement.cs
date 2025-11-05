@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem.EnhancedTouch;
@@ -12,11 +13,14 @@ public class PlayerTouchMovement : MonoBehaviour
     [SerializeField]
     private NavMeshAgent Player;
 
+    [SerializeField] private GameObject dragTutorial;
+    [SerializeField] private GameObject shootTutorial;
+
     private Finger MovementFinger;
     private Vector2 MovementAmount;
     
     [SerializeField]
-    private MainCharacter mainCharacter; // Reference to the MainCharacter script
+    private MainCharacter mainCharacter;
 
     private Finger TapFinger;
 
@@ -65,7 +69,18 @@ public class PlayerTouchMovement : MonoBehaviour
 
             Joystick.Knob.anchoredPosition = knobPosition;
             MovementAmount = knobPosition / maxMovement;
+
+            if (dragTutorial)
+            {
+                StartCoroutine(DisableAfterSeconds(dragTutorial,2f));
+            }
         }
+    }
+
+    IEnumerator DisableAfterSeconds(GameObject objectToDisable, float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        objectToDisable.SetActive(false);
     }
 
     private void HandleLoseFinger(Finger LostFinger)
@@ -79,7 +94,6 @@ public class PlayerTouchMovement : MonoBehaviour
         }
         else if (LostFinger == TapFinger)
         {
-            // Call shoot method
             if (mainCharacter != null)
             {
                 Vector3 shootDirection = mainCharacter.transform.forward;
@@ -87,6 +101,11 @@ public class PlayerTouchMovement : MonoBehaviour
             }
 
             TapFinger = null;
+
+            if (shootTutorial)
+            {
+                shootTutorial.SetActive(false);
+            }
         }
     }
 
