@@ -4464,6 +4464,7 @@ MonoBehaviour:
   objectives:
   - "Roba al menos un botin de \n50$ "
   pauseGameWhileVisible: 0
+  showOnStart: 0
 --- !u!114 &268676242
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -36566,8 +36567,10 @@ MonoBehaviour:
   JoystickSize: {x: 300, y: 300}
   Joystick: {fileID: 8152703037077488222}
   Player: {fileID: 8705301200629479264}
+  objectivesPanelName: Objectives
   dragTutorial: {fileID: 915651551}
   shootTutorial: {fileID: 733776557}
+  panelsController: {fileID: 798315206}
   mainCharacter: {fileID: 7073220178946339423}
 --- !u!1 &3778190607982534123
 GameObject:
