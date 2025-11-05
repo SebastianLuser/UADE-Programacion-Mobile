@@ -7,6 +7,7 @@ using Services.MicroServices.BlackboardService;
 using Services;
 using Services.MicroServices.UpdateService;
 using Unity.Assertions;
+using UnityEditor;
 
 public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 {
@@ -61,6 +62,25 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     [Header("Debug")]
     [SerializeField] private bool enableDebugLogs = false;
     [SerializeField] private bool canAttack = false;        // Civilians typically don't attack
+
+    // --- Pathfinding (mobile-friendly) ---
+    [Header("Pathfinding")]
+    [SerializeField] private GraphAsset fleeGraph;
+    [SerializeField] private int fleeTargetNodeIndex = -1;
+    [SerializeField] private float fleeWaypointReach = 0.8f;//0.5f;
+    [SerializeField] private float fleeRecomputeInterval = 1.0f;
+
+    // Reusable Buffers for Pathfinding (init in Start)
+    private float[] _astarG, _astarF;
+    private int[] _astarFrom, _heapIdx, _pathIdx;
+    private float[] _heapF;
+    private bool[] _astarClosed;
+    private Vector3[] _worldPath;
+    private PathFollowerAgent _pathFollower;
+    private float _lastAStarTime = -999f;
+    private int _pathLen = 0;
+    private int _graphCachedNodeCount = -1;
+
 
     // Component references
     private Transform player;
@@ -156,6 +176,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         base.Awake();
         InitializeComponents();
         SubscribeUpdateService();
+        TryInitFleePathfinding();
     }
 
     private void Start()
@@ -250,6 +271,199 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             if (enableDebugLogs)
                 MyLogger.LogInfo($"Civilian {gameObject.name}: Using legacy FSM (ScriptableObject FSM disabled or no states configured)");
         }
+    }
+
+    //Pathfinding
+    private void TryInitFleePathfinding()
+    {
+        if (fleeGraph == null || fleeGraph.NodeCount <= 0) return;
+        if (_astarG != null && _graphCachedNodeCount == fleeGraph.NodeCount) return; // ya listo
+
+        AllocateFleeBuffers(fleeGraph.NodeCount);
+    }
+
+    private void AllocateFleeBuffers(int n)
+    {
+        _astarG = new float[n];
+        _astarF = new float[n];
+        _astarFrom = new int[n];
+        _heapIdx = new int[n];
+        _heapF = new float[n];
+        _astarClosed = new bool[n];
+        _pathIdx = new int[n];
+        _worldPath = new Vector3[n];
+
+        if (_pathFollower == null)
+            _pathFollower = new PathFollowerAgent();
+
+        _pathFollower.waypointReachDist = fleeWaypointReach;
+        _pathFollower.slowingDistance = 1.0f;
+
+        _graphCachedNodeCount = n;
+        _pathLen = 0; // limpiar ruta previa si cambió el grafo
+    }
+
+    private void ClearFleeBuffers()
+    {
+        _astarG = _astarF = null;
+        _astarFrom = _heapIdx = _pathIdx = null;
+        _heapF = null;
+        _astarClosed = null;
+        _worldPath = null;
+        _graphCachedNodeCount = -1;
+        _pathLen = 0;
+    }
+
+    // este es el que invoca el estado: idempotente, rápido
+    public void EnsureFleePathfindingInitialized()
+    {
+        if (fleeGraph == null || fleeGraph.NodeCount <= 0)
+        {
+            ClearFleeBuffers();
+            return;
+        }
+        if (_astarG == null || _graphCachedNodeCount != fleeGraph.NodeCount)
+            AllocateFleeBuffers(fleeGraph.NodeCount);
+    }
+
+    #endregion
+
+    #region Pathfinding
+
+    // 1) Closest node
+    private int ClosestNodeIndex(Vector3 pos)
+    {
+        if (fleeGraph == null) return -1;
+        int best = -1; float bestSq = float.PositiveInfinity;
+        for (int i = 0; i < fleeGraph.NodeCount; i++)
+        {
+            float d = (fleeGraph.nodePositions[i] - pos).sqrMagnitude;
+            if (d < bestSq) { bestSq = d; best = i; }
+        }
+        return best;
+    }
+
+
+    // 2) Syntactic sugar
+    public bool HasFleeGraph =>
+        fleeGraph != null && fleeGraph.NodeCount > 0 && fleeTargetNodeIndex >= 0;
+
+    public bool HasFleePath => _pathLen > 0;
+
+    // 3) Recompute si hace falta (intervalo o path vacío)
+    /*public void RecomputeFleePathIfNeeded(float now)
+    {
+        if (!HasFleeGraph) { _pathLen = 0; return; }
+
+        if (now - _lastAStarTime < fleeRecomputeInterval && _pathLen > 0)
+            return; // todavía fresco
+
+        int startIdx = ClosestNodeIndex(transform.position);
+        if (startIdx < 0) { _pathLen = 0; return; }
+
+        _pathLen = AStarNoAlloc.FindPath(
+            fleeGraph, startIdx, fleeTargetNodeIndex,
+            _astarG, _astarF, _astarFrom, _astarClosed,
+            _heapIdx, _heapF, _pathIdx
+        );
+
+        if (_pathLen > 0)
+        {
+            _pathFollower.BuildWorldPath(fleeGraph, _pathIdx, _pathLen, _worldPath);
+            _lastAStarTime = now;
+        }
+    }*/
+    public void RecomputeFleePathIfNeeded(float now)
+    {
+        if (!HasFleeGraph) { _pathLen = 0; return; }
+
+        // 1) Si ya tengo ruta, y estoy cerca del waypoint actual, NO recomputar
+        if (_pathLen > 0 && _pathFollower != null)
+        {
+            int ci = Mathf.Clamp(_pathFollower.CurrentIndex, 0, _pathLen - 1);
+            Vector3 curWp = _worldPath[ci];
+            float r = fleeWaypointReach * 1.5f; // holgura
+            if ((transform.position - curWp).sqrMagnitude <= r * r)
+                return; // voy bien hacia el target actual
+        }
+
+        // 2) Respeta el intervalo de recompute
+        if (now - _lastAStarTime < fleeRecomputeInterval && _pathLen > 0)
+            return;
+
+        // 3) Correr A*
+        int startIdx = ClosestNodeIndex(transform.position);
+        if (startIdx < 0) { _pathLen = 0; return; }
+
+        // Guardar target previo (si había ruta)
+        Vector3 prevTarget = Vector3.zero;
+        bool hadPath = _pathLen > 0 && _pathFollower != null;
+        int prevIdx = 0;
+        if (hadPath)
+        {
+            prevIdx = Mathf.Clamp(_pathFollower.CurrentIndex, 0, _pathLen - 1);
+            prevTarget = _worldPath[prevIdx];
+        }
+
+        int newLen = AStarNoAlloc.FindPath(
+            fleeGraph, startIdx, fleeTargetNodeIndex,
+            _astarG, _astarF, _astarFrom, _astarClosed,
+            _heapIdx, _heapF, _pathIdx
+        );
+
+        if (newLen > 0)
+        {
+            _pathLen = _pathFollower.BuildWorldPath(fleeGraph, _pathIdx, newLen, _worldPath);
+            _lastAStarTime = now;
+
+            // 4) Preservar progreso: buscar en la ruta nueva el waypoint más cercano al target anterior
+            if (hadPath)
+            {
+                int best = 0;
+                float bestSq = float.PositiveInfinity;
+                for (int i = 0; i < _pathLen; i++)
+                {
+                    float sq = (_worldPath[i] - prevTarget).sqrMagnitude;
+                    if (sq < bestSq) { bestSq = sq; best = i; }
+                }
+                _pathFollower.ReseedCursor(best);
+            }
+        }
+    }
+
+    // 4) Un tick de follow-path → steering deseado
+    public Vector3 TickFleePathSteering()
+    {
+        return _pathFollower != null && _pathLen > 0
+            ? _pathFollower.Tick(transform.position, CurrentVelocity, FleeSpeed, _worldPath)
+            : Vector3.zero;
+    }
+
+    // 5) ¿Llegué al último waypoint?
+    /*public bool FleePathReachedEnd()
+    {
+        if (_pathFollower == null || _pathLen <= 0) return false;
+        if (!_pathFollower.ReachedEnd) return false;
+
+        // chequeo de distancia final
+        return Vector3.Distance(transform.position, _worldPath[_pathLen - 1]) <= fleeWaypointReach;
+    }*/
+    public bool FleePathReachedEnd()
+    {
+        if (_pathFollower == null || _pathLen <= 0) return false;
+        if (!_pathFollower.ReachedEnd) return false; // ya estamos en el último waypoint
+
+        // Chequeo de distancia final (sin sqrt)
+        var goal = _worldPath[_pathLen - 1];
+        float r2 = fleeWaypointReach * fleeWaypointReach;
+        return (transform.position - goal).sqrMagnitude <= r2;
+    }
+
+
+    // 6) Limpiar ruta (opcional)
+    public void ClearFleePath()
+    {
+        _pathLen = 0;
     }
 
     #endregion
@@ -549,7 +763,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     /// <summary>
     /// Apply steering force with obstacle avoidance and movement (identical to Guard)
     /// </summary>
-    public void ApplySteering(Vector3 steering)
+    /*public void ApplySteering(Vector3 steering)
     {
         if (!isAlive) return;
 
@@ -578,7 +792,170 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                 transform.rotation = Quaternion.LookRotation(lookDirection);
             }
         }
+    }*/
+    /*************************************************************************public void ApplySteering(Vector3 steering)
+    {
+        if (!isAlive) return;
+
+        // 1) Integrar la FUERZA de steering del PATH (Seek/Arrive) → velocidad deseada
+        Vector3 desiredVel = Integrate(steering, Time.deltaTime); // tu integración ya respeta maxSpeed/force
+        desiredVel.y = 0f;
+
+        float desiredSpeed = desiredVel.magnitude;
+        if (desiredSpeed <= 0.0001f)
+            return;
+
+        Vector3 desiredDir = desiredVel / Mathf.Max(desiredSpeed, 1e-5f); // dir del path
+
+        // 2) Evitación → sacar SOLO componente lateral (sin permitir empuje hacia atrás)
+        // Nota: GetDirImproved devuelve una "velocidad" corregida; usamos su DIRECCIÓN como insumo
+        Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(desiredVel, false);
+        Vector3 avoidDir = avoidedVel.sqrMagnitude > 1e-6f ? avoidedVel.normalized : Vector3.zero;
+
+        // Proyectar la evitación al plano ortogonal a -desiredDir (o sea, quitar componente "hacia atrás")
+        // Resultado: la evitación solo empuja lateralmente (ni frena ni invierte el rumbo)
+        if (avoidDir != Vector3.zero)
+        {
+            // Quitar componente opuesta al camino
+            avoidDir = Vector3.ProjectOnPlane(avoidDir, -desiredDir);
+            if (avoidDir.sqrMagnitude > 1e-6f) avoidDir.Normalize();
+        }
+
+        // 3) Blend PATH vs AVOIDANCE
+        float pathW = 1.0f;
+        float avoidW = 0.0f;//0.40f; // probá 0.30–0.50 según tu nivel de obstáculos
+
+        // Mezcla manteniendo escala de velocidades
+        Vector3 blended = pathW * desiredVel + avoidW * avoidDir * currentMaxSpeed;
+
+        // Clamp y plano XZ
+        float maxV = currentMaxSpeed;
+        if (blended.sqrMagnitude > maxV * maxV)
+            blended = blended.normalized * maxV;
+        blended.y = 0f;
+
+        // 4) Aplicar movimiento y facing
+        _vel = blended;
+        if (_vel.sqrMagnitude > 0.001f)
+        {
+            transform.position += _vel * Time.deltaTime;
+            currentMovementDirection = _vel.normalized;
+            currentMovementSpeed = _vel.magnitude;
+
+            if (_vel.sqrMagnitude > 0.01f)
+            {
+                Vector3 look = _vel.normalized; look.y = 0f;
+                transform.rotation = Quaternion.LookRotation(look);
+            }
+        }
+    }*/
+    /*public void ApplySteering(Vector3 steering)
+    {
+        if (!isAlive) return;
+
+        // 1) Integrar fuerzas → velocidad provisional de "path/steering"
+        Vector3 desiredVel = Integrate(steering, Time.deltaTime);
+
+        // 2) Evitar obstáculos (devuelve dirección “segura” a mezclar)
+        Vector3 avoidDir = obstacleAvoidance.GetDirImproved(desiredVel, false);
+
+        // 3) Pesos (probá estos valores)
+        float pathW = 1.0f;
+        float avoidW = 0.3f;//0.4f; // 0.35–0.55
+
+        // Si avoidance empuja en contra (> ~100°), lo capamos fuerte
+        if (avoidDir.sqrMagnitude > 1e-4f && desiredVel.sqrMagnitude > 1e-4f)
+        {
+            float cos = Vector3.Dot(desiredVel.normalized, avoidDir.normalized);
+            if (cos < -0.2f) avoidW *= 0.15f;
+        }
+
+        // 4) Mezcla
+        Vector3 blended = pathW * desiredVel + avoidW * avoidDir;
+
+        // 5) Clamp a tu velocidad máxima actual
+        if (blended.sqrMagnitude > currentMaxSpeed * currentMaxSpeed)
+            blended = blended.normalized * currentMaxSpeed;
+
+        // 6) Mover y orientar
+        if (blended.sqrMagnitude > 0.001f)
+        {
+            transform.position += blended * Time.deltaTime;
+
+            currentMovementDirection = blended.normalized;
+            currentMovementSpeed = blended.magnitude;
+
+            if (blended.magnitude > 0.1f)
+            {
+                var lookDir = blended.normalized; lookDir.y = 0;
+                transform.rotation = Quaternion.LookRotation(lookDir);
+            }
+        }
+
+        // Guardá la _vel para otros sistemas si la usás
+        _vel = blended;
+    }*/
+    public void ApplySteering(Vector3 steering)
+    {
+        if (!isAlive) return;
+
+        // 1) Integrar la FUERZA del PATH → velocidad deseada
+        Vector3 desiredVel = Integrate(steering, Time.deltaTime);
+        desiredVel.y = 0f;
+
+        float desiredSpeed = desiredVel.magnitude;
+        if (desiredSpeed <= 0.0001f)
+            return;
+
+        Vector3 desiredDir = desiredVel / Mathf.Max(desiredSpeed, 1e-5f);
+
+        // 2) Evitación → usar SOLO la dirección y quitar componente "hacia atrás"
+        Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(desiredVel, false);
+        Vector3 avoidDir = avoidedVel.sqrMagnitude > 1e-6f ? avoidedVel.normalized : Vector3.zero;
+
+        if (avoidDir != Vector3.zero)
+        {
+            // remover la componente que empuja en contra del camino
+            avoidDir = Vector3.ProjectOnPlane(avoidDir, -desiredDir);
+            if (avoidDir.sqrMagnitude > 1e-6f) avoidDir.Normalize();
+        }
+
+        // 3) Blend PATH vs AVOIDANCE (tuning suave)
+        float pathW = 1.0f;
+        float avoidW = 0.35f;     // probá 0.25–0.45 según densidad de obstáculos
+
+        // si por algún motivo el ángulo es muy contrario, capamos aún más
+        if (avoidDir.sqrMagnitude > 1e-6f)
+        {
+            float cos = Vector3.Dot(desiredDir, avoidDir);
+            if (cos < -0.2f) avoidW *= 0.15f;
+        }
+
+        Vector3 blended = pathW * desiredVel + avoidW * avoidDir * currentMaxSpeed;
+
+        // 4) Clamp y plano XZ
+        float maxV = currentMaxSpeed;
+        if (blended.sqrMagnitude > maxV * maxV)
+            blended = blended.normalized * maxV;
+        blended.y = 0f;
+
+        // 5) Aplicar movimiento y facing
+        _vel = blended;
+
+        if (_vel.sqrMagnitude > 0.001f)
+        {
+            transform.position += _vel * Time.deltaTime;
+            currentMovementDirection = _vel.normalized;
+            currentMovementSpeed = _vel.magnitude;
+
+            if (_vel.sqrMagnitude > 0.01f)
+            {
+                Vector3 look = _vel.normalized; look.y = 0f;
+                transform.rotation = Quaternion.LookRotation(look);
+            }
+        }
     }
+
 
     #endregion
 
@@ -965,6 +1342,100 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         
         Debug.Log("=======================");
     }
+
+    // Getter for pathfinding
+    public int PathLenForDebug => _pathLen;
+    public PathFollowerAgent PathFollower => _pathFollower;
+    public Vector3[] WorldPathForDebug => _worldPath;
+
+#if UNITY_EDITOR
+    /*private void OnDrawGizmosSelected()
+    {
+        // dibujar solo si hay path
+        if (_pathLen <= 0 || _worldPath == null) return;
+
+        // colores
+        Color cLine = new Color(0f, 0.8f, 1f, 0.9f);   // celeste
+        Color cWp = new Color(0f, 0.6f, 1f, 0.8f);   // waypoints
+        Color cCurrent = new Color(0.2f, 1f, 0.2f, 1f);   // waypoint actual (verde)
+        Color cGoal = new Color(1f, 0.5f, 0.1f, 1f);   // objetivo final (naranja)
+        float rWp = 0.08f;
+        float rCur = 0.12f;
+
+        // línea del path
+        Gizmos.color = cLine;
+        for (int i = 0; i < _pathLen - 1; i++)
+        {
+            Gizmos.DrawLine(_worldPath[i], _worldPath[i + 1]);
+        }
+
+        // waypoints
+        Gizmos.color = cWp;
+        for (int i = 0; i < _pathLen; i++)
+            Gizmos.DrawSphere(_worldPath[i], rWp);
+
+        // waypoint actual
+        int ci = _pathFollower != null ? Mathf.Clamp(_pathFollower.CurrentIndex, 0, _pathLen - 1) : 0;
+        Gizmos.color = cCurrent;
+        Gizmos.DrawSphere(_worldPath[ci], rCur);
+
+        // objetivo final + radio de llegada
+        Gizmos.color = cGoal;
+        Gizmos.DrawSphere(_worldPath[_pathLen - 1], rCur * 1.2f);
+        Gizmos.DrawWireSphere(_worldPath[_pathLen - 1], fleeWaypointReach);
+
+        // etiqueta útil
+#if UNITY_EDITOR
+        Handles.Label(_worldPath[_pathLen - 1] + Vector3.up * 0.2f, $"Safe ({_pathLen - 1})");
+#endif
+        // Dibuja path actual en escena cuando seleccionás el Civilian
+        if (_pathLen > 0 && _worldPath != null)
+        {
+            Gizmos.color = Color.green;
+            for (int i = 0; i < _pathLen; i++)
+            {
+                Gizmos.DrawSphere(_worldPath[i], 0.12f);
+                if (i < _pathLen - 1)
+                    Gizmos.DrawLine(_worldPath[i], _worldPath[i + 1]);
+            }
+
+            // destino final
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(_worldPath[_pathLen - 1], fleeWaypointReach);
+        }
+    }*/
+    private void OnDrawGizmosSelected()
+    {
+        if (_pathLen <= 0 || _worldPath == null) return;
+
+        // convertir _worldPath a array de points del tamaño exacto
+        var count = Mathf.Min(_pathLen, _worldPath.Length);
+        Vector3[] pts = new Vector3[count];
+        for (int i = 0; i < count; i++) pts[i] = _worldPath[i];
+
+        // línea AA con grosor
+        Handles.color = new Color(0f, 0.8f, 1f, 0.9f);
+        Handles.DrawAAPolyLine(4.0f, pts); // grosor = 4 px
+
+        // waypoints
+        Gizmos.color = new Color(0f, 0.6f, 1f, 0.8f);
+        for (int i = 0; i < count; i++)
+            Gizmos.DrawSphere(_worldPath[i], 0.08f);
+
+        // waypoint actual
+        int ci = _pathFollower != null ? Mathf.Clamp(_pathFollower.CurrentIndex, 0, count - 1) : 0;
+        Gizmos.color = new Color(0.2f, 1f, 0.2f, 1f);
+        Gizmos.DrawSphere(_worldPath[ci], 0.12f);
+
+        // destino + radio
+        Gizmos.color = new Color(1f, 0.5f, 0.1f, 1f);
+        Gizmos.DrawSphere(_worldPath[count - 1], 0.14f);
+        Gizmos.DrawWireSphere(_worldPath[count - 1], fleeWaypointReach);
+
+        // etiqueta SAFE
+        Handles.Label(_worldPath[count - 1] + Vector3.up * 0.2f, $"Safe ({count - 1})");
+    }
+#endif
 
     #endregion
 
