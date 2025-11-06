@@ -63,6 +63,7 @@ namespace Scripts.FSM.Base.StateMachine
 using Scripts.FSM.Models;
 using UnityEngine;
 using Game.AI.Steering;
+using UnityEngine.ProBuilder.Shapes;
 
 namespace Scripts.FSM.Base.StateMachine
 {
@@ -102,7 +103,7 @@ namespace Scripts.FSM.Base.StateMachine
             }
         }
 
-        private void PerformFleeMovement(Civilian civilian)
+        /*private void PerformFleeMovement(Civilian civilian)
         {
             // 1) Intentar A* por nodos (mobile-friendly)
             if (civilian.HasFleeGraph)
@@ -162,6 +163,98 @@ namespace Scripts.FSM.Base.StateMachine
                 );
                 civilian.ApplySteering(steering);
             }
+        }*/
+        /*private void PerformFleeMovement(Civilian civilian)
+        {
+            // 1) Intentar A* por nodos
+            if (civilian.HasFleeGraph)
+            {
+                civilian.RecomputeFleePathIfNeeded(Time.time);
+
+                if (civilian.HasFleePath)
+                {
+                    var steering = civilian.TickFleePathSteering();
+
+                    // === DEBUG: Ver qué steering genera el path ===
+                    Debug.Log($"[{civilian.name}] PATH STEERING: magnitude={steering.magnitude:F2}, " +
+                              $"dir={steering.normalized}, " +
+                              $"pathLen={civilian.PathLenForDebug}, " +
+                              $"currentWP={civilian.PathFollower?.CurrentIndex ?? -1}");
+
+                    //civilian.ApplySteering(steering);
+                    civilian.ApplySteeringDebug(steering); // <- TEST
+
+                    // Tracking de safe timer
+                    if (civilian.FleePathReachedEnd())
+                    {
+                        civilian.SafeTimer += Time.deltaTime;
+                        Debug.Log($"[{civilian.name}] Reached end, safe timer: {civilian.SafeTimer:F2}s");
+                    }
+                    else
+                    {
+                        civilian.SafeTimer = 0f;
+                    }
+
+                    return; // Usamos la ruta; no fallback
+                }
+                else
+                {
+                    Debug.LogWarning($"[{civilian.name}] Has graph but NO PATH computed!");
+                }
+            }
+
+            // 2) Fallback: huida directa del jugador
+            if (civilian.Player != null)
+            {
+                Debug.Log($"[{civilian.name}] Using FALLBACK flee (no path)");
+                Vector3 steering = Steering.Flee(
+                    civilian.transform.position,
+                    civilian.Player.position,
+                    civilian.CurrentVelocity,
+                    civilian.FleeSpeed
+                );
+                civilian.ApplySteering(steering);
+            }
+        }*/
+        private void PerformFleeMovement(Civilian civilian)
+        {
+            // 1) Intentar A* por nodos
+            if (civilian.HasFleeGraph)
+            {
+                civilian.RecomputeFleePathIfNeeded(Time.time);
+
+                if (civilian.HasFleePath)
+                {
+                    var steering = civilian.TickFleePathSteering();
+
+                    // USAR EL MÉTODO ESPECIALIZADO
+                    civilian.ApplySteeringFlee(steering); // <- CAMBIO AQUÍ
+
+                    if (civilian.FleePathReachedEnd())
+                    {
+                        civilian.SafeTimer += Time.deltaTime;
+                    }
+                    else
+                    {
+                        civilian.SafeTimer = 0f;
+                    }
+
+                    return;
+                }
+            }
+
+            // 2) Fallback: huida directa
+            if (civilian.Player != null)
+            {
+                Vector3 steering = Steering.Flee(
+                    civilian.transform.position,
+                    civilian.Player.position,
+                    civilian.CurrentVelocity,
+                    civilian.FleeSpeed
+                );
+                civilian.ApplySteeringDebug(steering); // Fallback sin obstacle avoidance
+            }
         }
+
     }
 }

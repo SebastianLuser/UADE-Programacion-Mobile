@@ -22,7 +22,7 @@ public class GraphNode : MonoBehaviour
             if (n) Gizmos.DrawLine(transform.position, n.transform.position);
 
         // dibujar el nombre del GO (puede incluir el índice si lo renombras)
-        UnityEditor.Handles.Label(transform.position + Vector3.up * 0.2f, gameObject.name);
+        //UnityEditor.Handles.Label(transform.position + Vector3.up * 0.2f, gameObject.name);
     }
 }
 #endif
