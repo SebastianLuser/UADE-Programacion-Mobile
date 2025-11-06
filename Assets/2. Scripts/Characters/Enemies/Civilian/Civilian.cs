@@ -346,7 +346,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     // 2) Syntactic sugar
     public bool HasFleeGraph =>
-        fleeGraph != null && fleeGraph.NodeCount > 0 && fleeTargetNodeIndex >= 0;
+        fleeGraph != null && fleeGraph.NodeCount > 0 && fleeTargetNodeIndex >= 0 && fleeTargetNodeIndex < fleeGraph.NodeCount;
 
     public bool HasFleePath => _pathLen > 0;
 
@@ -375,27 +375,78 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     }*/
     public void RecomputeFleePathIfNeeded(float now)
     {
-        if (!HasFleeGraph) { _pathLen = 0; return; }
-
+        //if (!HasFleeGraph) { _pathLen = 0; return; }
+        if (!HasFleeGraph)
+        {
+            _pathLen = 0;
+            if (enableDebugLogs)
+            {
+                if (fleeGraph == null)
+                    Debug.LogWarning($"[{name}] No flee graph assigned!");
+                else if (fleeGraph.NodeCount == 0)
+                    Debug.LogWarning($"[{name}] Flee graph is empty (0 nodes)!");
+                else if (fleeTargetNodeIndex < 0 || fleeTargetNodeIndex >= fleeGraph.NodeCount)
+                    Debug.LogWarning($"[{name}] Invalid target index: {fleeTargetNodeIndex} (graph has {fleeGraph.NodeCount} nodes)");
+            }
+            return;
+        }
         // 1) Si ya tengo ruta, y estoy cerca del waypoint actual, NO recomputar
-        if (_pathLen > 0 && _pathFollower != null)
+        /*if (_pathLen > 0 && _pathFollower != null)
         {
             int ci = Mathf.Clamp(_pathFollower.CurrentIndex, 0, _pathLen - 1);
             Vector3 curWp = _worldPath[ci];
             float r = fleeWaypointReach * 1.5f; // holgura
             if ((transform.position - curWp).sqrMagnitude <= r * r)
                 return; // voy bien hacia el target actual
+        }*/
+        if (_pathLen > 0 && _pathFollower != null)
+        {
+            int ci = Mathf.Clamp(_pathFollower.CurrentIndex, 0, _pathLen - 1);
+            Vector3 curWp = _worldPath[ci];
+            float r = fleeWaypointReach * 1.5f;
+            if ((transform.position - curWp).sqrMagnitude <= r * r)
+            {
+                if (enableDebugLogs)
+                    Debug.Log($"[{name}] Near current waypoint {ci}, skipping recompute");
+                return;
+            }
         }
 
         // 2) Respeta el intervalo de recompute
+        /*if (now - _lastAStarTime < fleeRecomputeInterval && _pathLen > 0)
+            return;*/
         if (now - _lastAStarTime < fleeRecomputeInterval && _pathLen > 0)
+        {
+            if (enableDebugLogs)
+                Debug.Log($"[{name}] Path still fresh ({now - _lastAStarTime:F2}s < {fleeRecomputeInterval}s)");
             return;
+        }
 
         // 3) Correr A*
+        /*int startIdx = ClosestNodeIndex(transform.position);
+        if (startIdx < 0) { _pathLen = 0; return; }*/
         int startIdx = ClosestNodeIndex(transform.position);
-        if (startIdx < 0) { _pathLen = 0; return; }
+        if (startIdx < 0)
+        {
+            _pathLen = 0;
+            if (enableDebugLogs)
+                Debug.LogError($"[{name}] ClosestNodeIndex returned -1! Graph has {fleeGraph.NodeCount} nodes");
+            return;
+        }
+
+        if (enableDebugLogs)
+            Debug.Log($"[{name}] Computing A* from node {startIdx} (pos: {fleeGraph.nodePositions[startIdx]}) to {fleeTargetNodeIndex} (pos: {fleeGraph.nodePositions[fleeTargetNodeIndex]})");
+
 
         // Guardar target previo (si había ruta)
+        /*Vector3 prevTarget = Vector3.zero;
+        bool hadPath = _pathLen > 0 && _pathFollower != null;
+        int prevIdx = 0;
+        if (hadPath)
+        {
+            prevIdx = Mathf.Clamp(_pathFollower.CurrentIndex, 0, _pathLen - 1);
+            prevTarget = _worldPath[prevIdx];
+        }*/
         Vector3 prevTarget = Vector3.zero;
         bool hadPath = _pathLen > 0 && _pathFollower != null;
         int prevIdx = 0;
@@ -404,8 +455,9 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             prevIdx = Mathf.Clamp(_pathFollower.CurrentIndex, 0, _pathLen - 1);
             prevTarget = _worldPath[prevIdx];
         }
+        //////
 
-        int newLen = AStarNoAlloc.FindPath(
+        /*int newLen = AStarNoAlloc.FindPath(
             fleeGraph, startIdx, fleeTargetNodeIndex,
             _astarG, _astarF, _astarFrom, _astarClosed,
             _heapIdx, _heapF, _pathIdx
@@ -428,7 +480,51 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                 }
                 _pathFollower.ReseedCursor(best);
             }
+        }*/
+        // 4) Correr A*
+        int newLen = AStarNoAlloc.FindPath(
+            fleeGraph, startIdx, fleeTargetNodeIndex,
+            _astarG, _astarF, _astarFrom, _astarClosed,
+            _heapIdx, _heapF, _pathIdx
+        );
+
+        if (newLen > 0)
+        {
+            _pathLen = _pathFollower.BuildWorldPath(fleeGraph, _pathIdx, newLen, _worldPath);
+            _lastAStarTime = now;
+
+            if (enableDebugLogs)
+            {
+                string pathStr = "";
+                for (int i = 0; i < Mathf.Min(5, _pathLen); i++)
+                    pathStr += $"{_pathIdx[i]} ";
+                if (_pathLen > 5) pathStr += "...";
+                Debug.Log($"[{name}] ✓ A* found path with {_pathLen} nodes: [{pathStr}]");
+            }
+
+            // 5) Preservar progreso
+            if (hadPath)
+            {
+                int best = 0;
+                float bestSq = float.PositiveInfinity;
+                for (int i = 0; i < _pathLen; i++)
+                {
+                    float sq = (_worldPath[i] - prevTarget).sqrMagnitude;
+                    if (sq < bestSq) { bestSq = sq; best = i; }
+                }
+                _pathFollower.ReseedCursor(best);
+
+                if (enableDebugLogs)
+                    Debug.Log($"[{name}] Preserved progress: cursor reseeded to waypoint {best}");
+            }
         }
+        else
+        {
+            _pathLen = 0;
+            if (enableDebugLogs)
+                Debug.LogError($"[{name}] ✗ A* FAILED to find path from {startIdx} to {fleeTargetNodeIndex}! Graph may be disconnected");
+        }
+
     }
 
     // 4) Un tick de follow-path → steering deseado
@@ -1404,7 +1500,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             Gizmos.DrawWireSphere(_worldPath[_pathLen - 1], fleeWaypointReach);
         }
     }*/
-    private void OnDrawGizmosSelected()
+    /*private void OnDrawGizmosSelected()
     {
         if (_pathLen <= 0 || _worldPath == null) return;
 
@@ -1434,8 +1530,170 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
         // etiqueta SAFE
         Handles.Label(_worldPath[count - 1] + Vector3.up * 0.2f, $"Safe ({count - 1})");
+    }*/
+    private void OnDrawGizmosSelected()
+    {
+        // === DIAGNÓSTICO DE GRAFO ===
+        if (fleeGraph != null && fleeGraph.NodeCount > 0)
+        {
+            // Validar target
+            bool validTarget = fleeTargetNodeIndex >= 0 && fleeTargetNodeIndex < fleeGraph.NodeCount;
+
+            // Nodo más cercano (START)
+            int startIdx = ClosestNodeIndex(transform.position);
+            if (startIdx >= 0)
+            {
+                Vector3 startPos = fleeGraph.nodePositions[startIdx];
+
+                // Dibujar START
+                Gizmos.color = Color.green;
+                Gizmos.DrawSphere(startPos, 0.15f);
+                UnityEditor.Handles.Label(startPos + Vector3.up * 0.3f, $"START [{startIdx}]");
+
+                // Línea desde NPC a START
+                Gizmos.color = new Color(0, 1, 0, 0.3f);
+                Gizmos.DrawLine(transform.position, startPos);
+
+                // Distancia a START
+                float distToStart = Vector3.Distance(transform.position, startPos);
+                UnityEditor.Handles.Label(
+                    Vector3.Lerp(transform.position, startPos, 0.5f),
+                    $"{distToStart:F1}m"
+                );
+            }
+
+            // Nodo objetivo (GOAL)
+            if (validTarget)
+            {
+                Vector3 goalPos = fleeGraph.nodePositions[fleeTargetNodeIndex];
+
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawSphere(goalPos, 0.18f);
+                Gizmos.DrawWireSphere(goalPos, fleeWaypointReach);
+                UnityEditor.Handles.Label(goalPos + Vector3.up * 0.3f, $"SAFE [{fleeTargetNodeIndex}]");
+            }
+            else
+            {
+                // Target inválido - warning grande
+                GUIStyle style = new GUIStyle();
+                style.normal.textColor = Color.red;
+                style.fontSize = 14;
+                style.fontStyle = FontStyle.Bold;
+                UnityEditor.Handles.Label(
+                    transform.position + Vector3.up * 0.5f,
+                    $"!!!!! INVALID TARGET: {fleeTargetNodeIndex} / {fleeGraph.NodeCount}",
+                    style
+                );
+            }
+
+            // === PATH ACTUAL ===
+            if (_pathLen > 0 && _worldPath != null)
+            {
+                int count = Mathf.Min(_pathLen, _worldPath.Length);
+                Vector3[] pathPoints = new Vector3[count];
+                for (int i = 0; i < count; i++) pathPoints[i] = _worldPath[i];
+
+                // Línea del path (antialiased)
+                UnityEditor.Handles.color = new Color(0f, 0.8f, 1f, 0.9f);
+                UnityEditor.Handles.DrawAAPolyLine(5.0f, pathPoints);
+
+                // Waypoints
+                for (int i = 0; i < count; i++)
+                {
+                    Gizmos.color = new Color(0f, 0.6f, 1f, 0.8f);
+                    Gizmos.DrawSphere(_worldPath[i], 0.08f);
+
+                    // Números de waypoint
+                    UnityEditor.Handles.Label(_worldPath[i] + Vector3.up * 0.1f, i.ToString());
+                }
+
+                // Waypoint actual (más grande, verde)
+                if (_pathFollower != null)
+                {
+                    int currentIdx = Mathf.Clamp(_pathFollower.CurrentIndex, 0, count - 1);
+                    Gizmos.color = new Color(0.2f, 1f, 0.2f, 1f);
+                    Gizmos.DrawSphere(_worldPath[currentIdx], 0.14f);
+                    Gizmos.DrawWireSphere(_worldPath[currentIdx], fleeWaypointReach);
+
+                    UnityEditor.Handles.Label(
+                        _worldPath[currentIdx] + Vector3.up * 0.25f,
+                        $"CURRENT [{currentIdx}]"
+                    );
+                }
+
+                // Info del path
+                GUIStyle pathStyle = new GUIStyle();
+                pathStyle.normal.textColor = Color.cyan;
+                pathStyle.fontSize = 11;
+                UnityEditor.Handles.Label(
+                    transform.position + Vector3.up * 0.7f,
+                    $"Path: {_pathLen} waypoints | Current: {_pathFollower?.CurrentIndex ?? -1} | Reached end: {_pathFollower?.ReachedEnd ?? false}",
+                    pathStyle
+                );
+            }
+            else if (validTarget)
+            {
+                // Tiene grafo válido pero no path
+                GUIStyle style = new GUIStyle();
+                style.normal.textColor = Color.yellow;
+                style.fontSize = 12;
+                UnityEditor.Handles.Label(
+                    transform.position + Vector3.up * 0.7f,
+                    "!!!! No path computed",
+                    style
+                );
+            }
+        }
+        else
+        {
+            // Sin grafo
+            GUIStyle style = new GUIStyle();
+            style.normal.textColor = Color.red;
+            style.fontSize = 14;
+            style.fontStyle = FontStyle.Bold;
+            UnityEditor.Handles.Label(
+                transform.position + Vector3.up * 0.5f,
+                "!!!! NO FLEE GRAPH ASSIGNED",
+                style
+            );
+        }
     }
 #endif
+
+    #endregion
+
+    #region DebugPathfinding
+
+    [ContextMenu("Debug Graph Info")]
+    void DebugGraphInfo()
+    {
+        if (fleeGraph == null)
+        {
+            Debug.LogError($"[{name}] fleeGraph is NULL!");
+            return;
+        }
+
+        Debug.Log($"=== GRAPH INFO [{name}] ===");
+        Debug.Log($"Node count: {fleeGraph.NodeCount}");
+        Debug.Log($"Target index: {fleeTargetNodeIndex}");
+        Debug.Log($"Target valid: {fleeTargetNodeIndex >= 0 && fleeTargetNodeIndex < fleeGraph.NodeCount}");
+
+        // Mostrar primeros 5 nodos
+        for (int i = 0; i < Mathf.Min(5, fleeGraph.NodeCount); i++)
+        {
+            var neighbors = fleeGraph.neighbors[i].data;
+            Debug.Log($"  Node {i}: pos={fleeGraph.nodePositions[i]}, neighbors={neighbors.Length} [{string.Join(",", neighbors)}]");
+        }
+
+        // Verificar conectividad del target
+        if (fleeTargetNodeIndex >= 0 && fleeTargetNodeIndex < fleeGraph.NodeCount)
+        {
+            var targetNeighbors = fleeGraph.neighbors[fleeTargetNodeIndex].data;
+            Debug.Log($"  Target node {fleeTargetNodeIndex}: neighbors={targetNeighbors.Length}");
+        }
+
+        Debug.Log("=======================");
+    }
 
     #endregion
 
