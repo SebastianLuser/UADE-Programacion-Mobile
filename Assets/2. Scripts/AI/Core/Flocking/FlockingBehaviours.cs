@@ -14,10 +14,11 @@ namespace FlockingSystem
     public static class SeparationBehaviour
     {
         public static Vector3 Calculate(
-            FlockingEntity entity, 
-            List<NeighborData> neighbors, 
+            FlockingEntity entity,
+            List<NeighborData> neighbors,
             SeparationConfig config,
-            FlockingProfile profile)
+            FlockingProfile profile,
+            Vector3 currentVelocity)
         {
             if (neighbors.Count == 0 || !config.enabled)
                 return Vector3.zero;
@@ -40,7 +41,7 @@ namespace FlockingSystem
 
             // Use static Steering.Seek for consistency
             Vector3 targetPos = entity.transform.position + separationForce.normalized;
-            return Steering.Seek(entity.transform.position, targetPos, entity.Velocity, profile.maxSpeed);
+            return Steering.Seek(entity.transform.position, targetPos, currentVelocity, profile.maxSpeed);
         }
     }
 
@@ -53,10 +54,11 @@ namespace FlockingSystem
     public static class CohesionBehaviour
     {
         public static Vector3 Calculate(
-            FlockingEntity entity, 
-            List<NeighborData> neighbors, 
+            FlockingEntity entity,
+            List<NeighborData> neighbors,
             CohesionConfig config,
-            FlockingProfile profile)
+            FlockingProfile profile,
+            Vector3 currentVelocity)
         {
             if (neighbors.Count == 0 || !config.enabled)
                 return Vector3.zero;
@@ -71,7 +73,7 @@ namespace FlockingSystem
             centerOfMass /= neighbors.Count;
 
             // Use static Steering.Seek
-            Vector3 force = Steering.Seek(entity.transform.position, centerOfMass, entity.Velocity, profile.maxSpeed);
+            Vector3 force = Steering.Seek(entity.transform.position, centerOfMass, currentVelocity, profile.maxSpeed);
             return force * config.strength;
         }
     }
@@ -85,10 +87,11 @@ namespace FlockingSystem
     public static class AlignmentBehaviour
     {
         public static Vector3 Calculate(
-            FlockingEntity entity, 
-            List<NeighborData> neighbors, 
+            FlockingEntity entity,
+            List<NeighborData> neighbors,
             AlignmentConfig config,
-            FlockingProfile profile)
+            FlockingProfile profile,
+            Vector3 currentVelocity)
         {
             if (neighbors.Count == 0 || !config.enabled)
                 return Vector3.zero;
@@ -107,7 +110,7 @@ namespace FlockingSystem
 
             // Use static Steering.Seek with predicted position
             Vector3 targetPos = entity.transform.position + averageVelocity.normalized;
-            Vector3 force = Steering.Seek(entity.transform.position, targetPos, entity.Velocity, profile.maxSpeed);
+            Vector3 force = Steering.Seek(entity.transform.position, targetPos, currentVelocity, profile.maxSpeed);
             return force * config.strength;
         }
     }

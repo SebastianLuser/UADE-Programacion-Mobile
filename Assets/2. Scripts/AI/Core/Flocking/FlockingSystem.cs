@@ -6,8 +6,10 @@ namespace FlockingSystem
 {
     /// <summary>
     /// Entity that exhibits flocking behaviour based on a configurable profile.
-    /// Registers with FlockingManager and calculates forces from nearby neighbors.
+    /// Registers with IFlockingService and calculates forces from nearby neighbors.
     /// Uses static Steering class for all movement calculations.
+    /// MODIFIED: Now only calculates and returns forces without applying movement.
+    /// Movement is controlled by host entity (e.g., Civilian).
     /// </summary>
     public class FlockingEntity : MonoBehaviour
     {
@@ -16,30 +18,62 @@ namespace FlockingSystem
         [SerializeField] private FlockingProfile profile;
 
         [Header("References")]
-        [Tooltip("FlockingManager reference - assign manually")]
-        [SerializeField] private FlockingManager flockingManager;
+        [Tooltip("Flocking service resolved via ServiceLocator at runtime")]
+        private Services.MicroServices.FlockingService.IFlockingService flockingService;
 
-        [Tooltip("Rigidbody reference - assign manually")]
-        [SerializeField] private Rigidbody rb;
+        private Civilian civilian;
 
-        [Header("Movement Settings")]
-        [SerializeField] private float maxSpeed = 5f;
-        [SerializeField] private float maxForce = 3f;
+        private Guard guard;
 
-        private Vector3 velocity;
+        [Header("Performance")]
+        [Tooltip("Update interval in frames (2 = every other frame)")]
+        [SerializeField] private int updateInterval = 2;
+
         private List<NeighborData> cachedNeighbors = new List<NeighborData>();
+        private Vector3 cachedFlockingForce = Vector3.zero;
+        private int updateOffset;
+        private float maxSpeed;
+        private float maxForce;
 
         public FlockingProfile Profile => profile;
-        public Vector3 Velocity => velocity;
+        public Vector3 CachedFlockingForce => cachedFlockingForce;
+
+        /// <summary>
+        /// Velocity property - reads from Civilian/Guard if available, otherwise returns zero
+        /// Used by NeighborData to cache neighbor velocities
+        /// </summary>
+        public Vector3 Velocity
+        {
+            get
+            {
+                if (civilian != null)
+                {
+                    return civilian.CurrentVelocity;
+                }
+                if (guard != null)
+                {
+                    return guard.CurrentVelocity;
+                }
+                return Vector3.zero;
+            }
+        }
 
         private void Awake()
         {
-            if (rb != null)
+            // Random offset for load balancing across frames
+            updateOffset = Random.Range(0, updateInterval);
+
+            // Auto-find Civilian/Guard component if not assigned
+            if (civilian == null)
             {
-                rb.useGravity = false;
-                rb.isKinematic = true;
+                civilian = GetComponent<Civilian>();
+            }
+            if (guard == null)
+            {
+                guard = GetComponent<Guard>();
             }
 
+            // Initialize speed and force from profile
             if (profile != null)
             {
                 maxSpeed = profile.maxSpeed;
@@ -49,16 +83,17 @@ namespace FlockingSystem
 
         private void Start()
         {
-            if (flockingManager != null)
+            // Resolve service and register entity
+            flockingService = Services.ServiceLocator.Get<Services.MicroServices.FlockingService.IFlockingService>();
+
+            if (flockingService != null)
             {
-                flockingManager.RegisterEntity(this);
+                flockingService.RegisterEntity(this);
             }
             else
             {
-                Debug.LogError($"FlockingManager reference not assigned on {gameObject.name}", this);
+                Debug.LogError($"IFlockingService not available for {gameObject.name}", this);
             }
-
-            ApplyInitialVelocity();
         }
 
         private void Update()
@@ -66,40 +101,53 @@ namespace FlockingSystem
             if (profile == null)
                 return;
 
+            // Frame skipping for performance (update every N frames with offset)
+            if ((Time.frameCount + updateOffset) % updateInterval != 0)
+                return;
+
+            // Check if host entity wants flocking active
+            if (!ShouldCalculateFlocking())
+            {
+                cachedFlockingForce = Vector3.zero;
+                return;
+            }
+
             UpdateNeighbors();
-            ApplyFlockingForces();
-            Move();
+            cachedFlockingForce = CalculateFlockingForce();
         }
 
         private void OnDestroy()
         {
-            if (flockingManager != null)
+            if (flockingService != null)
             {
-                flockingManager.UnregisterEntity(this);
+                flockingService.UnregisterEntity(this);
             }
         }
 
-        private void ApplyInitialVelocity()
+        /// <summary>
+        /// Check if flocking should be calculated this frame.
+        /// Delegates to Civilian/Guard ShouldFlock() if available.
+        /// </summary>
+        private bool ShouldCalculateFlocking()
         {
-            if (profile == null) return;
+            // If no host reference, always calculate (standalone mode)
+            if (civilian == null && guard == null)
+                return true;
 
-            Vector3 randomDirection = new Vector3(
-                Random.Range(-1f, 1f),
-                0f,
-                Random.Range(-1f, 1f)
-            ).normalized;
-
-            AddForce(randomDirection * maxSpeed);
+            // Delegate to host to check if it's in appropriate state
+            if (guard != null)
+                return guard.ShouldFlock();
+            return true;
         }
 
         private void UpdateNeighbors()
         {
             cachedNeighbors.Clear();
 
-            if (flockingManager == null)
+            if (flockingService == null)
                 return;
 
-            List<FlockingEntity> nearbyEntities = flockingManager.GetNeighbors(this, profile.detectionRadius);
+            List<FlockingEntity> nearbyEntities = flockingService.GetNeighbors(this, profile.detectionRadius);
 
             int maxNeighbors = profile.maxNeighbors > 0 ? profile.maxNeighbors : nearbyEntities.Count;
             int count = Mathf.Min(nearbyEntities.Count, maxNeighbors);
@@ -110,52 +158,71 @@ namespace FlockingSystem
             }
         }
 
-        private void ApplyFlockingForces()
+        /// <summary>
+        /// Calculate combined flocking forces from all enabled behaviors.
+        /// Returns force vector without applying it (host entity applies it).
+        /// </summary>
+        private Vector3 CalculateFlockingForce()
         {
             if (cachedNeighbors.Count == 0)
-                return;
+                return Vector3.zero;
 
             Vector3 totalForce = Vector3.zero;
 
-            // Separation
-            if (profile.separationConfig != null)
+            // Get current velocity from host if available
+            Vector3 currentVelocity = Vector3.zero;
+            if (civilian != null)
             {
-                Vector3 separationForce = SeparationBehaviour.Calculate(this, cachedNeighbors, profile.separationConfig, profile);
+                currentVelocity = civilian.CurrentVelocity;
+            }
+            else if (guard != null)
+            {
+                currentVelocity = guard.CurrentVelocity;
+            }
+
+            // Separation
+            if (profile.separationConfig != null && profile.separationConfig.enabled)
+            {
+                Vector3 separationForce = SeparationBehaviour.Calculate(
+                    this, cachedNeighbors, profile.separationConfig, profile, currentVelocity);
                 totalForce += separationForce * profile.separationConfig.weight;
             }
 
             // Cohesion
-            if (profile.cohesionConfig != null)
+            if (profile.cohesionConfig != null && profile.cohesionConfig.enabled)
             {
-                Vector3 cohesionForce = CohesionBehaviour.Calculate(this, cachedNeighbors, profile.cohesionConfig, profile);
+                Vector3 cohesionForce = CohesionBehaviour.Calculate(
+                    this, cachedNeighbors, profile.cohesionConfig, profile, currentVelocity);
                 totalForce += cohesionForce * profile.cohesionConfig.weight;
             }
 
             // Alignment
-            if (profile.alignmentConfig != null)
+            if (profile.alignmentConfig != null && profile.alignmentConfig.enabled)
             {
-                Vector3 alignmentForce = AlignmentBehaviour.Calculate(this, cachedNeighbors, profile.alignmentConfig, profile);
+                Vector3 alignmentForce = AlignmentBehaviour.Calculate(
+                    this, cachedNeighbors, profile.alignmentConfig, profile, currentVelocity);
                 totalForce += alignmentForce * profile.alignmentConfig.weight;
             }
 
-            AddForce(totalForce);
+            // Keep in XZ plane
+            totalForce.y = 0f;
+
+            return totalForce;
         }
 
-        private void AddForce(Vector3 force)
+        /// <summary>
+        /// Public API: Get the most recently calculated flocking force.
+        /// Host entity (e.g., Civilian) calls this to integrate flocking into movement.
+        /// </summary>
+        /// <returns>Cached flocking force vector</returns>
+        public Vector3 GetFlockingForce()
         {
-            velocity = Vector3.ClampMagnitude(velocity + force, maxSpeed);
-            velocity.y = 0f; // Keep in XZ plane
+            return cachedFlockingForce;
         }
 
-        private void Move()
-        {
-            if (velocity.sqrMagnitude < 0.001f)
-                return;
-
-            transform.forward = velocity.normalized;
-            transform.position += velocity * Time.deltaTime;
-        }
-
+        /// <summary>
+        /// Change flocking profile at runtime
+        /// </summary>
         public void SetProfile(FlockingProfile newProfile)
         {
             profile = newProfile;
