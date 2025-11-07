@@ -12,7 +12,7 @@ using Services.MicroServices.UpdateService;
 using Unity.Assertions;
 
 //todo revisar pasar a MVC
-[RequireComponent(typeof(SteeringMotor))]
+[RequireComponent(typeof(SteeringMotor), typeof(PerceptionSensor))]
 public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 {
     //todo utilizar scriptable object
@@ -43,6 +43,10 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [Header("Movement Components")]
     [SerializeField] private SteeringMotor steeringMotor;
     
+    [Header("Perception Components")]
+    [SerializeField] private PerceptionSensor perceptionSensor;
+    [SerializeField] private LayerMask perceptionObstacleMask = 0;
+    
     private Transform player;
     private Vector3 lastKnownPlayerPosition;
     private int currentPatrolIndex;
@@ -57,7 +61,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     // AI System components
     private AIContext aiContext;
     private IBlackboardService m_blackboardService;
-    private IPlayerDetector playerDetector;
 
     // FSM components
     private StateMachine stateMachine;
@@ -77,9 +80,9 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public System.Action OnMovementComplete { get; set; }
     public System.Action OnMovementBlocked { get; set; }
     
-    public float DetectionRange => detectionRange;
+    public float DetectionRange => perceptionSensor != null ? perceptionSensor.DetectionRange : detectionRange;
     public float AttackRange => attackRange;
-    public float FieldOfView => fieldOfView;
+    public float FieldOfView => perceptionSensor != null ? perceptionSensor.FieldOfView : fieldOfView;
     public float PatrolSpeed => patrolSpeed;
     public float ChaseSpeed => chaseSpeed;
     public float IdleTime => idleTime;
@@ -138,42 +141,14 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
     
-    // MEJORA: Improved player detection using new AI system
     public bool CanSeePlayer()
     {
-        if (enableNewAISystem && playerDetector != null)
-        {
-            return playerDetector.CanSeePlayer(player);
-        }
-        
-        // Fallback to legacy detection
-        return CanSeePlayerLegacy();
+        return perceptionSensor != null && perceptionSensor.CanSeeTarget;
     }
     
-    // MEJORA: Get advanced detection information
     public DetectionResult GetDetectionResult()
     {
-        if (enableNewAISystem && playerDetector != null)
-        {
-            return playerDetector.GetCurrentDetectionResult();
-        }
-        
-        return CanSeePlayerLegacy() ? DetectionResult.Clear : DetectionResult.None;
-    }
-    
-    private bool CanSeePlayerLegacy()
-    {
-        if (player == null) return false;
-        
-        Vector3 directionToPlayer = (player.position - transform.position).normalized;
-        float angleToPlayer = Vector3.Angle(transform.forward, directionToPlayer);
-        
-        if (angleToPlayer > fieldOfView / 2f) return false;
-        
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-        if (distanceToPlayer > detectionRange) return false;
-        
-        return !Physics.Raycast(transform.position + Vector3.up, directionToPlayer, distanceToPlayer, LayerMask.GetMask("Obstacles"));
+        return perceptionSensor != null ? perceptionSensor.GetDetectionResult() : DetectionResult.None;
     }
     
     protected override void Awake()
@@ -202,6 +177,20 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             steeringMotor = GetComponent<SteeringMotor>();
         }
         steeringMotor?.ResetVelocity();
+
+        if (perceptionSensor == null)
+        {
+            perceptionSensor = GetComponent<PerceptionSensor>();
+        }
+        if (perceptionSensor != null)
+        {
+            LayerMask obstacleMask = perceptionObstacleMask.value == 0 ? LayerMask.GetMask("Obstacles") : perceptionObstacleMask;
+            perceptionSensor.Configure(detectionRange, fieldOfView, searchTime, attackRange, obstacleMask);
+            if (player != null)
+            {
+                perceptionSensor.SetTarget(player, false);
+            }
+        }
         
         if (enableNewAISystem)
         {
@@ -215,10 +204,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             {
                 MyLogger.LogWarning($"Guard {gameObject.name}: Blackboard service not available yet");
             }
-
-            // Get player detector
-            playerDetector = gameObject.GetComponent<IPlayerDetector>();
-            Assert.IsNotNull(playerDetector);
 
             // Configure personality
             if (aiContext != null)
@@ -378,23 +363,26 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     private void UpdateAISystem()
     {
+        var detectionResult = GetDetectionResult();
+
+        if (perceptionSensor != null)
+        {
+            lastKnownPlayerPosition = perceptionSensor.LastKnownPosition;
+        }
+
         if (enableNewAISystem && m_blackboardService != null && player != null)
         {
             // Update blackboard with current player information
             m_blackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
             m_blackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
             
-            // Update last known position if we can see the player
-            if (CanSeePlayer())
+            if (detectionResult.canSeePlayer)
             {
-                lastKnownPlayerPosition = player.position;
                 m_blackboardService.SetValue(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION, lastKnownPlayerPosition);
             }
             
-            // Update detection information
-            var detectionResult = GetDetectionResult();
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_DetectionLevel", detectionResult.level);
-            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.level > PlayerDetectionLevel.None);
+            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.canSeePlayer);
         }
     }
 
@@ -554,6 +542,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public void SetTargetTransform(Transform p_target)
     {
         player = p_target;
+        perceptionSensor?.SetTarget(player, true);
         
         // Update AI system when target changes
         if (enableNewAISystem && m_blackboardService != null && player != null)
@@ -818,7 +807,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         // Fallback calculation
         if (!CanSeePlayer()) return 0f;
         
-        float distance = Vector3.Distance(transform.position, player.position);
+        float distance = perceptionSensor != null ? perceptionSensor.DistanceToTarget : Vector3.Distance(transform.position, player.position);
         float distanceFactor = 1f - Mathf.Clamp01(distance / detectionRange);
         
         return distanceFactor * 0.7f; // Base threat level
@@ -860,7 +849,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public bool ShouldAttack()
     {
         var detectionResult = GetDetectionResult();
-        float distance = Vector3.Distance(transform.position, player.position);
+        float distance = perceptionSensor != null ? perceptionSensor.DistanceToTarget : Vector3.Distance(transform.position, player.position);
 
         bool inAttackRange = distance <= attackRange;
         bool canSee = detectionResult.level >= PlayerDetectionLevel.Clear;
@@ -964,7 +953,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 
         if (player != null)
         {
-            Debug.Log($"Distance to Player: {Vector3.Distance(transform.position, player.position):F2}");
+            float distance = perceptionSensor != null ? perceptionSensor.DistanceToTarget : Vector3.Distance(transform.position, player.position);
+            Debug.Log($"Distance to Player: {distance:F2}");
         }
         Debug.Log("======================");
     }

@@ -9,7 +9,7 @@ using Services;
 using Services.MicroServices.UpdateService;
 using Unity.Assertions;
 
-[RequireComponent(typeof(SteeringMotor))]
+[RequireComponent(typeof(SteeringMotor), typeof(PerceptionSensor))]
 public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 {
     [Header("Movement Speeds")]
@@ -27,6 +27,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float safeDistance = 10f;      // Distance to stop fleeing
     [SerializeField] private float idleSecondsAfterSafe = 3f; // Idle time after reaching safety
     [SerializeField] private float loseSightGrace = 2f;     // Grace period after losing sight
+    [SerializeField] private LayerMask perceptionObstacleMask = 0;
 
     [Header("Roulette Decision System")]
     [SerializeField] private float escapeWeight = 0.8f;     // Weight for escape path
@@ -43,6 +44,9 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     [Header("Movement Components")]
     [SerializeField] private SteeringMotor steeringMotor;
 
+    [Header("Perception Components")]
+    [SerializeField] private PerceptionSensor perceptionSensor;
+
     [Header("FSM Configuration")]
     [SerializeField] private float evadeTime = 1f;          // Duration of evade state (0.75-1.25s)
     [SerializeField] private float safeTime = 2f;           // Time to maintain safety before idle
@@ -58,15 +62,15 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     // Component references
     private Transform player;
-    private IPlayerDetector playerDetector;
     private IBlackboardService m_blackboardService;
     private Renderer meshRenderer;
     private Material originalMaterial;
     private Color originalColor;
     private CivilianDecisionTreeRunner decisionTreeRunner;
 
-    // Steering components
+    // Steering/perception components
     private SteeringMotor Motor => steeringMotor != null ? steeringMotor : (steeringMotor = GetComponent<SteeringMotor>());
+    private PerceptionSensor Sensor => perceptionSensor != null ? perceptionSensor : (perceptionSensor = GetComponent<PerceptionSensor>());
     private float currentMaxSpeed;
 
     // FSM components
@@ -165,10 +169,8 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     private void InitializeComponents()
     {
         steeringMotor = Motor;
-        
-        // Get or add PlayerDetector
-        playerDetector = GetComponent<IPlayerDetector>();
-        Assert.IsNotNull(playerDetector);
+        perceptionSensor = Sensor;
+        ConfigurePerceptionSensor();
 
         // Get renderer for color changes during attacks
         meshRenderer = GetComponentInChildren<Renderer>();
@@ -203,6 +205,19 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             MyLogger.LogInfo($"Civilian {gameObject.name}: Steering initialized");
     }
 
+    private void ConfigurePerceptionSensor()
+    {
+        if (perceptionSensor == null) return;
+
+        LayerMask mask = perceptionObstacleMask.value == 0 ? LayerMask.GetMask("Obstacles") : perceptionObstacleMask;
+        perceptionSensor.Configure(sightRange, sightFOV, loseSightGrace, meleeRange, mask);
+
+        if (player != null)
+        {
+            perceptionSensor.SetTarget(player, false);
+        }
+    }
+
     private void FindPlayer()
     {
         if (player == null)
@@ -211,6 +226,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             if (playerGO != null)
             {
                 player = playerGO.transform;
+                perceptionSensor?.SetTarget(player);
                 if (enableDebugLogs)
                     MyLogger.LogInfo($"Civilian {gameObject.name}: Found player at {player.name}");
             }
@@ -537,31 +553,21 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public bool HasLoS()
     {
-        if (player == null || playerDetector == null) return false;
+        if (perceptionSensor == null) return false;
 
-        // Force visibility if player is in melee range to avoid LoS flickering during attacks
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-        if (distanceToPlayer <= meleeRange)
+        var detection = perceptionSensor.GetDetectionResult();
+
+        if (detection.canSeePlayer)
         {
-            if (enableDebugLogs)
-                MyLogger.LogInfo($"Civilian {gameObject.name}: Forcing LoS=true (in melee range: {distanceToPlayer:F2} <= {meleeRange})");
-            return true;
+            lastKnownPlayerPosition = perceptionSensor.LastKnownPosition;
+            hasEverSeenPlayer = true;
+        }
+        else if (perceptionSensor.HasRecentContact)
+        {
+            lastKnownPlayerPosition = perceptionSensor.LastKnownPosition;
         }
 
-        // Get debug info which includes hasLOS (line of sight) information
-        var debugInfo = playerDetector.GetDebugInfo();
-
-        // Additional distance check
-        bool inRange = distanceToPlayer <= sightRange;
-
-        // Additional FOV check
-        Vector3 directionToPlayer = (player.position - transform.position).normalized;
-        Vector3 forward = transform.forward;
-        float angle = Vector3.Angle(forward, directionToPlayer);
-        bool inFOV = angle <= sightFOV * 0.5f;
-
-        // Use hasLOS specifically - true line of sight with no obstacles
-        return debugInfo.hasLOS && inRange && inFOV;
+        return detection.canSeePlayer;
     }
 
     /// <summary>
@@ -569,8 +575,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public float GetDistanceToPlayer()
     {
-        if (player == null) return float.MaxValue;
-        return Vector3.Distance(transform.position, player.position);
+        return perceptionSensor != null ? perceptionSensor.DistanceToTarget : float.MaxValue;
     }
 
     /// <summary>
@@ -578,7 +583,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public bool IsPlayerInMeleeRange()
     {
-        return GetDistanceToPlayer() <= meleeRange;
+        return perceptionSensor != null && perceptionSensor.IsTargetWithinRange(meleeRange);
     }
 
     #endregion
@@ -809,6 +814,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     public void SetTargetTransform(Transform p_target)
     {
         player = p_target;
+        perceptionSensor?.SetTarget(player, true);
         
         // Update AI system when target changes
         if (m_blackboardService != null && player != null)
@@ -929,6 +935,20 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
         // Update timers
         stateTimer += Time.deltaTime;
+
+        if (perceptionSensor != null)
+        {
+            var detection = perceptionSensor.GetDetectionResult();
+            if (detection.canSeePlayer)
+            {
+                lastKnownPlayerPosition = perceptionSensor.LastKnownPosition;
+                hasEverSeenPlayer = true;
+            }
+            else if (perceptionSensor.HasRecentContact)
+            {
+                lastKnownPlayerPosition = perceptionSensor.LastKnownPosition;
+            }
+        }
 
         // Use ScriptableObject FSM if enabled, otherwise fallback to legacy system
         if (useFSM && stateMachine != null)
