@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using ScriptableObjects.Bullets;
 using Services;
 using Services.MicroServices.PoolObjectsService;
@@ -12,9 +13,11 @@ public class MainCharacter : BaseCharacter, ICombat
     private Rigidbody rb;
     private Vector3 lastMoveDirection;
     private PlayerCollector playerCollector;
-
+    
     private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData.rotationSpeed;
     private BulletData BulletData => mainCharacterData?.bulletData;
+
+    private float currentMagSize;
 
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
 
@@ -23,7 +26,7 @@ public class MainCharacter : BaseCharacter, ICombat
         base.Awake();
         rb = GetComponent<Rigidbody>();
         playerCollector = GetComponent<PlayerCollector>();
-        
+        currentMagSize = mainCharacterData.magSize;
         if (rb == null)
         {
             MyLogger.LogError($"{gameObject.name}: Rigidbody component required for MainCharacter2!");
@@ -45,15 +48,25 @@ public class MainCharacter : BaseCharacter, ICombat
     
     public override void Shoot(Vector3 direction)
     {
-        if (!isAlive || !CanShoot()) return;
+        if (!isAlive || !CanShoot())
+            return;
         
         lastShootTime = Time.time;
         CreateBullet(direction);
+        currentMagSize--;
     }
     
     public bool CanShoot()
     {
-        return Time.time >= lastShootTime + characterData.shootCooldown;
+        if (mainCharacterData.magSize != 0)
+        {
+            return Time.time >= lastShootTime + characterData.shootCooldown;   
+        }
+        else
+        {
+            return Time.time >= lastShootTime + mainCharacterData.reloadTime;
+            StartCoroutine(ReloadGun());
+        }
     }
     
     private void CreateBullet(Vector3 p_direction)
@@ -67,6 +80,13 @@ public class MainCharacter : BaseCharacter, ICombat
         var l_bullet = PoolObjectsService.GetOrCreateObject(BulletData.Prefab);
         l_bullet.OnDeactivate += OnDeactivateBulletHandler;
         l_bullet.InitializeBullet(BulletData, l_spawnPosition, p_direction);
+    }
+
+    private IEnumerator ReloadGun()
+    {
+        yield return new WaitForSeconds(mainCharacterData.reloadTime);
+
+        currentMagSize = mainCharacterData.magSize;
     }
 
     private static void OnDeactivateBulletHandler(BulletObject p_bullet)

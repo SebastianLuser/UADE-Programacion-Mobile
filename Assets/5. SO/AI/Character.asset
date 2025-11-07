@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   maxHealth: 100
   moveSpeed: 5
-  shootCooldown: 0.5
+  shootCooldown: 0.25
   rotationSpeed: 10
   characterName: Character
   characterColor: {r: 0.9433962, g: 0, b: 0, a: 1}
