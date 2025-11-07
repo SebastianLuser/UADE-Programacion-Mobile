@@ -8,7 +8,6 @@ public class MainCharacter : BaseCharacter, ICombat
 {
     [SerializeField] private MainCharacterDataSO mainCharacterData;
     
-    private float lastShootTime;
     private Rigidbody rb;
     private Vector3 lastMoveDirection;
     private PlayerCollector playerCollector;

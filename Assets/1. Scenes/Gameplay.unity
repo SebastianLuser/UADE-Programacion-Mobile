@@ -4453,6 +4453,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: alertEmitter
+      value: 
+      objectReference: {fileID: 1946605544}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: personalArea
       value: 1
       objectReference: {fileID: 0}
@@ -4461,6 +4466,16 @@ PrefabInstance:
       propertyPath: steeringMotor
       value: 
       objectReference: {fileID: 1946605536}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: perceptionSensor
+      value: 
+      objectReference: {fileID: 1946605542}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: rangedCombatModule
+      value: 
+      objectReference: {fileID: 1946605543}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: patrolPoints.Array.size
@@ -4611,6 +4626,12 @@ PrefabInstance:
       propertyPath: m_StaticEditorFlags
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4777592151020687598, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: bulletData
+      value: 
+      objectReference: {fileID: 11400000, guid: 6756e0916d9dd8a439d2c586d44476db,
+        type: 2}
     - target: {fileID: 4883312506515514553, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -7186,6 +7207,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f6c9cb2458d4c7fb8c2acb1ce0cb48f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SteeringMotor
+--- !u!114 &303114478 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5309187783255383160, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 403976066}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d98b0d7a4b7440d9c036b7839fa1c50, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PerceptionSensor
+--- !u!114 &303114479 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4777592151020687598, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 403976066}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5e3da5cbb94b20acfc198a8d7e32ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RangedCombatModule
+--- !u!114 &303114480 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3853583337811699191, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 403976066}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 570a8f59acbf4d97bf8aa2980aa928dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AlertEmitter
 --- !u!4 &303948051 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 470596, guid: 8fd8f3f29fdf6cf4c9c7e1dd047bc74c,
@@ -8911,6 +8968,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
         type: 3}
+      propertyPath: meleeCombat
+      value: 
+      objectReference: {fileID: 2070697707}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: alertEmitter
+      value: 
+      objectReference: {fileID: 2070697708}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
       propertyPath: attackWeight
       value: 0.9
       objectReference: {fileID: 0}
@@ -8934,6 +9001,11 @@ PrefabInstance:
       propertyPath: enableDebugLogs
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: perceptionSensor
+      value: 
+      objectReference: {fileID: 2070697706}
     - target: {fileID: 7941317387358255683, guid: 728c239681890b644978130b242e17da,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -9227,6 +9299,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: alertEmitter
+      value: 
+      objectReference: {fileID: 303114480}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: personalArea
       value: 1
       objectReference: {fileID: 0}
@@ -9235,6 +9312,16 @@ PrefabInstance:
       propertyPath: steeringMotor
       value: 
       objectReference: {fileID: 303114472}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: perceptionSensor
+      value: 
+      objectReference: {fileID: 303114478}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: rangedCombatModule
+      value: 
+      objectReference: {fileID: 303114479}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: patrolPoints.Array.size
@@ -9385,6 +9472,12 @@ PrefabInstance:
       propertyPath: m_StaticEditorFlags
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4777592151020687598, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: bulletData
+      value: 
+      objectReference: {fileID: 11400000, guid: 6756e0916d9dd8a439d2c586d44476db,
+        type: 2}
     - target: {fileID: 4883312506515514553, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -26625,6 +26718,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: alertEmitter
+      value: 
+      objectReference: {fileID: 2112614368}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: personalArea
       value: 1
       objectReference: {fileID: 0}
@@ -26633,6 +26731,16 @@ PrefabInstance:
       propertyPath: steeringMotor
       value: 
       objectReference: {fileID: 2112614360}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: perceptionSensor
+      value: 
+      objectReference: {fileID: 2112614366}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: rangedCombatModule
+      value: 
+      objectReference: {fileID: 2112614367}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: patrolPoints.Array.size
@@ -26788,6 +26896,12 @@ PrefabInstance:
       propertyPath: m_StaticEditorFlags
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4777592151020687598, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: bulletData
+      value: 
+      objectReference: {fileID: 11400000, guid: 6756e0916d9dd8a439d2c586d44476db,
+        type: 2}
     - target: {fileID: 4883312506515514553, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -27537,6 +27651,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f6c9cb2458d4c7fb8c2acb1ce0cb48f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SteeringMotor
+--- !u!114 &1205192965 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 424814392163698707, guid: 728c239681890b644978130b242e17da,
+    type: 3}
+  m_PrefabInstance: {fileID: 1812504281}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d98b0d7a4b7440d9c036b7839fa1c50, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PerceptionSensor
+--- !u!114 &1205192966 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 587847005043440151, guid: 728c239681890b644978130b242e17da,
+    type: 3}
+  m_PrefabInstance: {fileID: 1812504281}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1fb901c5a7a7417abfb621ff8e1eb640, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeleeCombatModule
+--- !u!114 &1205192967 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7682007936770600015, guid: 728c239681890b644978130b242e17da,
+    type: 3}
+  m_PrefabInstance: {fileID: 1812504281}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 570a8f59acbf4d97bf8aa2980aa928dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AlertEmitter
 --- !u!1001 &1207233361
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -41207,6 +41357,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
         type: 3}
+      propertyPath: meleeCombat
+      value: 
+      objectReference: {fileID: 1205192966}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: alertEmitter
+      value: 
+      objectReference: {fileID: 1205192967}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
       propertyPath: attackWeight
       value: 0.2
       objectReference: {fileID: 0}
@@ -41235,6 +41395,11 @@ PrefabInstance:
       propertyPath: enableDebugLogs
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: perceptionSensor
+      value: 
+      objectReference: {fileID: 1205192965}
     - target: {fileID: 7941317387358255683, guid: 728c239681890b644978130b242e17da,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -43639,6 +43804,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f6c9cb2458d4c7fb8c2acb1ce0cb48f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SteeringMotor
+--- !u!114 &1946605542 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5309187783255383160, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 207608558}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d98b0d7a4b7440d9c036b7839fa1c50, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PerceptionSensor
+--- !u!114 &1946605543 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4777592151020687598, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 207608558}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5e3da5cbb94b20acfc198a8d7e32ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RangedCombatModule
+--- !u!114 &1946605544 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3853583337811699191, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 207608558}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 570a8f59acbf4d97bf8aa2980aa928dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AlertEmitter
 --- !u!4 &1947070694 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 408154, guid: 883e08aa76ea4b94f81d3fe0f68f7ba8,
@@ -45558,6 +45759,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f6c9cb2458d4c7fb8c2acb1ce0cb48f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SteeringMotor
+--- !u!114 &2070697706 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 424814392163698707, guid: 728c239681890b644978130b242e17da,
+    type: 3}
+  m_PrefabInstance: {fileID: 392444777}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d98b0d7a4b7440d9c036b7839fa1c50, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PerceptionSensor
+--- !u!114 &2070697707 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 587847005043440151, guid: 728c239681890b644978130b242e17da,
+    type: 3}
+  m_PrefabInstance: {fileID: 392444777}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1fb901c5a7a7417abfb621ff8e1eb640, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeleeCombatModule
+--- !u!114 &2070697708 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7682007936770600015, guid: 728c239681890b644978130b242e17da,
+    type: 3}
+  m_PrefabInstance: {fileID: 392444777}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 570a8f59acbf4d97bf8aa2980aa928dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AlertEmitter
 --- !u!1001 &2072176190
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -46645,6 +46882,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f6c9cb2458d4c7fb8c2acb1ce0cb48f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SteeringMotor
+--- !u!114 &2112614366 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5309187783255383160, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 1189902614}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d98b0d7a4b7440d9c036b7839fa1c50, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PerceptionSensor
+--- !u!114 &2112614367 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4777592151020687598, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 1189902614}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5e3da5cbb94b20acfc198a8d7e32ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RangedCombatModule
+--- !u!114 &2112614368 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3853583337811699191, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 1189902614}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 570a8f59acbf4d97bf8aa2980aa928dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AlertEmitter
 --- !u!4 &2113520009 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 480330, guid: 61bb8d4e8c31dd044901d3a4baabe130,

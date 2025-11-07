@@ -10,6 +10,7 @@ using Services.MicroServices.UpdateService;
 using Unity.Assertions;
 
 [RequireComponent(typeof(SteeringMotor), typeof(PerceptionSensor))]
+[RequireComponent(typeof(AlertEmitter), typeof(MeleeCombatModule))]
 public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 {
     [Header("Movement Speeds")]
@@ -38,14 +39,17 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float attackHitWin = 0.10f;    // Hit window duration
     [SerializeField] private float attackRecover = 0.35f;   // Recovery after hit
     [SerializeField] private float attackLoseSightGrace = 0.3f; // Time before aborting attack
-    [SerializeField] private int meleeDamage = 1;           // Damage per melee hit
     [SerializeField] private Color attackColor = Color.red; // Visual feedback while attacking
 
     [Header("Movement Components")]
     [SerializeField] private SteeringMotor steeringMotor;
 
-    [Header("Perception Components")]
-    [SerializeField] private PerceptionSensor perceptionSensor;
+[Header("Perception Components")]
+[SerializeField] private PerceptionSensor perceptionSensor;
+
+[Header("Combat Components")]
+[SerializeField] private AlertEmitter alertEmitter;
+[SerializeField] private MeleeCombatModule meleeCombat;
 
     [Header("FSM Configuration")]
     [SerializeField] private float evadeTime = 1f;          // Duration of evade state (0.75-1.25s)
@@ -62,7 +66,6 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     // Component references
     private Transform player;
-    private IBlackboardService m_blackboardService;
     private Renderer meshRenderer;
     private Material originalMaterial;
     private Color originalColor;
@@ -115,7 +118,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     public float AttackHitWin => attackHitWin;
     public float AttackRecover => attackRecover;
     public float AttackLoseSightGrace => attackLoseSightGrace;
-    public int MeleeDamage => meleeDamage;
+    public int MeleeDamage => meleeCombat != null ? meleeCombat.Damage : 0;
     public Color AttackColor => attackColor;
     public bool CanAttack => canAttack;
     public bool EnableDebugLogs => enableDebugLogs;
@@ -171,6 +174,9 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         steeringMotor = Motor;
         perceptionSensor = Sensor;
         ConfigurePerceptionSensor();
+        alertEmitter = alertEmitter != null ? alertEmitter : GetComponent<AlertEmitter>();
+        alertEmitter?.Configure("Civilian");
+        meleeCombat = meleeCombat != null ? meleeCombat : GetComponent<MeleeCombatModule>();
 
         // Get renderer for color changes during attacks
         meshRenderer = GetComponentInChildren<Renderer>();
@@ -178,13 +184,6 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         {
             originalMaterial = meshRenderer.material;
             originalColor = meshRenderer.material.color;
-        }
-
-        // Get blackboard service (read-only access)
-        m_blackboardService = ServiceLocator.Get<IBlackboardService>();
-        if (m_blackboardService == null && enableDebugLogs)
-        {
-            MyLogger.LogWarning($"Civilian {gameObject.name}: Blackboard service not available");
         }
 
         // Initialize decision tree runner if enabled
@@ -226,7 +225,8 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             if (playerGO != null)
             {
                 player = playerGO.transform;
-                perceptionSensor?.SetTarget(player);
+                perceptionSensor?.SetTarget(player, false);
+                alertEmitter?.SetPlayer(player, false);
                 if (enableDebugLogs)
                     MyLogger.LogInfo($"Civilian {gameObject.name}: Found player at {player.name}");
             }
@@ -302,32 +302,12 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public void DealMeleeAttack()
     {
-        if (player == null) return;
+        if (player == null || meleeCombat == null) return;
 
-        // Try to get player health component
-        var playerHealth = player.GetComponent<IDamageable>();
-        if (playerHealth != null)
-        {
-            playerHealth.TakeDamage(meleeDamage);
-            
-            if (enableDebugLogs)
-                MyLogger.LogInfo($"Civilian {gameObject.name}: Dealt {meleeDamage} melee damage to player");
-        }
-        else
-        {
-            /* Todo: Que es esto?
-            // Fallback: try GameStateManager
-            var gameStateManager = ServiceLocator.Get<GameStateService>();
-            if (gameStateManager != null)
-            {
-                // gameStateManager.ApplyMeleeHit(meleeDamage);
-                if (enableDebugLogs)
-                    MyLogger.LogInfo($"Civilian {gameObject.name}: Applied melee hit via GameStateManager");
-            }*/
-        }
+        bool hit = meleeCombat.TryDealDamage(player);
 
         // Notify decision tree that damage was dealt
-        if (useDecisionTree && decisionTreeRunner != null)
+        if (hit && useDecisionTree && decisionTreeRunner != null)
         {
             decisionTreeRunner.OnMeleeDamageDealt();
         }
@@ -517,11 +497,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             {
                 case CivilianState.Safe:
                     // Write to blackboard if civilian reaches safety
-                    if (m_blackboardService != null)
-                    {
-                        // This could be used for global alert state
-                        m_blackboardService.SetValue(BlackboardKeys.GLOBAL_ALERT, true);
-                    }
+                    alertEmitter?.EmitGlobalAlert();
                     break;
             }
         }
@@ -816,12 +792,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         player = p_target;
         perceptionSensor?.SetTarget(player, true);
         
-        // Update AI system when target changes
-        if (m_blackboardService != null && player != null)
-        {
-            m_blackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
-            m_blackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
-        }
+        alertEmitter?.SetPlayer(player);
     }
 
     public Transform GetTargetTransform()

@@ -4,15 +4,14 @@ using Game.AI.Steering;
 using Scripts.FSM.Base.StateMachine;
 using Scripts.FSM.Models;
 using System.Collections.Generic;
-using ScriptableObjects.Bullets;
 using Services.MicroServices.BlackboardService;
 using Services;
-using Services.MicroServices.PoolObjectsService;
 using Services.MicroServices.UpdateService;
 using Unity.Assertions;
 
 //todo revisar pasar a MVC
 [RequireComponent(typeof(SteeringMotor), typeof(PerceptionSensor))]
+[RequireComponent(typeof(AlertEmitter), typeof(RangedCombatModule))]
 public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 {
     //todo utilizar scriptable object
@@ -26,7 +25,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float searchTime = 5f;
     [SerializeField] private float baseRotationSpeed = 2f;
     [SerializeField] private Transform[] patrolPoints;
-    [SerializeField] private BulletData bulletData;
 
     [Header("FSM Patrol Settings")]
     [SerializeField] private int loopsToIdle = 3;
@@ -47,6 +45,10 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private PerceptionSensor perceptionSensor;
     [SerializeField] private LayerMask perceptionObstacleMask = 0;
     
+    [Header("Combat Components")]
+    [SerializeField] private AlertEmitter alertEmitter;
+    [SerializeField] private RangedCombatModule rangedCombatModule;
+    
     private Transform player;
     private Vector3 lastKnownPlayerPosition;
     private int currentPatrolIndex;
@@ -60,7 +62,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     // AI System components
     private AIContext aiContext;
-    private IBlackboardService m_blackboardService;
 
     // FSM components
     private StateMachine stateMachine;
@@ -129,7 +130,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     // AI System access
     public AIContext AIContext => aiContext;
-    public IBlackboardService BlackboardService => m_blackboardService;
+    public IBlackboardService BlackboardService => alertEmitter?.Blackboard;
     public AIPersonalityType PersonalityType => personalityType;
 
     // Steering Physics access
@@ -138,8 +139,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public float MaxSpeed => steeringMotor != null ? steeringMotor.MaxSpeed : 0f;
     public float SlowingDistance => steeringMotor != null ? steeringMotor.SlowingDistance : 0f;
     public Vector3 CurrentVelocity => steeringMotor != null ? steeringMotor.CurrentVelocity : Vector3.zero;
-    
-    private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
     
     public bool CanSeePlayer()
     {
@@ -191,19 +190,27 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
                 perceptionSensor.SetTarget(player, false);
             }
         }
+
+        if (alertEmitter == null)
+        {
+            alertEmitter = GetComponent<AlertEmitter>();
+        }
+        alertEmitter?.Configure("Guard");
+        if (player != null)
+        {
+            alertEmitter?.SetPlayer(player, false);
+        }
+
+        if (rangedCombatModule == null)
+        {
+            rangedCombatModule = GetComponent<RangedCombatModule>();
+        }
         
         if (enableNewAISystem)
         {
             // Initialize AI Context
             aiContext = gameObject.GetComponent<AIContext>();
             Assert.IsNotNull(aiContext);
-
-            // Get blackboard service
-            m_blackboardService = ServiceLocator.Get<IBlackboardService>();
-            if (m_blackboardService == null)
-            {
-                MyLogger.LogWarning($"Guard {gameObject.name}: Blackboard service not available yet");
-            }
 
             // Configure personality
             if (aiContext != null)
@@ -245,12 +252,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private System.Collections.IEnumerator DelayedStart()
     {
         yield return null;
-        
-        // Ensure blackboard connection is established
-        if (enableNewAISystem && m_blackboardService == null)
-        {
-            m_blackboardService = ServiceLocator.Get<IBlackboardService>();
-        }
         
         // Find player if not set
         if (player == null)
@@ -370,19 +371,10 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             lastKnownPlayerPosition = perceptionSensor.LastKnownPosition;
         }
 
-        if (enableNewAISystem && m_blackboardService != null && player != null)
+        if (enableNewAISystem && alertEmitter != null)
         {
-            // Update blackboard with current player information
-            m_blackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
-            m_blackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
-            
-            if (detectionResult.canSeePlayer)
-            {
-                m_blackboardService.SetValue(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION, lastKnownPlayerPosition);
-            }
-            
-            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_DetectionLevel", detectionResult.level);
-            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.canSeePlayer);
+            alertEmitter.SyncPlayerTransform();
+            alertEmitter.ReportDetection(detectionResult, lastKnownPlayerPosition);
         }
     }
 
@@ -508,28 +500,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         if (!isAlive || !CanShoot()) return;
         
         lastShootTime = Time.time;
-        CreateBullet(direction);
-        
-        // MEJORA: Update blackboard with combat information
-        if (enableNewAISystem && m_blackboardService != null)
-        {
-            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_LastShootTime", lastShootTime);
-            m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_ShootDirection", direction);
-        }
-    }
-    
-    private void CreateBullet(Vector3 p_direction)
-    {
-        var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
-        var l_bullet = PoolObjectsService.GetOrCreateObject(bulletData.Prefab);
-        l_bullet.OnDeactivate += OnDeactivateBulletHandler;
-        l_bullet.InitializeBullet(bulletData, l_spawnPosition, p_direction);
-    }
-
-    private void OnDeactivateBulletHandler(BulletObject p_bullet)
-    {
-        p_bullet.OnDeactivate -= OnDeactivateBulletHandler;
-        PoolObjectsService.ReturnObject(p_bullet);
+        bool notify = enableNewAISystem && alertEmitter != null;
+        rangedCombatModule?.Fire(direction, lastShootTime, notify);
     }
 
     #region AI System Integration
@@ -544,11 +516,9 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         player = p_target;
         perceptionSensor?.SetTarget(player, true);
         
-        // Update AI system when target changes
-        if (enableNewAISystem && m_blackboardService != null && player != null)
+        if (enableNewAISystem)
         {
-            m_blackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
-            m_blackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
+            alertEmitter?.SetPlayer(player);
         }
     }
     
