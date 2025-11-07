@@ -12,6 +12,7 @@ using Services.MicroServices.UpdateService;
 using Unity.Assertions;
 
 //todo revisar pasar a MVC
+[RequireComponent(typeof(SteeringMotor))]
 public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 {
     //todo utilizar scriptable object
@@ -39,17 +40,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private AIPersonalityType personalityType = AIPersonalityType.Aggressive;
     [SerializeField] private bool enableNewAISystem = true;
 
-    [Header("Steering Physics")]
-    [SerializeField] private float mass = 1f;
-    [SerializeField] private float maxForce = 25f;
-    [SerializeField] private float maxSpeed = 8f;
-    [SerializeField] private float slowingDistance = 2f;
-
-    [Header("Obstacle Avoidance")]
-    [SerializeField] private LayerMask obstaclesMask = -1;
-    [SerializeField] private float avoidRadius = 2f;
-    [SerializeField] private float avoidAngle = 90f;
-    [SerializeField] private float personalArea = 0.5f;
+    [Header("Movement Components")]
+    [SerializeField] private SteeringMotor steeringMotor;
     
     private Transform player;
     private Vector3 lastKnownPlayerPosition;
@@ -66,10 +58,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private AIContext aiContext;
     private IBlackboardService m_blackboardService;
     private IPlayerDetector playerDetector;
-
-    // Steering components
-    private Vector3 _vel;
-    private ObstacleAvoidance obstacleAvoidance;
 
     // FSM components
     private StateMachine stateMachine;
@@ -142,11 +130,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public AIPersonalityType PersonalityType => personalityType;
 
     // Steering Physics access
-    public float Mass => mass;
-    public float MaxForce => maxForce;
-    public float MaxSpeed => maxSpeed;
-    public float SlowingDistance => slowingDistance;
-    public Vector3 CurrentVelocity => _vel;
+    public float Mass => steeringMotor != null ? steeringMotor.Mass : 0f;
+    public float MaxForce => steeringMotor != null ? steeringMotor.MaxForce : 0f;
+    public float MaxSpeed => steeringMotor != null ? steeringMotor.MaxSpeed : 0f;
+    public float SlowingDistance => steeringMotor != null ? steeringMotor.SlowingDistance : 0f;
+    public Vector3 CurrentVelocity => steeringMotor != null ? steeringMotor.CurrentVelocity : Vector3.zero;
     
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
     
@@ -209,6 +197,12 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     private void InitializeAISystem()
     {
+        if (steeringMotor == null)
+        {
+            steeringMotor = GetComponent<SteeringMotor>();
+        }
+        steeringMotor?.ResetVelocity();
+        
         if (enableNewAISystem)
         {
             // Initialize AI Context
@@ -233,17 +227,14 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             }
         }
 
-        // Initialize steering physics
-        _vel = Vector3.zero;
-        obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, personalArea, obstaclesMask);
-
-        // Ensure maxSpeed is at least as fast as chaseSpeed for proper movement
-        if (maxSpeed < chaseSpeed)
+        // Ensure motor speed is at least as fast as chaseSpeed for proper movement
+        if (steeringMotor != null && steeringMotor.MaxSpeed < chaseSpeed)
         {
-            maxSpeed = chaseSpeed * 1.2f; // Give some headroom
-            MyLogger.LogInfo($"Guard {gameObject.name}: Adjusted maxSpeed to {maxSpeed} to match chaseSpeed");
+            float headroomSpeed = chaseSpeed * 1.2f;
+            steeringMotor.ConfigureSteering(steeringMotor.Mass, steeringMotor.MaxForce, headroomSpeed, steeringMotor.SlowingDistance);
+            MyLogger.LogInfo($"Guard {gameObject.name}: Adjusted maxSpeed to {headroomSpeed} to match chaseSpeed");
         }
-
+        
         // Initialize FSM
         InitializeFSM();
     }
@@ -352,13 +343,13 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         else if (currentMovementStatus == MovementStatus.Moving && currentDestination != Vector3.zero)
         {
             // Use maxSpeed instead of currentMovementSpeed for more aggressive movement
-            float targetSpeed = Mathf.Max(currentMovementSpeed, maxSpeed * 0.5f); // At least half max speed
-            Vector3 steering = Steering.Seek(transform.position, currentDestination, _vel, targetSpeed);
+            float targetSpeed = Mathf.Max(currentMovementSpeed, MaxSpeed * 0.5f); // At least half max speed
+            Vector3 steering = Steering.Seek(transform.position, currentDestination, CurrentVelocity, targetSpeed);
 
             // Debug steering calculation
             if (Time.frameCount % 60 == 0)
             {
-                MyLogger.LogInfo($"[STEERING CALC] Pos: {transform.position}, Target: {currentDestination}, Vel: {_vel}, TargetSpeed: {targetSpeed}");
+                MyLogger.LogInfo($"[STEERING CALC] Pos: {transform.position}, Target: {currentDestination}, Vel: {CurrentVelocity}, TargetSpeed: {targetSpeed}");
                 MyLogger.LogInfo($"[STEERING CALC] Calculated steering: {steering}");
             }
 
@@ -370,7 +361,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             if (currentPatrolIndex < patrolPoints.Length)
             {
                 // Use Seek instead of Arrive for patrol movement to maintain constant speed
-                Vector3 steering = Steering.Seek(transform.position, patrolPoints[currentPatrolIndex].position, _vel, patrolSpeed);
+                Vector3 steering = Steering.Seek(transform.position, patrolPoints[currentPatrolIndex].position, CurrentVelocity, patrolSpeed);
                 ApplySteering(steering);
             }
         }
@@ -485,103 +476,23 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     #region Steering Physics
 
-    /// <summary>
-    /// Integrate steering force to update velocity with mass and force limits
-    /// </summary>
-    private Vector3 Integrate(Vector3 steering, float dt)
-    {
-        // Clamp steering force to maximum
-        Vector3 clampedForce = steering;
-        if (clampedForce.sqrMagnitude > maxForce * maxForce)
-        {
-            clampedForce = clampedForce.normalized * maxForce;
-        }
-
-        // Apply force to velocity (F = ma, so a = F/m)
-        Vector3 acceleration = clampedForce / mass;
-        Vector3 newVel = _vel + acceleration * dt;
-
-        // Clamp velocity to maximum speed
-        if (newVel.sqrMagnitude > maxSpeed * maxSpeed)
-        {
-            newVel = newVel.normalized * maxSpeed;
-        }
-
-        return newVel;
-    }
-
-    /// <summary>
-    /// Apply steering force with obstacle avoidance and movement
-    /// </summary>
     public void ApplySteering(Vector3 steering)
     {
-        if (!isAlive) return;
+        if (!isAlive || steeringMotor == null) return;
 
-        // 1) Update velocity using physics integration
-        _vel = Integrate(steering, Time.deltaTime);
+        Vector3 avoidedVel = steeringMotor.ApplySteering(steering, baseRotationSpeed * 3f);
 
-        // 2) Pass velocity through obstacle avoidance
-        Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(_vel, false);
-
-        // 3) Move and face movement direction
         if (avoidedVel.sqrMagnitude > 0.001f)
         {
-            // Use actual deltaTime - the steering system works correctly now
-            float effectiveDeltaTime = Time.deltaTime;
-
-            // Update position
-            Vector3 movement = avoidedVel * effectiveDeltaTime;
-            transform.position += movement;
-
-            // Update movement controller state
             currentMovementDirection = avoidedVel.normalized;
             currentMovementSpeed = avoidedVel.magnitude;
-
-            // Face movement direction with faster rotation
-            if (avoidedVel.magnitude > 0.1f)
-            {
-                Vector3 lookDirection = avoidedVel.normalized;
-                lookDirection.y = 0f; // Keep rotation in XZ plane
-
-                // Use faster rotation speed for more responsive steering
-                float rotationSpeed = baseRotationSpeed * 3f;
-                Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-            }
         }
 
-        // Debug velocity more frequently during development
         if (Time.frameCount % 30 == 0)
         {
-            float effectiveDeltaTime = Mathf.Max(Time.deltaTime, 0.016f);
-            MyLogger.LogInfo($"[STEERING DEBUG] {gameObject.name}: Vel: {_vel.magnitude:F2}, AvoidedVel: {avoidedVel.magnitude:F2}, MaxSpeed: {maxSpeed}");
-            MyLogger.LogInfo($"[STEERING DEBUG] Raw steering: {steering.magnitude:F2}, DeltaTime: {Time.deltaTime:F4}, Effective: {effectiveDeltaTime:F4}, Movement: {(avoidedVel * effectiveDeltaTime).magnitude:F4}");
+            MyLogger.LogInfo($"[STEERING DEBUG] {gameObject.name}: Vel: {steeringMotor.CurrentVelocity.magnitude:F2}, AvoidedVel: {avoidedVel.magnitude:F2}, MaxSpeed: {steeringMotor.MaxSpeed}");
+            MyLogger.LogInfo($"[STEERING DEBUG] Raw steering: {steering.magnitude:F2}");
         }
-    }
-
-    /// <summary>
-    /// Configure steering physics parameters at runtime
-    /// </summary>
-    public void ConfigureSteering(float newMass, float newMaxForce, float newMaxSpeed, float newSlowingDistance)
-    {
-        mass = newMass;
-        maxForce = newMaxForce;
-        maxSpeed = newMaxSpeed;
-        slowingDistance = newSlowingDistance;
-    }
-
-    /// <summary>
-    /// Configure obstacle avoidance parameters at runtime
-    /// </summary>
-    public void ConfigureObstacleAvoidance(float radius, float angle, float personalArea, LayerMask obstacleMask)
-    {
-        avoidRadius = radius;
-        avoidAngle = angle;
-        personalArea = personalArea;
-        obstaclesMask = obstacleMask;
-
-        // Recreate obstacle avoidance with new parameters
-        obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, personalArea, obstaclesMask);
     }
 
     #endregion
@@ -598,9 +509,9 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             return;
         }
 
-        // Legacy direct movement - use maxSpeed instead of characterData.moveSpeed
-        Vector3 targetVel = direction.normalized * maxSpeed;
-        Vector3 steering = targetVel - _vel;
+        // Legacy direct movement - use motor max speed instead of characterData.moveSpeed
+        Vector3 targetVel = direction.normalized * MaxSpeed;
+        Vector3 steering = targetVel - CurrentVelocity;
         ApplySteering(steering);
     }
     
@@ -663,7 +574,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     public Vector3 GetCurrentVelocity()
     {
-        return _vel;
+        return CurrentVelocity;
     }
     
     public Vector3 GetCurrentDirection()
@@ -738,15 +649,15 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         float distanceToTarget = Vector3.Distance(transform.position, target);
         Vector3 steering;
 
-        if (distanceToTarget > slowingDistance * 2f)
+        if (distanceToTarget > SlowingDistance * 2f)
         {
             // Use Seek for constant speed when far from target
-            steering = Steering.Seek(transform.position, target, _vel, speed);
+            steering = Steering.Seek(transform.position, target, CurrentVelocity, speed);
         }
         else
         {
             // Use Arrive for smooth stop near target
-            steering = Steering.Arrive(transform.position, target, _vel, speed, slowingDistance);
+            steering = Steering.Arrive(transform.position, target, CurrentVelocity, speed, SlowingDistance);
         }
 
         ApplySteering(steering);
@@ -762,7 +673,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         currentMovementStatus = MovementStatus.Fleeing;
 
         // Use steering behavior for fleeing
-        Vector3 steering = Steering.Flee(transform.position, fromPosition, _vel, speed);
+        Vector3 steering = Steering.Flee(transform.position, fromPosition, CurrentVelocity, speed);
         ApplySteering(steering);
 
         // Set destination for debugging/tracking purposes
@@ -977,7 +888,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             playerVel = playerRb.linearVelocity;
         }
 
-        Vector3 steering = Steering.Pursuit(transform.position, _vel, player.position, playerVel, chaseSpeed);
+        Vector3 steering = Steering.Pursuit(transform.position, CurrentVelocity, player.position, playerVel, chaseSpeed);
         ApplySteering(steering);
 
         currentMovementStatus = MovementStatus.Moving;
@@ -998,7 +909,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             playerVel = playerRb.linearVelocity;
         }
 
-        Vector3 steering = Steering.Evade(transform.position, _vel, player.position, playerVel, chaseSpeed);
+        Vector3 steering = Steering.Evade(transform.position, CurrentVelocity, player.position, playerVel, chaseSpeed);
         ApplySteering(steering);
 
         currentMovementStatus = MovementStatus.Fleeing;
@@ -1023,8 +934,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             _ => patrolSpeed
         };
 
-        // Ensure we don't exceed maxSpeed
-        return Mathf.Min(baseSpeed, maxSpeed);
+        // Ensure we don't exceed motor max speed
+        return Mathf.Min(baseSpeed, MaxSpeed);
     }
     
     #endregion
@@ -1048,8 +959,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         Debug.Log($"Contextual Speed: {GetContextualSpeed():F1}");
 
         // Steering physics status
-        Debug.Log($"Current Velocity: {_vel} (magnitude: {_vel.magnitude:F2})");
-        Debug.Log($"Max Speed: {maxSpeed}, Max Force: {maxForce}, Mass: {mass}");
+        Debug.Log($"Current Velocity: {CurrentVelocity} (magnitude: {CurrentVelocity.magnitude:F2})");
+        Debug.Log($"Max Speed: {MaxSpeed}, Max Force: {MaxForce}, Mass: {Mass}");
 
         if (player != null)
         {
@@ -1091,24 +1002,23 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         Vector3 testDirection = transform.forward;
         Move(testDirection);
-        Debug.Log($"Applied direct movement - Direction: {testDirection}, Current Vel: {_vel.magnitude:F2}");
+        Debug.Log($"Applied direct movement - Direction: {testDirection}, Current Vel: {CurrentVelocity.magnitude:F2}");
     }
 
     [ContextMenu("Reset Velocity")]
     private void ResetVelocity()
     {
-        _vel = Vector3.zero;
+        steeringMotor?.ResetVelocity();
         Debug.Log("Velocity reset to zero");
     }
 
     [ContextMenu("Force High Speed")]
     private void ForceHighSpeed()
     {
-        mass = 0.1f;
-        maxForce = 100f;
-        maxSpeed = 20f;
-        slowingDistance = 0.5f;
-        Debug.Log($"Forced high speed settings: Mass={mass}, MaxForce={maxForce}, MaxSpeed={maxSpeed}");
+        if (steeringMotor == null) return;
+        
+        steeringMotor.ConfigureSteering(0.1f, 100f, 20f, 0.5f);
+        Debug.Log($"Forced high speed settings: Mass={steeringMotor.Mass}, MaxForce={steeringMotor.MaxForce}, MaxSpeed={steeringMotor.MaxSpeed}");
     }
 
     [ContextMenu("Test Seek Behavior")]
@@ -1120,17 +1030,17 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             Debug.Log($"=== SEEK TEST ===");
             Debug.Log($"Position: {transform.position}");
             Debug.Log($"Target: {target}");
-            Debug.Log($"Current Vel: {_vel}");
-            Debug.Log($"Max Speed: {maxSpeed}");
+            Debug.Log($"Current Vel: {CurrentVelocity}");
+            Debug.Log($"Max Speed: {MaxSpeed}");
 
-            Vector3 steering = Steering.Seek(transform.position, target, _vel, maxSpeed);
+            Vector3 steering = Steering.Seek(transform.position, target, CurrentVelocity, MaxSpeed);
             Debug.Log($"Calculated steering: {steering}, magnitude: {steering.magnitude:F2}");
 
             // Calculate expected values manually
             Vector3 desired = target - transform.position;
             desired.y = 0f;
-            desired = desired.normalized * maxSpeed;
-            Vector3 expectedSteering = desired - _vel;
+            desired = desired.normalized * MaxSpeed;
+            Vector3 expectedSteering = desired - CurrentVelocity;
             Debug.Log($"Expected desired: {desired}");
             Debug.Log($"Expected steering: {expectedSteering}");
 
@@ -1141,10 +1051,12 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [ContextMenu("Force Manual Movement")]
     private void ForceManualMovement()
     {
+        if (steeringMotor == null) return;
+
         Vector3 forceVel = transform.forward * 5f;
-        _vel = forceVel;
-        transform.position += _vel * Time.deltaTime;
-        Debug.Log($"Forced velocity: {_vel}, moved to: {transform.position}");
+        steeringMotor.SetVelocity(forceVel);
+        transform.position += steeringMotor.CurrentVelocity * Time.deltaTime;
+        Debug.Log($"Forced velocity: {steeringMotor.CurrentVelocity}, moved to: {transform.position}");
     }
 
     [ContextMenu("Debug Complete Steering Pipeline")]
@@ -1153,31 +1065,20 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         Debug.Log("=== COMPLETE STEERING DEBUG ===");
         Debug.Log($"Current Status: isAlive={isAlive}, currentMovementStatus={currentMovementStatus}");
         Debug.Log($"Current destination: {currentDestination}");
-        Debug.Log($"Physics: mass={mass}, maxForce={maxForce}, maxSpeed={maxSpeed}");
-        Debug.Log($"Current velocity: {_vel}");
+        Debug.Log($"Physics: mass={Mass}, maxForce={MaxForce}, maxSpeed={MaxSpeed}");
+        Debug.Log($"Current velocity: {CurrentVelocity}");
         Debug.Log($"Time.deltaTime: {Time.deltaTime:F6}, FPS: {1f/Time.deltaTime:F1}");
 
-        if (currentDestination != Vector3.zero)
+        if (currentDestination != Vector3.zero && steeringMotor != null)
         {
             // Test direct steering calculation
-            Vector3 steering = Steering.Seek(transform.position, currentDestination, _vel, maxSpeed);
+            Vector3 steering = Steering.Seek(transform.position, currentDestination, CurrentVelocity, MaxSpeed);
             Debug.Log($"Direct Seek result: {steering}");
-
-            // Test integration
-            Vector3 integratedVel = Integrate(steering, Time.deltaTime);
-            Debug.Log($"After integration: {integratedVel}");
-
-            // Test obstacle avoidance
-            Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(integratedVel, false);
-            Debug.Log($"After obstacle avoidance: {avoidedVel}");
-
-            // Calculate final movement
+            
             float effectiveDeltaTime = Mathf.Max(Time.deltaTime, 0.016f);
-            Vector3 finalMovement = avoidedVel * effectiveDeltaTime;
-            Debug.Log($"Final movement per frame: {finalMovement.magnitude:F6} units");
-            Debug.Log($"Movement per second: {finalMovement.magnitude * (1f/effectiveDeltaTime):F2} units/sec");
-
-            // Apply directly
+            Vector3 predictedMovement = steering.normalized * MaxSpeed * effectiveDeltaTime;
+            Debug.Log($"Predicted movement per frame (pre-avoidance): {predictedMovement.magnitude:F6} units");
+            Debug.Log("Applying steering via motor for live verification.");
             ApplySteering(steering);
         }
     }

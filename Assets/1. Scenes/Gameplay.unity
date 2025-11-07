@@ -4458,6 +4458,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: steeringMotor
+      value: 
+      objectReference: {fileID: 1946605536}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: patrolPoints.Array.size
       value: 2
       objectReference: {fileID: 0}
@@ -4576,6 +4581,21 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.y
       value: 0.566
       objectReference: {fileID: 0}
+    - target: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: avoidAngle
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: avoidRadius
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: personalArea
+      value: 0.1
+      objectReference: {fileID: 0}
     - target: {fileID: 3609770977196227305, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: m_LocalPosition.y
@@ -4598,13 +4618,33 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 60d108c1758e69f4b9a274acaffda3f2, type: 2}
     - target: {fileID: 7362885490311734212, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: m_Height
+      value: 1.73
+      objectReference: {fileID: 0}
+    - target: {fileID: 7362885490311734212, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: m_Radius
+      value: 0.26
+      objectReference: {fileID: 0}
+    - target: {fileID: 7362885490311734212, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7362885490311734212, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: m_Center.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7362885490311734212, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: m_Center.y
-      value: 0.63
+      value: 0.51
+      objectReference: {fileID: 0}
+    - target: {fileID: 7362885490311734212, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: m_Center.z
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7652873752432105362, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -7129,6 +7169,18 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 403976066}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &303114472 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 403976066}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f6c9cb2458d4c7fb8c2acb1ce0cb48f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SteeringMotor
 --- !u!4 &303948051 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 470596, guid: 8fd8f3f29fdf6cf4c9c7e1dd047bc74c,
@@ -8864,6 +8916,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
         type: 3}
+      propertyPath: steeringMotor
+      value: 
+      objectReference: {fileID: 2070697700}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
       propertyPath: enableDebugLogs
       value: 0
       objectReference: {fileID: 0}
@@ -9165,6 +9222,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: steeringMotor
+      value: 
+      objectReference: {fileID: 303114472}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: patrolPoints.Array.size
       value: 2
       objectReference: {fileID: 0}
@@ -9282,6 +9344,21 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 4.143
+      objectReference: {fileID: 0}
+    - target: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: avoidAngle
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: avoidRadius
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: personalArea
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 3609770977196227305, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -26538,6 +26615,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: steeringMotor
+      value: 
+      objectReference: {fileID: 2112614360}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: patrolPoints.Array.size
       value: 3
       objectReference: {fileID: 0}
@@ -26655,6 +26737,21 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: -10.234
+      objectReference: {fileID: 0}
+    - target: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: avoidAngle
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: avoidRadius
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: personalArea
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 3609770977196227305, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -27403,6 +27500,18 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 1812504281}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1205192959 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 792197009195393244, guid: 728c239681890b644978130b242e17da,
+    type: 3}
+  m_PrefabInstance: {fileID: 1812504281}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f6c9cb2458d4c7fb8c2acb1ce0cb48f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SteeringMotor
 --- !u!1001 &1207233361
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -41088,6 +41197,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
         type: 3}
+      propertyPath: steeringMotor
+      value: 
+      objectReference: {fileID: 1205192959}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
       propertyPath: enableDebugLogs
       value: 0
       objectReference: {fileID: 0}
@@ -43483,6 +43597,18 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 207608558}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1946605536 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 207608558}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f6c9cb2458d4c7fb8c2acb1ce0cb48f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SteeringMotor
 --- !u!4 &1947070694 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 408154, guid: 883e08aa76ea4b94f81d3fe0f68f7ba8,
@@ -45390,6 +45516,18 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 5, y: 1.110223e-15, z: 5}
   m_Center: {x: -2.5, y: -5.551115e-16, z: 2.5}
+--- !u!114 &2070697700 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 792197009195393244, guid: 728c239681890b644978130b242e17da,
+    type: 3}
+  m_PrefabInstance: {fileID: 392444777}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f6c9cb2458d4c7fb8c2acb1ce0cb48f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SteeringMotor
 --- !u!1001 &2072176190
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -46465,6 +46603,18 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 2124494043}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2112614360 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3532095517495644014, guid: f9184d8cc36f6b244a622a479ed31918,
+    type: 3}
+  m_PrefabInstance: {fileID: 1189902614}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f6c9cb2458d4c7fb8c2acb1ce0cb48f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SteeringMotor
 --- !u!4 &2113520009 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 480330, guid: 61bb8d4e8c31dd044901d3a4baabe130,

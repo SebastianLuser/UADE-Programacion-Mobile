@@ -1,4 +1,5 @@
 using UnityEngine;
+using Game.AI.Steering;
 using Scripts.FSM.Base.StateMachine;
 using Scripts.FSM.Models;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using Services;
 using Services.MicroServices.UpdateService;
 using Unity.Assertions;
 
+[RequireComponent(typeof(SteeringMotor))]
 public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 {
     [Header("Movement Speeds")]
@@ -38,16 +40,8 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private int meleeDamage = 1;           // Damage per melee hit
     [SerializeField] private Color attackColor = Color.red; // Visual feedback while attacking
 
-    [Header("Steering Physics")]
-    [SerializeField] private float mass = 1f;
-    [SerializeField] private float maxForce = 15f;
-    [SerializeField] private float slowingDistance = 2f;
-
-    [Header("Obstacle Avoidance")]
-    [SerializeField] private LayerMask obstaclesMask = -1;
-    [SerializeField] private float avoidRadius = 1.5f;
-    [SerializeField] private float avoidAngle = 90f;
-    [SerializeField] private float personalArea = 0.3f;
+    [Header("Movement Components")]
+    [SerializeField] private SteeringMotor steeringMotor;
 
     [Header("FSM Configuration")]
     [SerializeField] private float evadeTime = 1f;          // Duration of evade state (0.75-1.25s)
@@ -71,9 +65,8 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     private Color originalColor;
     private CivilianDecisionTreeRunner decisionTreeRunner;
 
-    // Steering components (identical to Guard)
-    private Vector3 _vel;
-    private ObstacleAvoidance obstacleAvoidance;
+    // Steering components
+    private SteeringMotor Motor => steeringMotor != null ? steeringMotor : (steeringMotor = GetComponent<SteeringMotor>());
     private float currentMaxSpeed;
 
     // FSM components
@@ -125,7 +118,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     public bool UseDecisionTree => useDecisionTree;
     public Transform Player => player;
     public CivilianState CurrentState => currentState;
-    public Vector3 CurrentVelocity => _vel;
+    public Vector3 CurrentVelocity => steeringMotor != null ? steeringMotor.CurrentVelocity : Vector3.zero;
     public Vector3 LastKnownPlayerPosition => lastKnownPlayerPosition;
     
     // FSM Properties
@@ -171,6 +164,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     private void InitializeComponents()
     {
+        steeringMotor = Motor;
         
         // Get or add PlayerDetector
         playerDetector = GetComponent<IPlayerDetector>();
@@ -201,10 +195,9 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     private void InitializeSteering()
     {
-        // Initialize steering physics (identical to Guard)
-        _vel = Vector3.zero;
-        obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, personalArea, obstaclesMask);
-        currentMaxSpeed = walkSpeed;
+        steeringMotor = Motor;
+        steeringMotor.ResetVelocity();
+        SetCurrentMaxSpeed(walkSpeed);
 
         if (enableDebugLogs)
             MyLogger.LogInfo($"Civilian {gameObject.name}: Steering initialized");
@@ -263,6 +256,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     public void SetCurrentMaxSpeed(float speed)
     {
         currentMaxSpeed = speed;
+        steeringMotor?.SetMaxSpeed(currentMaxSpeed);
     }
 
     /// <summary>
@@ -521,62 +515,16 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     #region Steering Physics
 
-    /// <summary>
-    /// Integrate steering force to update velocity with mass and force limits
-    /// </summary>
-    private Vector3 Integrate(Vector3 steering, float dt)
-    {
-        // Clamp steering force to maximum
-        Vector3 clampedForce = steering;
-        if (clampedForce.sqrMagnitude > maxForce * maxForce)
-        {
-            clampedForce = clampedForce.normalized * maxForce;
-        }
-
-        // Apply force to velocity (F = ma, so a = F/m)
-        Vector3 acceleration = clampedForce / mass;
-        Vector3 newVel = _vel + acceleration * dt;
-
-        // Clamp velocity to current maximum speed
-        if (newVel.sqrMagnitude > currentMaxSpeed * currentMaxSpeed)
-        {
-            newVel = newVel.normalized * currentMaxSpeed;
-        }
-
-        return newVel;
-    }
-
-    /// <summary>
-    /// Apply steering force with obstacle avoidance and movement (identical to Guard)
-    /// </summary>
     public void ApplySteering(Vector3 steering)
     {
-        if (!isAlive) return;
+        if (!isAlive || steeringMotor == null) return;
 
-        // 1) Update velocity using physics integration
-        _vel = Integrate(steering, Time.deltaTime);
+        Vector3 avoidedVel = steeringMotor.ApplySteering(steering, 3f);
 
-        // 2) Pass velocity through obstacle avoidance
-        Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(_vel, false);
-
-        // 3) Move and face movement direction
         if (avoidedVel.sqrMagnitude > 0.001f)
         {
-            // Update position
-            Vector3 movement = avoidedVel * Time.deltaTime;
-            transform.position += movement;
-
-            // Update movement state
             currentMovementDirection = avoidedVel.normalized;
             currentMovementSpeed = avoidedVel.magnitude;
-
-            // Face movement direction
-            if (avoidedVel.magnitude > 0.1f)
-            {
-                Vector3 lookDirection = avoidedVel.normalized;
-                lookDirection.y = 0f; // Keep rotation in XZ plane
-                transform.rotation = Quaternion.LookRotation(lookDirection);
-            }
         }
     }
 
@@ -687,19 +635,19 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             Mathf.Cos(Time.time * 0.2f) * 0.5f
         );
 
-        currentMaxSpeed = walkSpeed;
-        Vector3 steering = Steering.Seek(transform.position, transform.position + driftDirection, _vel, walkSpeed);
+        SetCurrentMaxSpeed(walkSpeed);
+        Vector3 steering = Steering.Seek(transform.position, transform.position + driftDirection, CurrentVelocity, walkSpeed);
         ApplySteering(steering * 0.3f); // Gentle movement
     }
 
     private void HandleFleeingState(bool canSeePlayer, float distanceToPlayer)
     {
-        currentMaxSpeed = fleeSpeed;
+        SetCurrentMaxSpeed(fleeSpeed);
 
         if (canSeePlayer)
         {
             // Direct flee from player
-            Vector3 steering = Steering.Flee(transform.position, player.position, _vel, fleeSpeed);
+            Vector3 steering = Steering.Flee(transform.position, player.position, CurrentVelocity, fleeSpeed);
             ApplySteering(steering);
         }
         else if (hasEverSeenPlayer && lastKnownPlayerPosition != Vector3.zero)
@@ -722,7 +670,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     private void HandleEvadingState(bool canSeePlayer, float distanceToPlayer)
     {
-        currentMaxSpeed = evadeSpeed;
+        SetCurrentMaxSpeed(evadeSpeed);
 
         if (canSeePlayer)
         {
@@ -745,7 +693,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                 }
             }
 
-            Vector3 steering = Steering.Evade(transform.position, _vel, lastKnownPlayerPosition, playerVel, evadeSpeed);
+            Vector3 steering = Steering.Evade(transform.position, CurrentVelocity, lastKnownPlayerPosition, playerVel, evadeSpeed);
             ApplySteering(steering);
         }
 
@@ -773,8 +721,8 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         }
 
         // Stay still and wait
-        currentMaxSpeed = walkSpeed;
-        Vector3 brakeForce = -_vel * 3f;
+        SetCurrentMaxSpeed(walkSpeed);
+        Vector3 brakeForce = -CurrentVelocity * 3f;
         ApplySteering(brakeForce);
 
         // Return to idle after timer
@@ -820,7 +768,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
         // Direct movement using steering
         Vector3 targetVel = direction.normalized * currentMaxSpeed;
-        Vector3 steering = targetVel - _vel;
+        Vector3 steering = targetVel - CurrentVelocity;
         ApplySteering(steering);
     }
 
@@ -907,10 +855,10 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         Gizmos.DrawWireSphere(transform.position, meleeRange);
 
         // Current velocity
-        if (_vel.magnitude > 0.1f)
+        if (CurrentVelocity.magnitude > 0.1f)
         {
             Gizmos.color = Color.blue;
-            Gizmos.DrawRay(transform.position, _vel);
+            Gizmos.DrawRay(transform.position, CurrentVelocity);
         }
 
         // Last known player position
@@ -945,7 +893,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         Debug.Log($"Safe Timer: {safeTimer:F2}s");
         Debug.Log($"Can See Player: {HasLoS()}");
         Debug.Log($"Distance to Player: {GetDistanceToPlayer():F2}");
-        Debug.Log($"Current Velocity: {_vel.magnitude:F2}");
+        Debug.Log($"Current Velocity: {CurrentVelocity.magnitude:F2}");
         Debug.Log($"Current Max Speed: {currentMaxSpeed:F2}");
         Debug.Log($"Has Ever Seen Player: {hasEverSeenPlayer}");
         Debug.Log($"Last Known Player Pos: {lastKnownPlayerPosition}");
