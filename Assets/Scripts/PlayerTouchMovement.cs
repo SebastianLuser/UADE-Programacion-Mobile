@@ -1,3 +1,6 @@
+using System;
+using System.Collections;
+using _2._Scripts.UI.MainMenu;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem.EnhancedTouch;
@@ -11,14 +14,26 @@ public class PlayerTouchMovement : MonoBehaviour
     private FloatingJoystick Joystick;
     [SerializeField]
     private NavMeshAgent Player;
-
+    
+    [SerializeField] private string objectivesPanelName = "Objectives";
+    [SerializeField] private GameObject dragTutorial;
+    [SerializeField] private GameObject shootTutorial;
+    [SerializeField] private PanelsController panelsController;
+    
     private Finger MovementFinger;
     private Vector2 MovementAmount;
     
     [SerializeField]
-    private MainCharacter mainCharacter; // Reference to the MainCharacter script
+    private MainCharacter mainCharacter;
 
     private Finger TapFinger;
+    
+    bool dragClosed, shootClosed, objectivesShown;
+
+    private void Awake()
+    {
+        dragClosed = shootClosed = objectivesShown = false;
+    }
 
     private void OnEnable()
     {
@@ -65,7 +80,16 @@ public class PlayerTouchMovement : MonoBehaviour
 
             Joystick.Knob.anchoredPosition = knobPosition;
             MovementAmount = knobPosition / maxMovement;
+
+            if (!dragClosed && dragTutorial && dragTutorial.activeSelf)
+                StartCoroutine(CloseAfter(dragTutorial, 2f, () => { dragClosed = true; TryShowObjectives(); }));
         }
+    }
+
+    IEnumerator DisableAfterSeconds(GameObject objectToDisable, float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        objectToDisable.SetActive(false);
     }
 
     private void HandleLoseFinger(Finger LostFinger)
@@ -79,7 +103,6 @@ public class PlayerTouchMovement : MonoBehaviour
         }
         else if (LostFinger == TapFinger)
         {
-            // Call shoot method
             if (mainCharacter != null)
             {
                 Vector3 shootDirection = mainCharacter.transform.forward;
@@ -87,6 +110,9 @@ public class PlayerTouchMovement : MonoBehaviour
             }
 
             TapFinger = null;
+
+            if (!shootClosed && shootTutorial && shootTutorial.activeSelf)
+                StartCoroutine(CloseAfter(shootTutorial, 0f, () => { shootClosed = true; TryShowObjectives(); }));
         }
     }
 
@@ -187,5 +213,31 @@ public class PlayerTouchMovement : MonoBehaviour
     private bool IsFinite(float value)
     {
         return !float.IsNaN(value) && !float.IsInfinity(value);
+    }
+    
+    IEnumerator CloseAfter(GameObject go, float seconds, System.Action onClosed)
+    {
+        if (!go) yield break;
+        if (seconds > 0f) yield return new WaitForSecondsRealtime(seconds);
+        go.SetActive(false);
+        onClosed?.Invoke();
+    }
+    
+    void TryShowObjectives()
+    {
+        if (objectivesShown) return;
+
+        bool dragDone  = (dragTutorial  == null) || !dragTutorial.activeInHierarchy || dragClosed;
+        bool shootDone = (shootTutorial == null) || !shootTutorial.activeInHierarchy || shootClosed;
+        
+        Debug.Log(dragDone);
+        Debug.Log(shootDone);
+
+        if (dragDone && shootDone)
+        {
+            objectivesShown = true;
+            if (panelsController)
+                panelsController.ShowUI(objectivesPanelName);
+        }
     }
 }
