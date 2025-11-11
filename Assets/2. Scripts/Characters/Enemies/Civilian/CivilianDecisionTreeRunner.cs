@@ -438,6 +438,20 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     {
         Debug.Log("=== ShouldReturnToIdle() START ===");
 
+        // CivilianDecisionTreeRunner.cs  (dentro de ShouldReturnToIdle, al inicio)
+        if (IsCurrentlyFleeing() && m_civilian != null)
+        {
+            // Si usamos grafo y todavía no llegamos al nodo seguro, seguir huyendo
+            // (evita cortar por SafeDistance)
+            if (m_civilian.HasFleeGraph && m_civilian.HasFleePath && !m_civilian.FleePathReachedEnd())
+            {
+                // resetear cualquier safe timer local de DT, seguimos huyendo
+                m_safeTimer = 0f;
+                Debug.Log("FLEE A*: aún no llegué al nodo seguro → continuar huyendo (ignorar SafeDistance)");
+                return false;
+            }
+        }
+
         if (m_civilian == null || m_civilian.Player == null)
         {
             Debug.Log("CIVILIAN OR PLAYER IS NULL - RETURNING TRUE");
