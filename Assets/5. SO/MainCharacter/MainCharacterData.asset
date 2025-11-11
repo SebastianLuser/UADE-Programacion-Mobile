@@ -18,6 +18,6 @@ MonoBehaviour:
   rotationSpeed: 10
   characterName: Character
   characterColor: {r: 1, g: 1, b: 1, a: 1}
-  bulletData: {fileID: 11400000, guid: 6756e0916d9dd8a439d2c586d44476db, type: 2}
+  bulletData: {fileID: 11400000, guid: 8f7e1c159d78932449e64c0fe78dd9b9, type: 2}
   magSize: 10
   reloadTime: 2.5

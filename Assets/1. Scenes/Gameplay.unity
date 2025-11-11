@@ -35541,6 +35541,11 @@ MonoBehaviour:
   Joystick: {fileID: 8152703037077488222}
   Player: {fileID: 8705301200629479264}
   mainCharacter: {fileID: 7073220178946339423}
+  ShootingJoystick: {fileID: 0}
+  continuousShootingInterval: 0.3
+  burstShotCount: 5
+  burstShotInterval: 0.25
+  continuousShootingDelay: 0.3
 --- !u!1 &3778190607982534123
 GameObject:
   m_ObjectHideFlags: 0

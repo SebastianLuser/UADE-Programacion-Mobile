@@ -46,15 +46,17 @@ public class BulletObject : MonoBehaviour, IUpdateListener
 
     private void OnTriggerEnter(Collider p_other)
     {
-        m_isActive = true;
         if (!m_isActive)
-            return;
+            return;            
+
 
         if (!p_other.TryGetComponent<IDamageable>(out var l_character))
             return;
 
-        if (l_character.GameObject == gameObject)
-            return;
+
+            if (l_character.GameObject == gameObject)
+                return;
+
 
 
         l_character.TakeDamage(m_bulletData.Damage);
@@ -79,6 +81,7 @@ public class BulletObject : MonoBehaviour, IUpdateListener
 
     public void MyUpdate()
     {
+        Debug.Log("Update Bullet. Time Alive: " + m_timer);
         if (!m_isActive) return;
 
         m_timer += Time.deltaTime;
