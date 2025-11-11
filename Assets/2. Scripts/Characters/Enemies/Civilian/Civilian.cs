@@ -31,6 +31,11 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float escapeWeight = 0.8f;     // Weight for escape path
     [SerializeField] private float attackWeight = 0.2f;     // Weight for attack path
 
+    [Header("Dying Behavior")]
+    [SerializeField] private float dyingWeightMax = 1.5f;
+    [SerializeField] private AnimationCurve dyingWeightCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [SerializeField, Range(0.1f, 1f)] private float dyingSpeedMultiplier = 0.35f;
+
     [Header("Attack Configuration")]
     [SerializeField] private float attackWindup = 0.35f;    // Seconds before hit
     [SerializeField] private float attackHitWin = 0.10f;    // Hit window duration
@@ -80,6 +85,8 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     private float _lastAStarTime = -999f;
     private int _pathLen = 0;
     private int _graphCachedNodeCount = -1;
+    private float dyingRouletteWeight = 0f;
+    private bool isInDyingEvade = false;
 
 
     // Component references
@@ -134,6 +141,11 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     public float SafeTime => safeTime;
     public float EscapeWeight => escapeWeight;
     public float AttackWeight => attackWeight;
+    public float DyingWeight => dyingRouletteWeight;
+    public float DyingSpeed => Mathf.Max(0.1f, fleeSpeed * dyingSpeedMultiplier);
+    public float HealthNormalized => Mathf.Clamp01(currentHealth / Mathf.Max(0.0001f, MaxHealth));
+    public float HealthLostNormalized => 1f - HealthNormalized;
+    public bool IsInDyingEvade => isInDyingEvade;
     public float AttackWindup => attackWindup;
     public float AttackHitWin => attackHitWin;
     public float AttackRecover => attackRecover;
@@ -167,6 +179,11 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         set => pursuitLoseSightTimer = value; 
     }
 
+    public void SetDyingEvadeMode(bool active)
+    {
+        isInDyingEvade = active;
+    }
+
     #endregion
 
     #region Unity Lifecycle
@@ -174,6 +191,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     private void Awake()
     {
         base.Awake();
+        RecalculateDyingWeight();
         InitializeComponents();
         SubscribeUpdateService();
         TryInitFleePathfinding();
@@ -555,6 +573,21 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         }
     }
 
+    public override void TakeDamage(float damage)
+    {
+        if (!isAlive) return;
+
+        float previousNorm = HealthNormalized;
+
+        base.TakeDamage(damage);
+        RecalculateDyingWeight();
+
+        if (enableDebugLogs && isAlive && !Mathf.Approximately(previousNorm, HealthNormalized))
+        {
+            MyLogger.LogInfo($"Civilian {gameObject.name}: Health {previousNorm:P1} -> {HealthNormalized:P1}, DyingWeight={dyingRouletteWeight:F2}");
+        }
+    }
+
     /// <summary>
     /// Apply damage to player if available
     /// </summary>
@@ -686,6 +719,10 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             case "attack":
             case "attacking":
                 return "S_CivAttack";
+
+            case "dying":
+            case "limp":
+                return "S_CivEvade";
                 
             default:
                 // Return original suggestion if no mapping found
@@ -715,6 +752,10 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                 break;
             case "safe":
                 newState = CivilianState.Safe;
+                break;
+            case "dying":
+            case "limp":
+                newState = CivilianState.Evading;
                 break;
             case "pursuing":
             case "pursue":
@@ -1313,6 +1354,20 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     public Transform GetTargetTransform()
     {
         return player;
+    }
+
+    #endregion
+
+    #region Dying Support
+
+    private void RecalculateDyingWeight()
+    {
+        float healthLoss = 1f - HealthNormalized;
+        float curveValue = dyingWeightCurve != null && dyingWeightCurve.length > 0
+            ? Mathf.Clamp01(dyingWeightCurve.Evaluate(healthLoss))
+            : healthLoss;
+
+        dyingRouletteWeight = Mathf.Clamp(curveValue * dyingWeightMax, 0f, dyingWeightMax);
     }
 
     #endregion

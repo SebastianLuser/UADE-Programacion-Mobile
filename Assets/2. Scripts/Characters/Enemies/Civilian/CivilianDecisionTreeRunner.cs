@@ -12,6 +12,12 @@ using Services;
 /// </summary>
 public class CivilianDecisionTreeRunner : MonoBehaviour
 {
+    private enum CivilianStance
+    {
+        Escape,
+        Attack,
+        Dying
+    }
     [Header("Decision Tree Configuration")]
     [SerializeField] private float evaluationInterval = 0.15f;  // Reduced frequency now that we have locks/hysteresis
     [SerializeField] private float alertChanceWhenNoLoS = 0.5f;
@@ -53,10 +59,12 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     private float m_postHitFleeStartTime = 0f; // When post-hit flee started
 
     // Stance Lock system - prevents roulette flip-flop
-    private bool m_currentStance = false;     // true = ATTACK, false = ESCAPE
+    private CivilianStance m_currentStance = CivilianStance.Escape;
     private float m_stanceLockUntil = 0f;     // Time until stance lock expires
     private float m_stanceLockDuration = 2.5f; // How long to maintain stance (2.5 seconds)
     private bool m_hasActiveStanceLock = false;
+    private CivilianStance m_cachedEvaluationStance = CivilianStance.Escape;
+    private bool m_hasCachedStanceEvaluation = false;
     
     // Coroutine reference
     private Coroutine m_evaluationCoroutine;
@@ -126,61 +134,69 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
         //   YES → Check melee range → Attack/Pursue/Flee based on stance and range
         //   NO → Check for timeout conditions and alert triggers
 
-        // Create leaf nodes
-        var l_fleeNode = new ActionNode(() => SuggestFlee());
-        var l_pursueNode = new ActionNode(() => SuggestPursue());
-        var l_attackNode = new ActionNode(() => SuggestAttack());
-        var l_evadeNode = new ActionNode(() => SuggestEvade());
-        var l_idleNode = new ActionNode(() => SuggestIdle());
-        var l_alertNode = new ActionNode(() => SuggestAlert());
 
-        // Decision logic when player is visible
-        // Priority: Attack cycle (non-interruptible) → Melee range → Roulette choice
-        var l_visibleDecisionNode = new QuestionNode(
-            () => IsInNonInterruptibleAttackCycle(),
-            l_attackNode,  // Continue attack cycle if non-interruptible
+// Create leaf nodes
+var l_fleeNode = new ActionNode(() => SuggestFlee());
+var l_pursueNode = new ActionNode(() => SuggestPursue());
+var l_attackNode = new ActionNode(() => SuggestAttack());
+var l_evadeNode = new ActionNode(() => SuggestEvade());
+var l_idleNode = new ActionNode(() => SuggestIdle());
+var l_alertNode = new ActionNode(() => SuggestAlert());
+var l_dyingNode = new ActionNode(() => SuggestDying());
+
+// Decision logic when player is visible
+// Priority: Attack cycle (non-interruptible) -> Dying stance -> Melee range -> Roulette choice
+var l_visibleDecisionNode = new QuestionNode(
+    () => IsInNonInterruptibleAttackCycle(),
+    l_attackNode,  // Continue attack cycle if non-interruptible
+    new QuestionNode(
+        () => GetEvaluatedStance() == CivilianStance.Dying,
+        l_dyingNode,
+        new QuestionNode(
+            () => IsPlayerInMeleeRange() && m_civilian.CanAttack && GetEvaluatedStance() == CivilianStance.Attack,
+            l_attackNode,  // Enter attack if in melee and stance is ATTACK
             new QuestionNode(
-                () => IsPlayerInMeleeRange() && m_civilian.CanAttack && ShouldChooseAttackOverFlee(),
-                l_attackNode,  // Enter attack if in melee and stance is ATTACK
+                () => GetEvaluatedStance() == CivilianStance.Attack,
+                l_pursueNode,  // ATTACK stance but not in melee -> pursue
+                l_fleeNode     // ESCAPE stance -> flee
+            )
+        )
+    )
+);
+
+// Decision logic when player is not visible - NEVER suggest flee without LoS
+// Exceptions: Continue current action if within commitment/grace period
+var l_invisibleDecisionNode = new QuestionNode(
+    () => IsInNonInterruptibleAttackCycle(),
+    l_attackNode,  // Continue attack cycle even without LoS (brief window)
+    new QuestionNode(
+        () => GetEvaluatedStance() == CivilianStance.Dying,
+        l_dyingNode,
+        new QuestionNode(
+            () => IsCurrentlyPursuing() && IsWithinPursuitCommitment(),
+            l_pursueNode,  // Continue pursuing if committed (hysteresis to prevent jitter)
+            new QuestionNode(
+                () => IsCurrentlyFleeing() && !ShouldReturnToIdle(),
+                l_fleeNode,  // Continue fleeing if already fleeing and grace timer hasn't expired
                 new QuestionNode(
-                    () => ShouldChooseAttackOverFlee(),
-                    l_pursueNode,  // ATTACK stance but not in melee → pursue
-                    l_fleeNode     // ESCAPE stance → flee
+                    () => ShouldTriggerAlert(),
+                    l_alertNode,
+                    l_idleNode  // No LoS = Return to idle (SafeDistance only stops fleeing, doesn't start it)
                 )
             )
-        );
+        )
+    )
+);
 
-        // Decision logic when player is not visible - NEVER suggest flee without LoS
-        // Exceptions: Continue current action if within commitment/grace period
-        var l_invisibleDecisionNode = new QuestionNode(
-            () => IsInNonInterruptibleAttackCycle(),
-            l_attackNode,  // Continue attack cycle even without LoS (brief window)
-            new QuestionNode(
-                () => IsCurrentlyPursuing() && IsWithinPursuitCommitment(),
-                l_pursueNode,  // Continue pursuing if committed (hysteresis to prevent jitter)
-                new QuestionNode(
-                    () => IsCurrentlyFleeing() && !ShouldReturnToIdle(),
-                    l_fleeNode,  // Continue fleeing if already fleeing and grace timer hasn't expired
-                    new QuestionNode(
-                        () => ShouldTriggerAlert(),
-                        l_alertNode,
-                        l_idleNode  // No LoS = Return to idle (SafeDistance only stops fleeing, doesn't start it)
-                    )
-                )
-            )
-        );
-
-        // Create root node - check if player is visible
-        m_root = new QuestionNode(
-            () => {
-                bool l_hasLoS = m_civilian.HasLoS();
-                //Debug.Log($"ROOT DECISION: HasLoS = {l_hasLoS}");
-                return l_hasLoS;
-            },
-            l_visibleDecisionNode,
-            l_invisibleDecisionNode
-        );
-
+// Create root node - check if player is visible
+m_root = new QuestionNode(
+    () => {
+        bool l_hasLoS = m_civilian.HasLoS();
+        return l_hasLoS;
+    },
+    l_visibleDecisionNode,
+    l_invisibleDecisionNode
+);
         if (debugDT)
             MyLogger.LogInfo($"CivilianDecisionTreeRunner on {gameObject.name}: Enhanced decision tree with timing logic built");
     }
@@ -244,7 +260,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
             
             // Break stance lock and force ESCAPE for hit-and-run
             BreakStanceLock("Post-hit flee - forcing hit-and-run");
-            LockStance(false, "Post-hit flee - hit-and-run behavior");
+            LockStance(CivilianStance.Escape, "Post-hit flee - hit-and-run behavior");
 
             if (debugDT)
                 MyLogger.LogInfo($"Ended attack cycle, started post-hit flee for {postHitFleeTime}s");
@@ -276,73 +292,106 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     }
 
     /// <summary>
-    /// Determine if civilian should choose attack over flee when player is visible.
-    /// Uses the existing roulette system weights.
+    /// Evaluate roulette stance (Attack/Escape/Dying) with caching per tick
     /// </summary>
-    private bool ShouldChooseAttackOverFlee()
+    private CivilianStance GetEvaluatedStance()
     {
-        // Force ESCAPE stance during post-hit flee period
+        if (!m_hasCachedStanceEvaluation)
+        {
+            m_cachedEvaluationStance = EvaluateStance();
+            m_hasCachedStanceEvaluation = true;
+        }
+
+        return m_cachedEvaluationStance;
+    }
+
+    private CivilianStance EvaluateStance()
+    {
         if (IsInPostHitFlee())
         {
             if (debugDT)
-                MyLogger.LogInfo($"Civilian {m_civilian.name}: Post-hit flee active - forcing ESCAPE");
-            return false;
+                MyLogger.LogInfo($"Civilian {m_civilian.name}: Post-hit flee active - forcing ESCAPE stance");
+
+            LockStance(CivilianStance.Escape, "Post-hit flee cooldown");
+            return CivilianStance.Escape;
         }
 
-        // Only consider attack if civilian can attack
-        if (!m_civilian.CanAttack)
-        {
-            if (debugDT)
-                MyLogger.LogInfo($"Civilian {m_civilian.name}: Stance Lock - Cannot attack, choosing ESCAPE");
-
-            // Lock into ESCAPE stance
-            LockStance(false, "Cannot attack");
-            return false;
-        }
-
-        // Check if we have an active stance lock
         if (m_hasActiveStanceLock && Time.time < m_stanceLockUntil)
         {
-            Debug.Log($"STANCE LOCK ACTIVE: Using cached stance = {(m_currentStance ? "ATTACK" : "ESCAPE")}, expires in {(m_stanceLockUntil - Time.time):F2}s");
-
-            if (debugDT)
-                MyLogger.LogInfo($"Civilian {m_civilian.name}: Stance Lock active - Using cached {(m_currentStance ? "ATTACK" : "ESCAPE")} for {(m_stanceLockUntil - Time.time):F2}s");
-
+            m_civilian.SetDyingEvadeMode(m_currentStance == CivilianStance.Dying);
             return m_currentStance;
         }
 
-        Debug.Log("STANCE LOCK EXPIRED OR NO LOCK - Rolling new roulette");
-
-        var l_decisions = new Dictionary<string, float>
+        if (m_hasActiveStanceLock && Time.time >= m_stanceLockUntil)
         {
-            {"ATTACK", m_civilian.AttackWeight},
-            {"ESCAPE", m_civilian.EscapeWeight}
+            BreakStanceLock("Stance lock expired");
+        }
+
+        bool canAttack = m_civilian.CanAttack;
+        float attackWeight = canAttack ? Mathf.Max(0f, m_civilian.AttackWeight) : 0f;
+        float escapeWeight = Mathf.Max(0f, m_civilian.EscapeWeight);
+        float dyingWeight = Mathf.Max(0f, m_civilian.DyingWeight);
+
+        if (!canAttack && dyingWeight <= 0.0001f)
+        {
+            m_civilian.SetDyingEvadeMode(false);
+            return CivilianStance.Escape;
+        }
+
+        var l_decisions = new Dictionary<CivilianStance, float>
+        {
+            { CivilianStance.Attack, attackWeight },
+            { CivilianStance.Escape, escapeWeight },
+            { CivilianStance.Dying, dyingWeight }
         };
-        
-        string l_choice = RouletteWheel<string>.Run(l_decisions);
-        bool l_chooseAttack = (l_choice == "ATTACK");
 
-        Debug.Log($"NEW ROULETTE: Choice={l_choice}, Attack Weight={m_civilian.AttackWeight}, Escape Weight={m_civilian.EscapeWeight}");
+        float total = attackWeight + escapeWeight + dyingWeight;
+        if (total <= 0.0001f)
+        {
+            m_civilian.SetDyingEvadeMode(false);
+            return CivilianStance.Escape;
+        }
 
-        // Lock into the new stance
-        LockStance(l_chooseAttack, $"New roulette: {l_choice}");
+        CivilianStance choice = RouletteWheel<CivilianStance>.Run(l_decisions);
+
+        Debug.Log($"NEW ROULETTE: Choice={choice}, Attack={attackWeight:F2}, Escape={escapeWeight:F2}, Dying={dyingWeight:F2}");
+
+        if (choice == CivilianStance.Escape && !m_civilian.CanAttack)
+        {
+            m_civilian.SetDyingEvadeMode(false);
+
+            if (debugDT)
+                MyLogger.LogInfo($"Civilian {m_civilian.name}: Roulette -> ESCAPE (no attack capability) - skipping stance lock");
+
+            return CivilianStance.Escape;
+        }
+
+        LockStance(choice, $"New roulette: {choice}");
+
+        if (choice != CivilianStance.Dying)
+        {
+            m_civilian.SetDyingEvadeMode(false);
+        }
 
         if (debugDT)
-            MyLogger.LogInfo($"Civilian {m_civilian.name}: New roulette - Choose: {l_choice}, Locked for {m_stanceLockDuration}s");
+            MyLogger.LogInfo($"Civilian {m_civilian.name}: Stance -> {choice}, locked for {m_stanceLockDuration}s");
 
-        return l_chooseAttack;
+        return choice;
     }
 
     /// <summary>
-    /// Lock the civilian into a specific stance (ATTACK or ESCAPE) to prevent flip-flop
+    /// Lock the civilian into a specific stance to prevent flip-flop
     /// </summary>
-    private void LockStance(bool p_attackStance, string p_reason)
+    private void LockStance(CivilianStance p_stance, string p_reason)
     {
-        m_currentStance = p_attackStance;
+        m_currentStance = p_stance;
         m_stanceLockUntil = Time.time + m_stanceLockDuration;
         m_hasActiveStanceLock = true;
+        m_cachedEvaluationStance = p_stance;
+        m_hasCachedStanceEvaluation = true;
+        m_civilian.SetDyingEvadeMode(p_stance == CivilianStance.Dying);
 
-        Debug.Log($"STANCE LOCKED: {(p_attackStance ? "ATTACK" : "ESCAPE")} for {m_stanceLockDuration}s - Reason: {p_reason}");
+        Debug.Log($"STANCE LOCKED: {p_stance} for {m_stanceLockDuration}s - Reason: {p_reason}");
     }
 
     /// <summary>
@@ -355,6 +404,8 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
             Debug.Log($"STANCE LOCK BROKEN: {p_reason}");
             m_hasActiveStanceLock = false;
             m_stanceLockUntil = 0f;
+            m_hasCachedStanceEvaluation = false;
+            m_civilian.SetDyingEvadeMode(false);
         }
     }
 
@@ -365,10 +416,19 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     {
         if (!m_hasActiveStanceLock) return;
 
+        bool isDyingStance = m_currentStance == CivilianStance.Dying;
+
         // Null check for player safety
         if (m_civilian?.Player == null) 
         {
             BreakStanceLock("Player reference lost");
+            return;
+        }
+
+        if (isDyingStance)
+        {
+            // Dying stance is meant to persist even if player gets far;
+            // only explicit state changes or lock expiration should break it.
             return;
         }
 
@@ -381,7 +441,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
         }
 
         // Break ATTACK stance lock if lost LoS for too long (using VISIBLE timer)
-        if (m_currentStance && !m_civilian.HasLoS())
+        if (m_currentStance == CivilianStance.Attack && !m_civilian.HasLoS())
         {
             m_pursuitLoseSightTimerVisible += evaluationInterval;
             if (m_pursuitLoseSightTimerVisible >= m_civilian.AttackLoseSightGrace * 2f) // Double the normal grace
@@ -393,6 +453,13 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
         else if (m_civilian.HasLoS())
         {
             m_pursuitLoseSightTimerVisible = 0f; // Reset visible timer if we can see player
+        }
+
+        float combined = m_civilian.AttackWeight + m_civilian.EscapeWeight;
+        if (m_civilian.DyingWeight > combined && m_civilian.DyingWeight > 0f)
+        {
+            BreakStanceLock("Dying weight dominance");
+            return;
         }
 
         // Break lock if attack cycle completed (post-hit scenarios handled separately)
@@ -557,6 +624,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     /// </summary>
     private void SuggestFlee()
     {
+        m_civilian.SetDyingEvadeMode(false);
         SetSuggestion("Flee");
 
         if (debugDT)
@@ -573,6 +641,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     /// </summary>
     private void SuggestAttack()
     {
+        m_civilian.SetDyingEvadeMode(false);
         // Start attack cycle if not already in one
         if (!m_isInAttackCycle)
         {
@@ -596,6 +665,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     /// </summary>
     private void SuggestPursue()
     {
+        m_civilian.SetDyingEvadeMode(false);
         // Initialize pursuit timing if entering pursuit for first time
         if (m_currentSuggestion != "Pursue")
         {
@@ -623,8 +693,10 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     /// <summary>
     /// Suggest evading the player (short burst movement)
     /// </summary>
-    private void SuggestEvade()
+    
+private void SuggestEvade()
     {
+        m_civilian.SetDyingEvadeMode(false);
         // If we're already evading, check if time elapsed
         if (m_currentSuggestion == "Evade" && ShouldTransitionFromEvade())
         {
@@ -641,14 +713,29 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
         SetSuggestion("Evade");
 
         if (debugDT)
-            MyLogger.LogInfo($"DT → Evade (Player visible, evading for {m_civilian.EvadeTime}s)");
+            MyLogger.LogInfo($"DT ? Evade (Player visible, evading for {m_civilian.EvadeTime}s)");
+    }
+
+    /// <summary>
+    /// Suggest the permanent dying/limp evade
+    /// </summary>
+    private void SuggestDying()
+    {
+        m_civilian.SetDyingEvadeMode(true);
+        SetSuggestion("Dying");
+
+        if (debugDT)
+            MyLogger.LogInfo($"DT -> Dying (Health loss {m_civilian.HealthLostNormalized:P0}, Weight={m_civilian.DyingWeight:F2})");
     }
 
     /// <summary>
     /// Suggest idle behavior
+/// <summary>
+    /// Suggest idle behavior
     /// </summary>
     private void SuggestIdle()
     {
+        m_civilian.SetDyingEvadeMode(false);
         SetSuggestion("Idle");
 
         if (debugDT)
@@ -660,6 +747,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     /// </summary>
     private void SuggestAlert()
     {
+        m_civilian.SetDyingEvadeMode(false);
         // Trigger global alert only if it's not already set
         var l_currentAlert = BlackboardService.GetValue<bool>(BlackboardKeys.GLOBAL_ALERT);
         if (!l_currentAlert)
@@ -682,6 +770,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     /// </summary>
     private void SuggestResume()
     {
+        m_civilian.SetDyingEvadeMode(false);
         SetSuggestion(resumeSuggestion);
         
         if (debugDT)
@@ -750,6 +839,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
             
             if (m_root != null)
             {
+                m_hasCachedStanceEvaluation = false;
                 m_root.Execute();
             }
 
@@ -825,6 +915,9 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
             case "attack":
             case "attacking":
                 return "S_CivAttack";
+
+            case "dying":
+                return "S_CivEvade";
                 
             default:
                 return p_suggestion;
@@ -899,6 +992,10 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
                 RequestStateChange("Evading");
                 break;
 
+            case "Dying":
+                RequestStateChange("Evading");
+                break;
+
             case "Idle":
                 RequestStateChange("Idle");
                 break;
@@ -959,6 +1056,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
         if (m_root != null)
         {
             string l_previousSuggestion = m_currentSuggestion;
+            m_hasCachedStanceEvaluation = false;
             m_root.Execute();
             
             if (debugDT)
@@ -1003,7 +1101,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
         // Stance Lock Status
         Debug.Log($"--- STANCE LOCK ---");
         Debug.Log($"Has Active Lock: {m_hasActiveStanceLock}");
-        Debug.Log($"Current Stance: {(m_currentStance ? "ATTACK" : "ESCAPE")}");
+        Debug.Log($"Current Stance: {m_currentStance}");
         Debug.Log($"Lock Expires In: {(m_hasActiveStanceLock ? (m_stanceLockUntil - Time.time).ToString("F2") + "s" : "N/A")}");
         
         // Attack Cycle Status
