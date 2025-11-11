@@ -10,7 +10,8 @@ namespace _2._Scripts.UI.Gameplay.Objectives
         [SerializeField] private string uiTitle = "Objetivos";
         [SerializeField, TextArea] private string[] objectives;
         [SerializeField] private bool pauseGameWhileVisible = true;
-
+        [SerializeField] private bool showOnStart = false;
+        
         private ObjectivesModel m_model;
         private ObjectivesView m_view;
         private IGameStateService m_gameStateService;
@@ -32,12 +33,15 @@ namespace _2._Scripts.UI.Gameplay.Objectives
             m_model.SetObjectives(objectives);
             m_view.SetTitle(uiTitle);
             m_view.SetObjectives(m_model.Objectives);
+            
+            Hide();
 
-            Show();
+            if (showOnStart) Show();
         }
 
         public override void Show()
         {
+            Debug.Log("SE MUESTRAN LOS OBJETIVOS");
             base.Show();
 
             if (pauseGameWhileVisible)
