@@ -125,6 +125,9 @@ MonoBehaviour:
   useFSM: 1
   personalityType: 0
   enableNewAISystem: 1
+  useFlocking: 1
+  baseForceWeight: 0.8
+  flockForceWeight: 0.2
   mass: 1
   maxForce: 100
   maxSpeed: 100
