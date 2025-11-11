@@ -1,6 +1,7 @@
 using Scripts.FSM.Models;
 using UnityEngine;
 using Game.AI.Steering;
+using UnityEngine.ProBuilder.Shapes;
 
 namespace Scripts.FSM.Base.StateMachine
 {
@@ -11,9 +12,13 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Civilian civilian)
             {
-                // Initialize safe timer (tracks time spent in safe conditions)
                 civilian.SafeTimer = 0f;
                 civilian.SetCurrentMaxSpeed(civilian.FleeSpeed);
+
+                // A*: asegurar init (no hace alloc si ya estaba)
+                civilian.EnsureFleePathfindingInitialized();
+
+                Debug.Log($"------------------------- Civilian scaping using A* -------------------------------");
 
                 if (civilian.EnableDebugLogs)
                     MyLogger.LogInfo($"Civilian {civilian.name}: Entered Flee State - Fleeing at speed {civilian.FleeSpeed:F1}");
@@ -24,36 +29,55 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Civilian civilian)
             {
-                // Perform flee movement only - Decision Tree handles transitions
                 PerformFleeMovement(civilian);
             }
         }
 
         public override void ExitState(IUseFsm p_model)
         {
-            if (p_model is Civilian civilian)
+            if (p_model is Civilian civilian && civilian.EnableDebugLogs)
             {
-                if (civilian.EnableDebugLogs)
-                    MyLogger.LogInfo($"Civilian {civilian.name}: Exited Flee State - Reached safety, returning to Idle");
+                MyLogger.LogInfo($"Civilian {civilian.name}: Exited Flee State");
             }
         }
-
         private void PerformFleeMovement(Civilian civilian)
         {
-            if (civilian.Player == null) return;
+            // 1) Intentar A* por nodos
+            if (civilian.HasFleeGraph)
+            {
+                civilian.RecomputeFleePathIfNeeded(Time.time);
 
-            Vector3 playerPosition = civilian.Player.position;
+                if (civilian.HasFleePath)
+                {
+                    var steering = civilian.TickFleePathSteering();
 
-            // Use Steering.Flee for direct sustained flee behavior
-            Vector3 steering = Steering.Flee(
-                civilian.transform.position,
-                playerPosition,
-                civilian.CurrentVelocity,
-                civilian.FleeSpeed
-            );
+                    // USAR EL MÉTODO ESPECIALIZADO
+                    civilian.ApplySteeringFlee(steering); // <- CAMBIO AQUÍ
 
-            // Apply through the movement funnel (ApplySteering -> ObstacleAvoidance.GetDir2 -> move)
-            civilian.ApplySteering(steering);
+                    if (civilian.FleePathReachedEnd())
+                    {
+                        civilian.SafeTimer += Time.deltaTime;
+                    }
+                    else
+                    {
+                        civilian.SafeTimer = 0f;
+                    }
+
+                    return;
+                }
+            }
+
+            // 2) Fallback: huida directa
+            if (civilian.Player != null)
+            {
+                Vector3 steering = Steering.Flee(
+                    civilian.transform.position,
+                    civilian.Player.position,
+                    civilian.CurrentVelocity,
+                    civilian.FleeSpeed
+                );
+                civilian.ApplySteeringDebug(steering); // Fallback sin obstacle avoidance
+            }
         }
 
     }

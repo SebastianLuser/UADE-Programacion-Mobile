@@ -39,6 +39,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private AIPersonalityType personalityType = AIPersonalityType.Aggressive;
     [SerializeField] private bool enableNewAISystem = true;
 
+    [Header("Flocking Integration")]
+    [SerializeField] private bool useFlocking = false;
+    [SerializeField] private float baseForceWeight = 0.8f;
+    [SerializeField] private float flockForceWeight = 0.2f;
+
     [Header("Steering Physics")]
     [SerializeField] private float mass = 1f;
     [SerializeField] private float maxForce = 25f;
@@ -70,6 +75,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     // Steering components
     private Vector3 _vel;
     private ObstacleAvoidance obstacleAvoidance;
+    private FlockingSystem.FlockingEntity flockingEntity;
 
     // FSM components
     private StateMachine stateMachine;
@@ -236,6 +242,16 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         // Initialize steering physics
         _vel = Vector3.zero;
         obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, personalArea, obstaclesMask);
+
+        // Initialize flocking entity if present
+        if (useFlocking)
+        {
+            flockingEntity = GetComponent<FlockingSystem.FlockingEntity>();
+            if (flockingEntity == null)
+            {
+                MyLogger.LogWarning($"Guard {gameObject.name}: useFlocking enabled but FlockingEntity component not found");
+            }
+        }
 
         // Ensure maxSpeed is at least as fast as chaseSpeed for proper movement
         if (maxSpeed < chaseSpeed)
@@ -511,14 +527,28 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     }
 
     /// <summary>
-    /// Apply steering force with obstacle avoidance and movement
+    /// Apply steering force with optional flocking blend, obstacle avoidance and movement
     /// </summary>
     public void ApplySteering(Vector3 steering)
     {
         if (!isAlive) return;
 
+        Vector3 finalSteering = steering;
+
+        // Blend flocking forces if enabled and active
+        if (useFlocking && flockingEntity != null && ShouldFlock())
+        {
+            Vector3 flockingForce = flockingEntity.GetFlockingForce();
+            finalSteering = (steering * baseForceWeight) + (flockingForce * flockForceWeight);
+
+            if (Time.frameCount % 60 == 0)
+            {
+                MyLogger.LogInfo($"[FLOCK BLEND] {gameObject.name}: base={steering.magnitude:F2}, flock={flockingForce.magnitude:F2}, final={finalSteering.magnitude:F2}");
+            }
+        }
+
         // 1) Update velocity using physics integration
-        _vel = Integrate(steering, Time.deltaTime);
+        _vel = Integrate(finalSteering, Time.deltaTime);
 
         // 2) Pass velocity through obstacle avoidance
         Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(_vel, false);
@@ -555,8 +585,27 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         {
             float effectiveDeltaTime = Mathf.Max(Time.deltaTime, 0.016f);
             MyLogger.LogInfo($"[STEERING DEBUG] {gameObject.name}: Vel: {_vel.magnitude:F2}, AvoidedVel: {avoidedVel.magnitude:F2}, MaxSpeed: {maxSpeed}");
-            MyLogger.LogInfo($"[STEERING DEBUG] Raw steering: {steering.magnitude:F2}, DeltaTime: {Time.deltaTime:F4}, Effective: {effectiveDeltaTime:F4}, Movement: {(avoidedVel * effectiveDeltaTime).magnitude:F4}");
+            MyLogger.LogInfo($"[STEERING DEBUG] Raw steering: {finalSteering.magnitude:F2}, DeltaTime: {Time.deltaTime:F4}, Effective: {effectiveDeltaTime:F4}, Movement: {(avoidedVel * effectiveDeltaTime).magnitude:F4}");
         }
+    }
+
+    /// <summary>
+    /// Determine if flocking should be active based on current guard state
+    /// </summary>
+    public bool ShouldFlock()
+    {
+        if (!useFlocking || !isAlive)
+            return false;
+
+        if (useFSM && stateMachine != null)
+        {
+            var stateName = stateMachine.GetCurrentState()?.State?.StateName;
+            // Enable flocking during patrol and chase for group coordination
+            return stateName == "S_GuardPatrol" || stateName == "S_GuardChase";
+        }
+
+        // Fallback heuristic: flock while patrolling or when seeing player (group chase)
+        return isActivelyPatrolling || CanSeePlayer();
     }
 
     /// <summary>
