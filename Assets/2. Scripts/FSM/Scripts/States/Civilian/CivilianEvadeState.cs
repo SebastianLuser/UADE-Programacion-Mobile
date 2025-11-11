@@ -13,10 +13,12 @@ namespace Scripts.FSM.Base.StateMachine
             {
                 // Initialize evade timer using EvadeTime property
                 civilian.StateTimer = civilian.EvadeTime;
-                civilian.SetCurrentMaxSpeed(civilian.EvadeSpeed);
+                civilian.SetCurrentMaxSpeed(civilian.IsInDyingEvade ? civilian.DyingSpeed : civilian.EvadeSpeed);
 
                 if (civilian.EnableDebugLogs)
-                    MyLogger.LogInfo($"Civilian {civilian.name}: Entered Evade State - Evading for {civilian.EvadeTime:F2}s at speed {civilian.EvadeSpeed:F1}");
+                    MyLogger.LogInfo(
+                        $"Civilian {civilian.name}: Entered Evade State {(civilian.IsInDyingEvade ? "(DYING)" : string.Empty)} - " +
+                        $"Evading at speed {(civilian.IsInDyingEvade ? civilian.DyingSpeed : civilian.EvadeSpeed):F1}");
             }
         }
 
@@ -34,7 +36,9 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is Civilian civilian)
             {
                 if (civilian.EnableDebugLogs)
-                    MyLogger.LogInfo($"Civilian {civilian.name}: Exited Evade State - Timer expired, transitioning to Flee");
+                    MyLogger.LogInfo($"Civilian {civilian.name}: Exited Evade State");
+
+                civilian.SetDyingEvadeMode(false);
             }
         }
 
@@ -42,11 +46,24 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (civilian.Player == null) return;
 
+            if (civilian.IsInDyingEvade)
+            {
+                Vector3 fleeSteering = Steering.Flee(
+                    civilian.transform.position,
+                    civilian.Player.position,
+                    civilian.CurrentVelocity,
+                    civilian.DyingSpeed
+                );
+
+                civilian.ApplySteering(fleeSteering);
+                return;
+            }
+
             Vector3 playerPosition = civilian.Player.position;
             Vector3 playerVelocity = GetPlayerVelocity(civilian);
 
             // Use Steering.Evade for predictive evasion (burst lateral/away movement)
-            Vector3 steering = Steering.Evade(
+            Vector3 evadeSteering = Steering.Evade(
                 civilian.transform.position,
                 civilian.CurrentVelocity,
                 playerPosition,
@@ -56,10 +73,10 @@ namespace Scripts.FSM.Base.StateMachine
 
             // Add some lateral force for unpredictable burst movement
             Vector3 lateralForce = GetLateralEvasionForce(civilian);
-            steering += lateralForce;
+            evadeSteering += lateralForce;
 
             // Apply through the movement funnel (ApplySteering -> ObstacleAvoidance.GetDir2 -> move)
-            civilian.ApplySteering(steering);
+            civilian.ApplySteering(evadeSteering);
         }
 
         private Vector3 GetPlayerVelocity(Civilian civilian)
