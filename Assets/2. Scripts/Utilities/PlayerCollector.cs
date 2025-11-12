@@ -74,9 +74,21 @@ public class PlayerCollector : MonoBehaviour, ICollector
     {
         _totalPoints += points;
 
+        // Analytics Event 1: Item collected
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogItemCollected(points, _totalPoints);
+        }
+
         if (!_canEscape && _totalPoints >= escapeThreshold)
         {
             _canEscape = true;
+
+            // Analytics Event 2: Escape unlocked
+            if (UGS_Analytics.Instance != null)
+            {
+                UGS_Analytics.Instance.LogEscapeUnlocked(_totalPoints, Time.timeSinceLevelLoad);
+            }
         }
 
         UpdatePointsDisplay();
@@ -162,6 +174,12 @@ public class PlayerCollector : MonoBehaviour, ICollector
         _isDead = true;
         _currentHealth = 0;
         UpdateHealthBar();
+
+        // Analytics Event 3: Player death
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogPlayerDeath(_totalPoints, _currentHealth);
+        }
 
         ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.GameOver);

@@ -76,6 +76,11 @@ public class EscapeZone : MonoBehaviour
             playerMovement.enabled = false;
         }
 
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogEscapeZoneReached(playerCollector.TotalPoints, Time.timeSinceLevelLoad);
+        }
+
         playerCollector.gameObject.SetActive(false);
 
         ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(true, playerCollector.TotalPoints));

@@ -177,7 +177,7 @@ public class GuardController : NPCController, ICombat, IAIMovementController, IU
         var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
         var l_bullet = PoolObjectsService.GetOrCreateObject(guardData.bulletData.Prefab);
         l_bullet.OnDeactivate += OnDeactivateBulletHandler;
-        l_bullet.InitializeBullet(guardData.bulletData, l_spawnPosition, p_direction);
+        l_bullet.InitializeBullet(guardData.bulletData, l_spawnPosition, p_direction, BulletOwner.Guard, gameObject.name);
     }
 
     private static void OnDeactivateBulletHandler(BulletObject p_bullet)
@@ -868,6 +868,16 @@ public class GuardController : NPCController, ICombat, IAIMovementController, IU
     }
 
     #endregion
+
+    protected override void OnDeath()
+    {
+        base.OnDeath();
+
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogGuardKilled(gameObject.name, transform.position);
+        }
+    }
 
     public void MyUpdate()
     {

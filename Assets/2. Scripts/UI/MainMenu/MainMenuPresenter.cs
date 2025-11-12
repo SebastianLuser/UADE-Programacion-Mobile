@@ -68,6 +68,11 @@ namespace _2._Scripts.UI.MainMenu
         
         private void OnShopClickedHandler()
         {
+            if (UGS_Analytics.Instance != null)
+            {
+                UGS_Analytics.Instance.LogShopOpened(nameof(MainMenuView));
+            }
+
             Hide();
             panelsController.ShowUI(shopUIName);
         }
