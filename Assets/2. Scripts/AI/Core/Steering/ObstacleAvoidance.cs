@@ -140,9 +140,13 @@ public class ObstacleAvoidance
             if (currAngle > _angle / 2) continue;
 
             Vector3 relativePos = npcTransform.InverseTransformPoint(closestPoint);
-            Vector3 avoidanceDir = relativePos.x < 0 ?
-                Vector3.Cross(npcTransform.up, dirToColl.normalized) :
-                -Vector3.Cross(npcTransform.up, dirToColl.normalized);
+
+            // Primary push goes directly away from the obstacle so we can back off corners
+            Vector3 awayFromObstacle = -dirToColl.normalized;
+
+            // Small lateral bias keeps left/right decisions consistent to avoid jitter
+            Vector3 lateralBias = relativePos.x < 0 ? -npcTransform.right : npcTransform.right;
+            Vector3 avoidanceDir = (awayFromObstacle + lateralBias * 0.25f).normalized;
 
             float weight = Mathf.Clamp01((_radius - distance + _personalArea) / _radius);
             weight = weight * weight;

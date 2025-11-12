@@ -874,43 +874,26 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
         // 2) Obstacle avoidance - SOLO ajuste lateral, NO retroceso
         Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(desiredVel, false);
-        Vector3 avoidDir = avoidedVel.sqrMagnitude > 1e-6f ? avoidedVel.normalized : Vector3.zero;
+        Vector3 avoidanceDelta = avoidedVel - desiredVel;
+        Vector3 avoidDir = avoidanceDelta.sqrMagnitude > 1e-6f ? avoidanceDelta.normalized : Vector3.zero;
 
-        // CRÍTICO: Proyectar avoidance al plano perpendicular al path
-        // Esto elimina cualquier componente que empuje hacia atrás o hacia adelante
-        if (avoidDir != Vector3.zero)
-        {
-            // Quitar componente paralela al path (solo mantener perpendicular)
-            avoidDir = Vector3.ProjectOnPlane(avoidDir, desiredDir);
-            if (avoidDir.sqrMagnitude > 1e-6f)
-                avoidDir.Normalize();
-            else
-                avoidDir = Vector3.zero; // Si quedó muy chico, ignorar
-        }
-
-        // 3) Blend conservador - path tiene MUCHA más prioridad
+        // 3) Blend adaptativo - permitir retroceder cuando la pared está enfrente
         float pathW = 1.0f;
-        float avoidW = 0.25f; // Reducido de 0.35 para dar más prioridad al path
+        float avoidW = 0.35f;
 
-        // Si el avoidance empuja contra el path, reducir aún más su peso
         if (avoidDir != Vector3.zero)
         {
-            float alignment = Vector3.Dot(desiredDir, avoidDir);
+            float oppositeFactor = Mathf.Clamp01(-Vector3.Dot(avoidDir, desiredDir));
+            // Más oposición => más peso para separarnos de la pared
+            float weightBoost = Mathf.Lerp(0f, 0.75f, oppositeFactor);
+            avoidW += weightBoost;
 
-            // Si hay conflicto (alignment negativo), reducir drásticamente
-            if (alignment < -0.1f)
-            {
-                avoidW *= 0.05f; // Casi anular el obstacle avoidance
-                Debug.DrawRay(transform.position, avoidDir * 2f, Color.red, 0.1f);
-            }
-            else
-            {
-                Debug.DrawRay(transform.position, avoidDir * 2f, Color.yellow, 0.1f);
-            }
+            Color debugColor = Color.Lerp(Color.yellow, Color.red, oppositeFactor);
+            Debug.DrawRay(transform.position, avoidDir * 2f, debugColor, 0.1f);
         }
 
-        // Blend: path + ajuste lateral mínimo
-        Vector3 blended = desiredVel + avoidDir * (avoidW * currentMaxSpeed);
+        // Blend: path + corrección (ahora puede empujar hacia atrás)
+        Vector3 blended = (desiredVel * pathW) + (avoidDir * (avoidW * currentMaxSpeed));
 
         // 4) Clamp manteniendo dirección del path
         float maxV = currentMaxSpeed;

@@ -5229,12 +5229,17 @@ PrefabInstance:
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: avoidRadius
-      value: 10
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: personalArea
-      value: 1
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: obstaclesMask.m_Bits
+      value: 8192
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -11492,12 +11497,17 @@ PrefabInstance:
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: avoidRadius
-      value: 10
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: personalArea
-      value: 1
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: obstaclesMask.m_Bits
+      value: 8192
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -11658,6 +11668,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Center.y
       value: 0.63
+      objectReference: {fileID: 0}
+    - target: {fileID: 7362885490311734212, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: m_ExcludeLayers.m_Bits
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7652873752432105362, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -31417,12 +31432,17 @@ PrefabInstance:
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: avoidRadius
-      value: 10
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: personalArea
-      value: 1
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: obstaclesMask.m_Bits
+      value: 8192
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -34489,7 +34509,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 444550, guid: fc90a43fa1070334fa80362482043901, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 32.5
+      value: 32.30689
       objectReference: {fileID: 0}
     - target: {fileID: 444550, guid: fc90a43fa1070334fa80362482043901, type: 3}
       propertyPath: m_LocalRotation.w

@@ -547,45 +547,85 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             }
         }
 
-        // 1) Update velocity using physics integration
-        _vel = Integrate(finalSteering, Time.deltaTime);
+        // 1) Integrate steering into desired velocity
+        Vector3 desiredVel = Integrate(finalSteering, Time.deltaTime);
+        desiredVel.y = 0f;
 
-        // 2) Pass velocity through obstacle avoidance
-        Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(_vel, false);
+        float desiredSpeed = desiredVel.magnitude;
+        if (desiredSpeed <= 0.0001f) return;
+
+        Vector3 desiredDir = desiredVel / Mathf.Max(desiredSpeed, 1e-5f);
+
+        // 2) Obstacle avoidance can now push opposite to desired direction
+        Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(desiredVel, false);
+        Vector3 avoidanceDelta = avoidedVel - desiredVel;
+        Vector3 avoidDir = avoidanceDelta.sqrMagnitude > 1e-6f ? avoidanceDelta.normalized : Vector3.zero;
+
+        float pathW = 1.0f;
+        float avoidW = 0.35f;
+
+        if (avoidDir != Vector3.zero)
+        {
+            float oppositeFactor = Mathf.Clamp01(-Vector3.Dot(avoidDir, desiredDir));
+            float weightBoost = Mathf.Lerp(0f, 0.75f, oppositeFactor);
+            avoidW += weightBoost;
+
+            Color debugColor = Color.Lerp(Color.yellow, Color.red, oppositeFactor);
+            Debug.DrawRay(transform.position, avoidDir * 2f, debugColor, 0.1f);
+        }
+        avoidW = Mathf.Clamp(avoidW, 0f, 1f);
+
+        float avoidScale = Mathf.Max(desiredSpeed, 0.1f);
+        Vector3 blended = (desiredVel * pathW) + (avoidDir * (avoidW * avoidScale));
+
+        // Clamp while prioritizing the path component
+        float maxV = maxSpeed;
+        if (blended.sqrMagnitude > maxV * maxV)
+        {
+            Vector3 pathComponent = Vector3.Project(blended, desiredDir);
+            Vector3 avoidComponent = blended - pathComponent;
+
+            float pathMag = pathComponent.magnitude;
+            float avoidMag = avoidComponent.magnitude;
+            float totalMag = Mathf.Sqrt(pathMag * pathMag + avoidMag * avoidMag);
+
+            if (totalMag > maxV)
+            {
+                float scale = Mathf.Sqrt(Mathf.Max(0, maxV * maxV - pathMag * pathMag)) / Mathf.Max(avoidMag, 1e-5f);
+                avoidComponent *= Mathf.Min(scale, 1f);
+                blended = pathComponent + avoidComponent;
+            }
+        }
+
+        blended.y = 0f;
+        _vel = blended;
 
         // 3) Move and face movement direction
-        if (avoidedVel.sqrMagnitude > 0.001f)
+        if (_vel.sqrMagnitude > 0.001f)
         {
-            // Use actual deltaTime - the steering system works correctly now
             float effectiveDeltaTime = Time.deltaTime;
-
-            // Update position
-            Vector3 movement = avoidedVel * effectiveDeltaTime;
+            Vector3 movement = _vel * effectiveDeltaTime;
             transform.position += movement;
 
-            // Update movement controller state
-            currentMovementDirection = avoidedVel.normalized;
-            currentMovementSpeed = avoidedVel.magnitude;
+            currentMovementDirection = _vel.normalized;
+            currentMovementSpeed = _vel.magnitude;
 
-            // Face movement direction with faster rotation
-            if (avoidedVel.magnitude > 0.1f)
+            if (_vel.magnitude > 0.1f)
             {
-                Vector3 lookDirection = avoidedVel.normalized;
-                lookDirection.y = 0f; // Keep rotation in XZ plane
+                Vector3 lookDirection = _vel.normalized;
+                lookDirection.y = 0f;
 
-                // Use faster rotation speed for more responsive steering
                 float rotationSpeed = baseRotationSpeed * 3f;
                 Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
             }
         }
 
-        // Debug velocity more frequently during development
         if (Time.frameCount % 30 == 0)
         {
             float effectiveDeltaTime = Mathf.Max(Time.deltaTime, 0.016f);
-            MyLogger.LogInfo($"[STEERING DEBUG] {gameObject.name}: Vel: {_vel.magnitude:F2}, AvoidedVel: {avoidedVel.magnitude:F2}, MaxSpeed: {maxSpeed}");
-            MyLogger.LogInfo($"[STEERING DEBUG] Raw steering: {finalSteering.magnitude:F2}, DeltaTime: {Time.deltaTime:F4}, Effective: {effectiveDeltaTime:F4}, Movement: {(avoidedVel * effectiveDeltaTime).magnitude:F4}");
+            MyLogger.LogInfo($"[STEERING DEBUG] {gameObject.name}: Vel: {_vel.magnitude:F2}, AvoidDir: {avoidDir.magnitude:F2}, MaxSpeed: {maxSpeed}");
+            MyLogger.LogInfo($"[STEERING DEBUG] Raw steering: {finalSteering.magnitude:F2}, DeltaTime: {Time.deltaTime:F4}, Movement: {(_vel * effectiveDeltaTime).magnitude:F4}");
         }
     }
 
