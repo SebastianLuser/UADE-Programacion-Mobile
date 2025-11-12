@@ -1,25 +1,28 @@
+using System;
 using ScriptableObjects.Bullets;
 using Services;
 using Services.MicroServices.PoolObjectsService;
 using UnityEngine;
 
-public class MainCharacter : Character, ICombat
+public class MainCharacter : BaseCharacter, ICombat
 {
     [SerializeField] private MainCharacterDataSO mainCharacterData;
     
     private float lastShootTime;
     private Rigidbody rb;
     private Vector3 lastMoveDirection;
-    
+    private PlayerCollector playerCollector;
+
     private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData.rotationSpeed;
     private BulletData BulletData => mainCharacterData?.bulletData;
 
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
-    
+
     protected override void Awake()
     {
         base.Awake();
         rb = GetComponent<Rigidbody>();
+        playerCollector = GetComponent<PlayerCollector>();
         
         if (rb == null)
         {
@@ -40,7 +43,7 @@ public class MainCharacter : Character, ICombat
         }
     }
     
-    public void Shoot(Vector3 direction)
+    public override void Shoot(Vector3 direction)
     {
         if (!isAlive || !CanShoot()) return;
         
@@ -90,6 +93,28 @@ public class MainCharacter : Character, ICombat
         {
             Quaternion targetRotation = Quaternion.LookRotation(direction);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, RotationSpeed * Time.deltaTime);
+        }
+    }
+
+    public override void TakeDamage(float damage)
+    {
+        if (!isAlive) return;
+
+        currentHealth -= damage;
+        playerCollector?.SyncHealth(currentHealth, MaxHealth);
+
+        if (currentHealth <= 0f)
+        {
+            isAlive = false;
+            OnDeath();
+        }
+    }
+
+    protected override void OnDeath()
+    {
+        if (playerCollector != null)
+        {
+            playerCollector.HandleDeath();
         }
     }
 }

@@ -1,5 +1,9 @@
+using System.Collections;
+using Services;
+using Services.MicroServices.EventsServices;
+using Services.MicroServices.EventsServices.CustomEvents;
+using Services.MicroServices.GameStateService;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
@@ -20,12 +24,17 @@ public class PlayerCollector : MonoBehaviour, ICollector
     [Header("Health Settings")]
     [SerializeField] private Slider healthBar;
     [SerializeField] private int maxHealth = 100;
-    [SerializeField] private int bulletDamage = 20;
-    [SerializeField] private string sceneToRestart;
+
+    [SerializeField] private GameObject ragdoll;
+    [SerializeField] private GameObject armL;
+    [SerializeField] private GameObject armR;
 
     private int _totalPoints = 0;
     private bool _canEscape = false;
     private int _currentHealth;
+    private bool _isDead;
+    private MainCharacter _mainCharacter;
+    private PlayerTouchMovement _playerMovement;
 
     /// <summary>
     /// Total points collected (read-only)
@@ -39,7 +48,20 @@ public class PlayerCollector : MonoBehaviour, ICollector
 
     void Start()
     {
-        _currentHealth = maxHealth;
+        _mainCharacter = GetComponent<MainCharacter>();
+        _playerMovement = GetComponent<PlayerTouchMovement>();
+        _isDead = false;
+
+        if (_mainCharacter != null)
+        {
+            maxHealth = Mathf.Max(1, Mathf.RoundToInt(_mainCharacter.MaxHealth));
+            _currentHealth = Mathf.Clamp(Mathf.RoundToInt(_mainCharacter.CurrentHealth), 0, maxHealth);
+        }
+        else
+        {
+            _currentHealth = maxHealth;
+        }
+
         UpdateHealthBar();
         UpdatePointsDisplay();
     }
@@ -52,21 +74,9 @@ public class PlayerCollector : MonoBehaviour, ICollector
     {
         _totalPoints += points;
 
-        // Analytics Event 1: Item collected
-        if (UGS_Analytics.Instance != null)
-        {
-            UGS_Analytics.Instance.LogItemCollected(points, _totalPoints);
-        }
-
         if (!_canEscape && _totalPoints >= escapeThreshold)
         {
             _canEscape = true;
-
-            // Analytics Event 2: Escape unlocked
-            if (UGS_Analytics.Instance != null)
-            {
-                UGS_Analytics.Instance.LogEscapeUnlocked(_totalPoints);
-            }
         }
 
         UpdatePointsDisplay();
@@ -109,29 +119,22 @@ public class PlayerCollector : MonoBehaviour, ICollector
             return;
         }
 
-        // Check for bullet collision
-        //if (other.CompareTag("EnemyBullet") || other.name.Contains("Bullet") || other.name.Contains("bullet"))
-        if (other.name.Contains("Bullet") || other.name.Contains("bullet"))
-        {
-            TakeDamage(bulletDamage);
-            Destroy(other.gameObject);
-        }
     }
 
-    /// <summary>
-    /// Take damage and update health bar
-    /// </summary>
-    /// <param name="damage">Amount of damage to take</param>
-    private void TakeDamage(int damage)
+    public void SyncHealth(float currentHealth, float maxHealthValue)
     {
-        _currentHealth -= damage;
-        _currentHealth = Mathf.Max(0, _currentHealth);
+        if (_isDead)
+        {
+            return;
+        }
+
+        maxHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealthValue));
+        _currentHealth = Mathf.Clamp(Mathf.RoundToInt(currentHealth), 0, maxHealth);
 
         UpdateHealthBar();
-
         if (_currentHealth <= 0)
         {
-            Die();
+            HandleDeath();
         }
     }
 
@@ -149,23 +152,30 @@ public class PlayerCollector : MonoBehaviour, ICollector
     /// <summary>
     /// Handle player death and restart game
     /// </summary>
-    private void Die()
+    public void HandleDeath()
     {
-        Debug.Log("Player died! Restarting game...");
-
-        // Analytics Event 3: Player death
-        if (UGS_Analytics.Instance != null)
+        if (_isDead)
         {
-            UGS_Analytics.Instance.LogPlayerDeath(_totalPoints, _currentHealth);
+            return;
         }
 
-        if (!string.IsNullOrEmpty(sceneToRestart))
+        _isDead = true;
+        _currentHealth = 0;
+        UpdateHealthBar();
+
+        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints));
+        ServiceLocator.Get<IGameStateService>().ChangeState(GameState.GameOver);
+
+        if (_playerMovement)
         {
-            SceneManager.LoadScene(sceneToRestart);
+            _playerMovement.enabled = false;
         }
-        else
-        {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        }
+
+        GetComponent<MeshCollider>().enabled = false;
+        GetComponent<MeshRenderer>().enabled = false;
+        armR.SetActive(false);
+        armL.SetActive(false);
+        
+        ragdoll.SetActive(true);
     }
 }
