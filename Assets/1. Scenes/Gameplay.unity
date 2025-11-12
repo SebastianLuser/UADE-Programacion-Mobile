@@ -27574,7 +27574,7 @@ MonoBehaviour:
   escapeMessage: Ya puedes escapar!
   escapeThreshold: 20
   healthBar: {fileID: 1262776168}
-  maxHealth: 200
+  maxHealth: 2000
   ragdoll: {fileID: 1034529480}
   armL: {fileID: 4276043347270378703}
   armR: {fileID: 2934201453092783651}
@@ -55969,7 +55969,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02f11facdf00a164bb00a91dc42ea027, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainCharacter
-  characterData: {fileID: 11400000, guid: bffa5f6ea800fe6498addf62fbe2b66f, type: 2}
+  characterData: {fileID: 11400000, guid: 42946e771724b1541976c212bb212fc7, type: 2}
   mainCharacterData: {fileID: 11400000, guid: 42946e771724b1541976c212bb212fc7, type: 2}
 --- !u!222 &7164358060514703315
 CanvasRenderer:

@@ -25,6 +25,25 @@ namespace _2._Scripts.UI.MainMenu.Shop
 
         public event Action<ShopCategory, float> OnCategorySelected;
         public event Action OnBackClicked;
+        public event Action<ShopModel.ShopItemDefinition> OnBuyRequested;
+
+        private void Awake()
+        {
+            for (var i = 0; i < itemSlots.Length; i++)
+            {
+                if (!itemSlots[i]) continue;
+                itemSlots[i].OnBuyClicked += HandleBuyClicked;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            for (var i = 0; i < itemSlots.Length; i++)
+            {
+                if (!itemSlots[i]) continue;
+                itemSlots[i].OnBuyClicked -= HandleBuyClicked;
+            }
+        }
 
         public override void Show()
         {
@@ -67,6 +86,7 @@ namespace _2._Scripts.UI.MainMenu.Shop
             base.Shutdown();
             OnCategorySelected = null;
             OnBackClicked = null;
+            OnBuyRequested = null;
         }
 
         public void SetCurrency(int coins, int diamonds)
@@ -111,6 +131,11 @@ namespace _2._Scripts.UI.MainMenu.Shop
         private void HandleBackClicked()
         {
             OnBackClicked?.Invoke();
+        }
+
+        private void HandleBuyClicked(ShopModel.ShopItemDefinition item)
+        {
+            OnBuyRequested?.Invoke(item);
         }
     }
 }
