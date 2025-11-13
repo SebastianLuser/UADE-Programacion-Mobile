@@ -12,10 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 10a721b7239043db8c0df40cff4b3508, type: 3}
   m_Name: Player Bullet Data
   m_EditorClassIdentifier: Assembly-CSharp::ScriptableObjects.Bullets.BulletData
-  <Prefab>k__BackingField: {fileID: 3499885524630990997, guid: 481f064127890404a8d1b69c997e36b3,
-    type: 3}
-  <Speed>k__BackingField: 10
-  <Damage>k__BackingField: 25
-  <Lifetime>k__BackingField: 5
-  <Color>k__BackingField: {r: 1, g: 0.7465527, b: 0, a: 1}
-  <UseGravity>k__BackingField: 0
+  prefab: {fileID: 3499885524630990997, guid: 481f064127890404a8d1b69c997e36b3, type: 3}
+  speed: 10
+  damage: 25
+  lifetime: 5
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  useGravity: 0
