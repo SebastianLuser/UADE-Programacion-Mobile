@@ -25,11 +25,14 @@ namespace DevelopmentUtilities
                     l_obj = m_availables.Dequeue();
                 }
                 if (l_obj == null)
-                    l_obj = Object.Instantiate(m_prefab, m_parent);
+                    l_obj = InstantiateAtDefaultPose();
+
+                ResetTransform(l_obj);
                 return l_obj;
             }
 
-            var l_newObj = Object.Instantiate(m_prefab, m_parent);
+            var l_newObj = InstantiateAtDefaultPose();
+            ResetTransform(l_newObj);
             return l_newObj;
         }
 
@@ -41,6 +44,26 @@ namespace DevelopmentUtilities
         public void ClearData()
         {
             m_availables.Clear();
+        }
+
+        private static void ResetTransform(T p_object)
+        {
+            if (p_object is Component l_component)
+            {
+                l_component.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            }
+            else if (p_object is GameObject l_gameObject)
+            {
+                l_gameObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            }
+        }
+
+        private T InstantiateAtDefaultPose()
+        {
+            if (m_parent == null)
+                return Object.Instantiate(m_prefab, Vector3.zero, Quaternion.identity);
+
+            return Object.Instantiate(m_prefab, Vector3.zero, Quaternion.identity, m_parent);
         }
     }
 }
