@@ -8,13 +8,15 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/1. Scenes/MainMenuScene.unity
     guid: c83047b8460ead9438a9b8f15a26ccf7
-  - enabled: 0
-    path: Assets/5.Assets/PolygonHeist/Scenes/DemoProto2.unity
-    guid: 00714072892c66f499c893430eee8566
+  - enabled: 1
+    path: Assets/1. Scenes/Loading.unity
+    guid: 30127c4e5765f74488ca272f12b07c29
   - enabled: 1
     path: Assets/1. Scenes/Gameplay.unity
     guid: 915dcc4b476967940946f806a08ecd83
   m_configObjects:
+    com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: 19aceeb6a1d48c549bc5c98c154bbb3e,
+      type: 2}
     com.unity.adaptiveperformance.simulator.provider_settings: {fileID: 11400000,
       guid: 3e75bcefbdc665d45ab7dbc2579fca7d, type: 2}
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f,

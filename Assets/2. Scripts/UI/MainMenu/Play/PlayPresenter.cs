@@ -47,7 +47,8 @@ namespace _2._Scripts.UI.MainMenu.Play
         private void OnStartClickedHandler()
         {
             m_gameStateService?.ChangeState(GameState.Playing);
-            SceneManager.LoadScene(gameplaySceneName);
+            //SceneManager.LoadScene(gameplaySceneName);
+            SceneLoadManager.LoadWithLoading("Gameplay", "Loading");
         }
         
         private void OnBackClickedHandler()
