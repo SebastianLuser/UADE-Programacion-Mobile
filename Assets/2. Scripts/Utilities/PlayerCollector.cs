@@ -1,5 +1,6 @@
 using System.Collections;
 using Services;
+using Services.MicroServices.AudioService;
 using Services.MicroServices.EventsServices;
 using Services.MicroServices.EventsServices.CustomEvents;
 using Services.MicroServices.GameStateService;
@@ -35,7 +36,9 @@ public class PlayerCollector : MonoBehaviour, ICollector
     private bool _isDead;
     private MainCharacter _mainCharacter;
     private PlayerTouchMovement _playerMovement;
-
+    private IAudioService m_audioService;
+    private AudioConfig m_audioConfig;
+    
     /// <summary>
     /// Total points collected (read-only)
     /// </summary>
@@ -45,9 +48,12 @@ public class PlayerCollector : MonoBehaviour, ICollector
     /// Whether player can escape (read-only)
     /// </summary>
     public bool CanEscape => _canEscape;
-
+    
     void Start()
     {
+        m_audioService = ServiceLocator.Get<IAudioService>();
+        m_audioConfig = (m_audioService as AudioService)?.Config;
+        
         _mainCharacter = GetComponent<MainCharacter>();
         _playerMovement = GetComponent<PlayerTouchMovement>();
         _isDead = false;
@@ -64,6 +70,8 @@ public class PlayerCollector : MonoBehaviour, ICollector
 
         UpdateHealthBar();
         UpdatePointsDisplay();
+        
+        m_audioService.PlayMusic(m_audioConfig.gameplayBackground);
     }
 
     /// <summary>
@@ -77,6 +85,7 @@ public class PlayerCollector : MonoBehaviour, ICollector
         if (!_canEscape && _totalPoints >= escapeThreshold)
         {
             _canEscape = true;
+            m_audioService.PlaySFX(m_audioConfig.canEscapeSFX);
         }
 
         UpdatePointsDisplay();
@@ -116,21 +125,24 @@ public class PlayerCollector : MonoBehaviour, ICollector
         if (collectable != null)
         {
             collectable.Collect(this);
-            return;
+            m_audioService.PlaySFX(m_audioConfig.collectItemSFX);
         }
-
     }
 
     public void SyncHealth(float currentHealth, float maxHealthValue)
     {
-        if (_isDead)
-        {
-            return;
-        }
+        if (_isDead) return;
+        
+        int previousHealth = _currentHealth;
 
         maxHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealthValue));
         _currentHealth = Mathf.Clamp(Mathf.RoundToInt(currentHealth), 0, maxHealth);
 
+        if (_currentHealth < previousHealth)
+        {
+            m_audioService.PlaySFX(m_audioConfig.maleHurtSFX);
+        }
+        
         UpdateHealthBar();
         if (_currentHealth <= 0)
         {
@@ -161,6 +173,7 @@ public class PlayerCollector : MonoBehaviour, ICollector
 
         _isDead = true;
         _currentHealth = 0;
+        
         UpdateHealthBar();
 
         ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints));
