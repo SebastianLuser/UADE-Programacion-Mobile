@@ -15,6 +15,8 @@ GameObject:
   - component: {fileID: 7696721049475684638}
   - component: {fileID: 6417356738711028240}
   - component: {fileID: -254809627937339830}
+  - component: {fileID: -6999088593241126063}
+  - component: {fileID: -8875022428076968555}
   m_Layer: 7
   m_Name: Guard
   m_TagString: Untagged
@@ -126,8 +128,8 @@ MonoBehaviour:
   personalityType: 0
   enableNewAISystem: 1
   useFlocking: 1
-  baseForceWeight: 0.8
-  flockForceWeight: 0.2
+  baseForceWeight: 0.7
+  flockForceWeight: 0.3
   mass: 1
   maxForce: 100
   maxSpeed: 100
@@ -260,6 +262,46 @@ SkinnedMeshRenderer:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_DirtyAABB: 1
+--- !u!114 &-6999088593241126063
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2502322239598372139}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24f9c65d8a277e74686a7802088798c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlockingDebugVisualizer
+  showDetectionRadius: 1
+  showNeighborConnections: 1
+  showFlockingForce: 1
+  showVelocity: 1
+  showLabels: 1
+  detectionRadiusColor: {r: 0, g: 1, b: 0, a: 0.2}
+  neighborConnectionColor: {r: 0, g: 1, b: 1, a: 1}
+  flockingForceColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  velocityColor: {r: 0, g: 0, b: 1, a: 1}
+  separationColor: {r: 1, g: 0, b: 0, a: 1}
+  cohesionColor: {r: 0, g: 1, b: 0, a: 1}
+  alignmentColor: {r: 1, g: 0, b: 1, a: 1}
+  forceVectorScale: 2
+  velocityVectorScale: 1
+--- !u!114 &-8875022428076968555
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2502322239598372139}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c21e34e95714e3a9f2dfc974ad70529, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlockingSystem.FlockingEntity
+  profile: {fileID: 11400000, guid: 30691810f383d2a4384bd5a3a9cdade5, type: 2}
+  updateInterval: 2
 --- !u!1 &4489298991749989335
 GameObject:
   m_ObjectHideFlags: 0

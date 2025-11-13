@@ -40,7 +40,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private bool enableNewAISystem = true;
 
     [Header("Flocking Integration")]
-    [SerializeField] private bool useFlocking = false;
+    [SerializeField] private bool useFlocking = true;
     [SerializeField] private float baseForceWeight = 0.8f;
     [SerializeField] private float flockForceWeight = 0.2f;
 

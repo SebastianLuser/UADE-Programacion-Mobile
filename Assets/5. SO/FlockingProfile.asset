@@ -15,7 +15,7 @@ MonoBehaviour:
   separationConfig: {fileID: 11400000, guid: 9635fcd1e060f85479bd4acf1d6cc3f0, type: 2}
   cohesionConfig: {fileID: 11400000, guid: 8c9015b8abb9bfe4cb03c361cb8b70f5, type: 2}
   alignmentConfig: {fileID: 11400000, guid: fc7936ee86b54034cbb057f8d55e742f, type: 2}
-  detectionRadius: 20
-  maxSpeed: 1
-  maxForce: 1
-  maxNeighbors: 20
+  detectionRadius: 15
+  maxSpeed: 5
+  maxForce: 10
+  maxNeighbors: 10
