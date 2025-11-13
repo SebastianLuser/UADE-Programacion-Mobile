@@ -29,6 +29,22 @@ public class PlayerTouchMovement : MonoBehaviour
     private Finger TapFinger;
     
     bool dragClosed, shootClosed, objectivesShown;
+    
+    private Finger ShootingFinger;
+    private Vector2 ShootingStartPosition;
+    private Vector2 ShootingAmount;
+    private bool isContinuousShooting = false;
+    private bool hasBurstFired = false;
+    private Coroutine continuousShootingCoroutine;
+
+    [Header("Shooting Settings")]
+    [SerializeField] private FloatingJoystick ShootingJoystick;
+    [SerializeField] private float continuousShootingInterval = 0.3f;
+    [SerializeField] private int burstShotCount = 5;
+    [SerializeField] private float burstShotInterval = 0.25f;
+    [SerializeField]
+    private float continuousShootingDelay = 0.3f;
+    private Coroutine delayedContinuousCoroutine;
 
     private void Awake()
     {
@@ -84,12 +100,66 @@ public class PlayerTouchMovement : MonoBehaviour
             if (!dragClosed && dragTutorial && dragTutorial.activeSelf)
                 StartCoroutine(CloseAfter(dragTutorial, 2f, () => { dragClosed = true; TryShowObjectives(); }));
         }
-    }
+        else if (MovedFinger == ShootingFinger)
+        {
+            // Handle shooting joystick movement
+            Vector2 knobPosition;
+            float maxMovement = JoystickSize.x / 2f;
+            ETouch.Touch currentTouch = MovedFinger.currentTouch;
+            
+            if (!IsValidVector2(currentTouch.screenPosition))
+            {
+                return;
+            }
 
-    IEnumerator DisableAfterSeconds(GameObject objectToDisable, float seconds)
-    {
-        yield return new WaitForSeconds(seconds);
-        objectToDisable.SetActive(false);
+            // Calculate knob position relative to start position
+            Vector2 dragVector = currentTouch.screenPosition - ShootingStartPosition;
+            
+            if (dragVector.magnitude > maxMovement)
+            {
+                knobPosition = dragVector.normalized * maxMovement;
+            }
+            else
+            {
+                knobPosition = dragVector;
+            }
+
+            // Clamp knob position to stay within joystick bounds
+            knobPosition = Vector2.ClampMagnitude(knobPosition, maxMovement);
+            
+            ShootingJoystick.Knob.anchoredPosition = knobPosition;
+            ShootingAmount = knobPosition / maxMovement;
+            
+            // If we have significant drag, trigger burst shooting
+            if (dragVector.magnitude > 30f && mainCharacter != null)
+            {
+                // Cancel delayed continuous shooting if it was scheduled
+                if (delayedContinuousCoroutine != null)
+                {
+                    StopCoroutine(delayedContinuousCoroutine);
+                    delayedContinuousCoroutine = null;
+                }
+                
+                // Stop any active continuous shooting
+                if (isContinuousShooting && continuousShootingCoroutine != null)
+                {
+                    StopCoroutine(continuousShootingCoroutine);
+                    isContinuousShooting = false;
+                }
+                
+                // Only fire burst if we haven't already or if we're still dragging
+                if (!hasBurstFired || dragVector.magnitude > 50f)
+                {
+                    Vector3 shootDirection = new Vector3(dragVector.normalized.x, 0, dragVector.normalized.y);
+                    if (!hasBurstFired)
+                    {
+                        // First burst
+                        StartCoroutine(ShootBurst(shootDirection));
+                        hasBurstFired = true;
+                    }
+                }
+            }
+        }
     }
 
     private void HandleLoseFinger(Finger LostFinger)
@@ -101,15 +171,35 @@ public class PlayerTouchMovement : MonoBehaviour
             Joystick.gameObject.SetActive(false);
             MovementAmount = Vector2.zero;
         }
-        else if (LostFinger == TapFinger)
+        else if (LostFinger == ShootingFinger)
         {
-            if (mainCharacter != null)
+            // Cancel delayed continuous shooting
+            if (delayedContinuousCoroutine != null)
+            {
+                StopCoroutine(delayedContinuousCoroutine);
+                delayedContinuousCoroutine = null;
+            }
+            
+            // Stop continuous shooting
+            if (isContinuousShooting && continuousShootingCoroutine != null)
+            {
+                StopCoroutine(continuousShootingCoroutine);
+                isContinuousShooting = false;
+            }
+            
+            // If no burst was fired and no continuous shooting was active, fire a single shot
+            if (!hasBurstFired && !isContinuousShooting && mainCharacter != null)
             {
                 Vector3 shootDirection = mainCharacter.transform.forward;
                 mainCharacter.Shoot(shootDirection);
             }
-
-            TapFinger = null;
+            
+            // Reset shooting joystick
+            ShootingJoystick.Knob.anchoredPosition = Vector2.zero;
+            ShootingJoystick.gameObject.SetActive(false);
+            ShootingFinger = null;
+            ShootingAmount = Vector2.zero;
+            hasBurstFired = false;
 
             if (!shootClosed && shootTutorial && shootTutorial.activeSelf)
                 StartCoroutine(CloseAfter(shootTutorial, 0f, () => { shootClosed = true; TryShowObjectives(); }));
@@ -133,9 +223,22 @@ public class PlayerTouchMovement : MonoBehaviour
             Joystick.RectTransform.sizeDelta = JoystickSize;
             Joystick.RectTransform.anchoredPosition = ClampStartPosition(screenPosition);
         }
-        else if (screenPosition.x > halfScreenWidth) // Right side of screen for shooting
+        else if (screenPosition.x > halfScreenWidth)
         {
-            TapFinger = TouchedFinger;
+            ShootingFinger = TouchedFinger;
+            ShootingStartPosition = ClampShootingPosition(screenPosition);
+            ShootingAmount = Vector2.zero;
+            hasBurstFired = false;
+            
+            ShootingJoystick.gameObject.SetActive(true);
+            ShootingJoystick.RectTransform.sizeDelta = JoystickSize;
+            ShootingJoystick.RectTransform.anchoredPosition = ShootingStartPosition;
+            ShootingJoystick.Knob.anchoredPosition = Vector2.zero;
+            
+            if (mainCharacter != null)
+            {
+                delayedContinuousCoroutine = StartCoroutine(DelayedContinuousShooting());
+            }
         }
     }
 
@@ -238,6 +341,63 @@ public class PlayerTouchMovement : MonoBehaviour
             objectivesShown = true;
             if (panelsController)
                 panelsController.ShowUI(objectivesPanelName);
+        }
+    }
+    
+    private Vector2 ClampShootingPosition(Vector2 screenPosition)
+    {
+        float minX = Screen.width / 2 + JoystickSize.x / 2;
+        float maxX = Screen.width - JoystickSize.x / 2;
+        float minY = JoystickSize.y / 2;
+        float maxY = Screen.height - JoystickSize.y / 2;
+
+        screenPosition.x = Mathf.Clamp(screenPosition.x, minX, maxX);
+        screenPosition.y = Mathf.Clamp(screenPosition.y, minY, maxY);
+
+        return screenPosition;
+    }
+
+    private IEnumerator ShootContinuously()
+    {
+        while (isContinuousShooting && mainCharacter != null)
+        {
+            Vector3 shootDirection = mainCharacter.transform.forward;
+            mainCharacter.Shoot(shootDirection);
+            yield return new WaitForSeconds(continuousShootingInterval);
+        }
+    }
+
+    private IEnumerator ShootBurst(Vector3 direction)
+    {
+        if (mainCharacter == null) yield break;
+        
+        if (direction.magnitude > 0.1f)
+        {
+            direction.Normalize();
+        }
+        else
+        {
+            direction = mainCharacter.transform.forward;
+        }
+        
+        for (int i = 0; i < burstShotCount; i++)
+        {
+            if (mainCharacter != null)
+            {
+                mainCharacter.Shoot(direction);
+            }
+            yield return new WaitForSeconds(burstShotInterval);
+        }
+    }
+    
+    private IEnumerator DelayedContinuousShooting()
+    {
+        yield return new WaitForSeconds(continuousShootingDelay);
+        
+        if (ShootingFinger != null && !hasBurstFired && mainCharacter != null)
+        {
+            isContinuousShooting = true;
+            continuousShootingCoroutine = StartCoroutine(ShootContinuously());
         }
     }
 }

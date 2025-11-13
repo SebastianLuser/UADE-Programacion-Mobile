@@ -10,7 +10,7 @@ public class CharacterDataSO : ScriptableObject
     public float moveSpeed = 5f;
     
     [Header("Combat")]
-    public float shootCooldown = 0.5f;
+    public float shootCooldown = 0.25f;
     public float rotationSpeed = 10f;
     
     [Header("Visual")]

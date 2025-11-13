@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(RectTransform))]
-[DisallowMultipleComponent]
+//[DisallowMultipleComponent]
 public class FloatingJoystick : MonoBehaviour
 {
     [HideInInspector]

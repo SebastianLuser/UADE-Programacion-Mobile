@@ -2,6 +2,7 @@ using System;
 using ScriptableObjects.Bullets;
 using Services;
 using Services.MicroServices.UpdateService;
+using Unity.VisualScripting;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -46,7 +47,7 @@ public class BulletObject : MonoBehaviour, IUpdateListener
 
     private void OnTriggerEnter(Collider p_other)
     {
-        m_isActive = true;
+        //m_isActive = true;
         if (!m_isActive)
             return;
 

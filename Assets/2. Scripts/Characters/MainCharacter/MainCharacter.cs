@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using ScriptableObjects.Bullets;
 using Services;
 using Services.MicroServices.PoolObjectsService;
@@ -12,6 +13,7 @@ public class MainCharacter : BaseCharacter, ICombat
     private Rigidbody rb;
     private Vector3 lastMoveDirection;
     private PlayerCollector playerCollector;
+    private float currentMagSize;
 
     private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData.rotationSpeed;
     private BulletData BulletData => mainCharacterData?.bulletData;
@@ -23,7 +25,7 @@ public class MainCharacter : BaseCharacter, ICombat
         base.Awake();
         rb = GetComponent<Rigidbody>();
         playerCollector = GetComponent<PlayerCollector>();
-        
+        currentMagSize = mainCharacterData.magSize;
         if (rb == null)
         {
             MyLogger.LogError($"{gameObject.name}: Rigidbody component required for MainCharacter2!");
@@ -49,11 +51,27 @@ public class MainCharacter : BaseCharacter, ICombat
         
         lastShootTime = Time.time;
         CreateBullet(direction);
+        currentMagSize--;
     }
     
     public bool CanShoot()
     {
-        return Time.time >= lastShootTime + characterData.shootCooldown;
+        if (mainCharacterData.magSize != 0)
+        {
+            return Time.time >= lastShootTime + characterData.shootCooldown;   
+        }
+        else
+        {
+            return Time.time >= lastShootTime + mainCharacterData.reloadTime;
+            StartCoroutine(ReloadGun());
+        }
+    }
+    
+    private IEnumerator ReloadGun()
+    {
+        yield return new WaitForSeconds(mainCharacterData.reloadTime);
+
+        currentMagSize = mainCharacterData.magSize;
     }
     
     private void CreateBullet(Vector3 p_direction)
