@@ -14,6 +14,11 @@ namespace _2._Scripts.UI.MainMenu.Shop
         [SerializeField] private MainCharacterDataSO mainCharacterData;
         [SerializeField] private float maxHealthCap = 250f;
         [SerializeField] private float moveSpeedCap = 10f;
+        [SerializeField] private float magSizeCap = 50f;
+        [SerializeField] private float reloadTimeMin = 0.5f;
+        [SerializeField] private float shootCooldownMin = 0.05f;
+        [SerializeField] private float bulletSpeedCap = 60f;
+        [SerializeField] private float bulletDamageCap = 200f;
 
         private ShopModel m_model;
         private ShopView m_view;
@@ -115,6 +120,40 @@ namespace _2._Scripts.UI.MainMenu.Shop
                 case ShopUpgradeType.MoveSpeed:
                     mainCharacterData.moveSpeed = Mathf.Clamp(mainCharacterData.moveSpeed + item.upgradeValue, 0f, moveSpeedCap);
                     MyLogger.LogInfo($"Move speed upgraded to {mainCharacterData.moveSpeed}");
+                    break;
+                case ShopUpgradeType.ShootCooldown:
+                    mainCharacterData.shootCooldown = Mathf.Clamp(mainCharacterData.shootCooldown - item.upgradeValue, shootCooldownMin, 10f);
+                    MyLogger.LogInfo($"Shoot cooldown now {mainCharacterData.shootCooldown}");
+                    break;
+                case ShopUpgradeType.MagSize:
+                    mainCharacterData.magSize = Mathf.Clamp(mainCharacterData.magSize + item.upgradeValue, 0f, magSizeCap);
+                    MyLogger.LogInfo($"Magazine size upgraded to {mainCharacterData.magSize}");
+                    break;
+                case ShopUpgradeType.ReloadTime:
+                    mainCharacterData.reloadTime = Mathf.Clamp(mainCharacterData.reloadTime - item.upgradeValue, reloadTimeMin, 30f);
+                    MyLogger.LogInfo($"Reload time now {mainCharacterData.reloadTime}");
+                    break;
+                case ShopUpgradeType.BulletSpeed:
+                    if (mainCharacterData.bulletData)
+                    {
+                        mainCharacterData.bulletData.AddSpeed(item.upgradeValue, 0f, bulletSpeedCap);
+                        MyLogger.LogInfo($"Bullet speed upgraded to {mainCharacterData.bulletData.Speed}");
+                    }
+                    else
+                    {
+                        MyLogger.LogWarning("BulletData reference missing. Cannot upgrade bullet speed.");
+                    }
+                    break;
+                case ShopUpgradeType.BulletDamage:
+                    if (mainCharacterData.bulletData)
+                    {
+                        mainCharacterData.bulletData.AddDamage(item.upgradeValue, 0f, bulletDamageCap);
+                        MyLogger.LogInfo($"Bullet damage upgraded to {mainCharacterData.bulletData.Damage}");
+                    }
+                    else
+                    {
+                        MyLogger.LogWarning("BulletData reference missing. Cannot upgrade bullet damage.");
+                    }
                     break;
                 default:
                     MyLogger.LogInfo($"Purchased {item.displayName} (no stat change configured).");

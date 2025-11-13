@@ -4,6 +4,11 @@ namespace _2._Scripts.UI.MainMenu.Shop
     {
         None,
         MaxHealth,
-        MoveSpeed
+        MoveSpeed,
+        ShootCooldown,
+        MagSize,
+        ReloadTime,
+        BulletSpeed,
+        BulletDamage
     }
 }

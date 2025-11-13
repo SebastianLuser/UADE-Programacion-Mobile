@@ -46348,7 +46348,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CollectableGem
   pointValue: 50
-  itemName: Gem
+  itemName: Diamond
 --- !u!4 &1714943066 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 427198, guid: e2f3d2fd53001e647bf9d788ec6d25fb,
