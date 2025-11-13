@@ -36749,7 +36749,7 @@ PrefabInstance:
     - target: {fileID: 2074463825805323714, guid: b0e1e461bede89046bbd5b2cd7b09214,
         type: 3}
       propertyPath: m_VersionIndex
-      value: 1678
+      value: 1681
       objectReference: {fileID: 0}
     - target: {fileID: 3759175590961036196, guid: b0e1e461bede89046bbd5b2cd7b09214,
         type: 3}
@@ -36859,7 +36859,7 @@ PrefabInstance:
     - target: {fileID: 7018269496977051510, guid: b0e1e461bede89046bbd5b2cd7b09214,
         type: 3}
       propertyPath: m_VersionIndex
-      value: 1675
+      value: 1678
       objectReference: {fileID: 0}
     - target: {fileID: 7106129380641349782, guid: b0e1e461bede89046bbd5b2cd7b09214,
         type: 3}
@@ -36869,7 +36869,7 @@ PrefabInstance:
     - target: {fileID: 7106129380641349782, guid: b0e1e461bede89046bbd5b2cd7b09214,
         type: 3}
       propertyPath: m_VersionIndex
-      value: 783
+      value: 786
       objectReference: {fileID: 0}
     - target: {fileID: 8200182592325509853, guid: b0e1e461bede89046bbd5b2cd7b09214,
         type: 3}
@@ -56308,6 +56308,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 161577cfe2b66cf429750ae366535ba1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  currentState: 0
+  previousState: 0
   JoystickSize: {x: 300, y: 300}
   Joystick: {fileID: 8152703037077488222}
   Player: {fileID: 8705301200629479264}
