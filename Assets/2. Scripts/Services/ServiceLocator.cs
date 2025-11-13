@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Services.MicroServices.AudioService;
 using Services.MicroServices.BlackboardService;
 using Services.MicroServices.EventsServices;
 using Services.MicroServices.FlockingService;
@@ -47,6 +48,7 @@ namespace Services
             Register<IPoolObjectsService, PoolObjectsService>();
             Register<IGameStateService, GameStateService>();
             Register<IBlackboardService, BlackboardService>(true);
+            Register<IAudioService, AudioService>();
             Register<IWalletService, WalletService>(true, true);
         }
 
