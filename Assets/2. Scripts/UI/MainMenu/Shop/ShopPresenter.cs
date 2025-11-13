@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using Game.Upgrades;
 using Services;
+using Services.MicroServices.UserDataService.PlayerUpgrades;
 using Services.MicroServices.UserDataService.Wallet;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -11,7 +13,7 @@ namespace _2._Scripts.UI.MainMenu.Shop
         [SerializeField] private string mainUIName = "Main";
         [SerializeField] private ShopCategory defaultCategory = ShopCategory.Weapons;
         [Header("Upgrades")]
-        [SerializeField] private MainCharacterDataSO mainCharacterData;
+        [SerializeField] private MainCharacterDataSO baseStats;
         [SerializeField] private float maxHealthCap = 250f;
         [SerializeField] private float moveSpeedCap = 10f;
         [SerializeField] private float magSizeCap = 50f;
@@ -24,6 +26,7 @@ namespace _2._Scripts.UI.MainMenu.Shop
         private ShopView m_view;
         private ShopCategory m_currentCategory;
         private IWalletService m_walletService;
+        private IPlayerUpgradeService m_upgradeService;
 
         public override void Initialize()
         {
@@ -42,6 +45,8 @@ namespace _2._Scripts.UI.MainMenu.Shop
             m_walletService = ServiceLocator.Get<IWalletService>();
             m_walletService.OnWalletChanged += OnWalletChangedHandler;
             OnWalletChangedHandler(m_walletService.Coins, m_walletService.Diamonds);
+
+            m_upgradeService = ServiceLocator.Get<IPlayerUpgradeService>();
 
             ShowCategory(defaultCategory, 0f);
 
@@ -105,65 +110,82 @@ namespace _2._Scripts.UI.MainMenu.Shop
 
         private void ApplyUpgrade(ShopModel.ShopItemDefinition item)
         {
-            if (!mainCharacterData)
+            if (item.upgradeType == PlayerUpgradeType.None)
             {
-                MyLogger.LogWarning("MainCharacterDataSO reference missing. Upgrade cannot be applied.");
+                MyLogger.LogInfo($"Purchased {item.displayName} (no stat change configured).");
                 return;
             }
 
-            switch (item.upgradeType)
+            if (m_upgradeService == null)
             {
-                case ShopUpgradeType.MaxHealth:
-                    mainCharacterData.maxHealth = Mathf.Clamp(mainCharacterData.maxHealth + item.upgradeValue, 0f, maxHealthCap);
-                    MyLogger.LogInfo($"Max health upgraded to {mainCharacterData.maxHealth}");
-                    break;
-                case ShopUpgradeType.MoveSpeed:
-                    mainCharacterData.moveSpeed = Mathf.Clamp(mainCharacterData.moveSpeed + item.upgradeValue, 0f, moveSpeedCap);
-                    MyLogger.LogInfo($"Move speed upgraded to {mainCharacterData.moveSpeed}");
-                    break;
-                case ShopUpgradeType.ShootCooldown:
-                    mainCharacterData.shootCooldown = Mathf.Clamp(mainCharacterData.shootCooldown - item.upgradeValue, shootCooldownMin, 10f);
-                    MyLogger.LogInfo($"Shoot cooldown now {mainCharacterData.shootCooldown}");
-                    break;
-                case ShopUpgradeType.MagSize:
-                    mainCharacterData.magSize = Mathf.Clamp(mainCharacterData.magSize + item.upgradeValue, 0f, magSizeCap);
-                    MyLogger.LogInfo($"Magazine size upgraded to {mainCharacterData.magSize}");
-                    break;
-                case ShopUpgradeType.ReloadTime:
-                    mainCharacterData.reloadTime = Mathf.Clamp(mainCharacterData.reloadTime - item.upgradeValue, reloadTimeMin, 30f);
-                    MyLogger.LogInfo($"Reload time now {mainCharacterData.reloadTime}");
-                    break;
-                case ShopUpgradeType.BulletSpeed:
-                    if (mainCharacterData.bulletData)
-                    {
-                        mainCharacterData.bulletData.AddSpeed(item.upgradeValue, 0f, bulletSpeedCap);
-                        MyLogger.LogInfo($"Bullet speed upgraded to {mainCharacterData.bulletData.Speed}");
-                    }
-                    else
-                    {
-                        MyLogger.LogWarning("BulletData reference missing. Cannot upgrade bullet speed.");
-                    }
-                    break;
-                case ShopUpgradeType.BulletDamage:
-                    if (mainCharacterData.bulletData)
-                    {
-                        mainCharacterData.bulletData.AddDamage(item.upgradeValue, 0f, bulletDamageCap);
-                        MyLogger.LogInfo($"Bullet damage upgraded to {mainCharacterData.bulletData.Damage}");
-                    }
-                    else
-                    {
-                        MyLogger.LogWarning("BulletData reference missing. Cannot upgrade bullet damage.");
-                    }
-                    break;
-                default:
-                    MyLogger.LogInfo($"Purchased {item.displayName} (no stat change configured).");
-                    break;
+                MyLogger.LogWarning("PlayerUpgradeService unavailable. Upgrade ignored.");
+                return;
             }
+
+            float delta = CalculateAllowedDelta(item.upgradeType, item.upgradeValue);
+            if (delta <= 0f)
+            {
+                MyLogger.LogInfo($"{item.upgradeType} already at cap.");
+                return;
+            }
+
+            m_upgradeService.ApplyUpgrade(item.upgradeType, delta);
+            MyLogger.LogInfo($"Applied {item.upgradeType} upgrade (+{delta}).");
         }
 
         private void OnWalletChangedHandler(int coins, int diamonds)
         {
             m_view.SetCurrency(coins, diamonds);
+        }
+
+        private float CalculateAllowedDelta(PlayerUpgradeType type, float requestedDelta)
+        {
+            if (baseStats == null)
+            {
+                return requestedDelta;
+            }
+
+            var state = m_upgradeService?.State;
+            float bonus = state == null ? 0f : type switch
+            {
+                PlayerUpgradeType.MaxHealth => state.maxHealthBonus,
+                PlayerUpgradeType.MoveSpeed => state.moveSpeedBonus,
+                PlayerUpgradeType.ShootCooldown => state.shootCooldownReduction,
+                PlayerUpgradeType.MagSize => state.magSizeBonus,
+                PlayerUpgradeType.ReloadTime => state.reloadTimeReduction,
+                PlayerUpgradeType.BulletSpeed => state.bulletSpeedBonus,
+                PlayerUpgradeType.BulletDamage => state.bulletDamageBonus,
+                _ => 0f
+            };
+
+            switch (type)
+            {
+                case PlayerUpgradeType.MaxHealth:
+                    float currentHealth = baseStats.maxHealth + bonus;
+                    return Mathf.Max(0f, Mathf.Min(requestedDelta, maxHealthCap - currentHealth));
+                case PlayerUpgradeType.MoveSpeed:
+                    float currentSpeed = baseStats.moveSpeed + bonus;
+                    return Mathf.Max(0f, Mathf.Min(requestedDelta, moveSpeedCap - currentSpeed));
+                case PlayerUpgradeType.ShootCooldown:
+                    float currentCooldown = Mathf.Max(shootCooldownMin, baseStats.shootCooldown - bonus);
+                    return Mathf.Max(0f, Mathf.Min(requestedDelta, currentCooldown - shootCooldownMin));
+                case PlayerUpgradeType.MagSize:
+                    float currentMag = baseStats.magSize + bonus;
+                    return Mathf.Max(0f, Mathf.Min(requestedDelta, magSizeCap - currentMag));
+                case PlayerUpgradeType.ReloadTime:
+                    float currentReload = Mathf.Max(reloadTimeMin, baseStats.reloadTime - bonus);
+                    return Mathf.Max(0f, Mathf.Min(requestedDelta, currentReload - reloadTimeMin));
+                case PlayerUpgradeType.BulletSpeed:
+                    if (baseStats.bulletData == null) return 0f;
+                    float currentBulletSpeed = baseStats.bulletData.Speed + bonus;
+                    return Mathf.Max(0f, Mathf.Min(requestedDelta, bulletSpeedCap - currentBulletSpeed));
+                case PlayerUpgradeType.BulletDamage:
+                    if (baseStats.bulletData == null) return 0f;
+                    float currentDamage = baseStats.bulletData.Damage + bonus;
+                    return Mathf.Max(0f, Mathf.Min(requestedDelta, bulletDamageCap - currentDamage));
+                default:
+                    return requestedDelta;
+            }
         }
     }
 }

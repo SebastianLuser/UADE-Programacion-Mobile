@@ -3,6 +3,7 @@ using System.Collections;
 using ScriptableObjects.Bullets;
 using Services;
 using Services.MicroServices.PoolObjectsService;
+using Services.MicroServices.UserDataService.PlayerUpgrades;
 using UnityEngine;
 
 public class MainCharacter : BaseCharacter, ICombat
@@ -14,6 +15,7 @@ public class MainCharacter : BaseCharacter, ICombat
     private Vector3 lastMoveDirection;
     private PlayerCollector playerCollector;
     private float currentMagSize;
+    private IPlayerUpgradeService m_upgradeService;
 
     private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData.rotationSpeed;
     private BulletData BulletData => mainCharacterData?.bulletData;
@@ -22,13 +24,38 @@ public class MainCharacter : BaseCharacter, ICombat
 
     protected override void Awake()
     {
+        PrepareRuntimeData();
         base.Awake();
         rb = GetComponent<Rigidbody>();
         playerCollector = GetComponent<PlayerCollector>();
-        currentMagSize = mainCharacterData.magSize;
+        currentMagSize = mainCharacterData != null ? mainCharacterData.magSize : currentMagSize;
         if (rb == null)
         {
             MyLogger.LogError($"{gameObject.name}: Rigidbody component required for MainCharacter2!");
+        }
+    }
+
+    private void PrepareRuntimeData()
+    {
+        if (mainCharacterData != null)
+        {
+            var cloned = ScriptableObject.Instantiate(mainCharacterData);
+            if (cloned.bulletData != null)
+            {
+                cloned.bulletData = ScriptableObject.Instantiate(cloned.bulletData);
+            }
+            mainCharacterData = cloned;
+            characterData = cloned;
+        }
+        else if (characterData != null)
+        {
+            characterData = ScriptableObject.Instantiate(characterData);
+        }
+
+        m_upgradeService = ServiceLocator.Get<IPlayerUpgradeService>();
+        if (m_upgradeService != null && mainCharacterData != null)
+        {
+            m_upgradeService.ApplyUpgrades(mainCharacterData);
         }
     }
     

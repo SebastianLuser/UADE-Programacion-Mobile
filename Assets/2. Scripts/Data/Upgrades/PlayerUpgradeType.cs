@@ -1,6 +1,6 @@
-namespace _2._Scripts.UI.MainMenu.Shop
+namespace Game.Upgrades
 {
-    public enum ShopUpgradeType
+    public enum PlayerUpgradeType
     {
         None,
         MaxHealth,

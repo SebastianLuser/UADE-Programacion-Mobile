@@ -11,6 +11,7 @@ using Services.MicroServices.PersistanceService;
 using Services.MicroServices.PoolObjectsService;
 using Services.MicroServices.UpdateService;
 using Services.MicroServices.UserDataService;
+using Services.MicroServices.UserDataService.PlayerUpgrades;
 using Services.MicroServices.UserDataService.Wallet;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -50,6 +51,7 @@ namespace Services
             Register<IBlackboardService, BlackboardService>(true);
             Register<IAudioService, AudioService>();
             Register<IWalletService, WalletService>(true, true);
+            Register<IPlayerUpgradeService, PlayerUpgradeService>(true, true);
         }
 
         private static void Register<TInterface, TInstance>(bool p_isSceneUnloaded = false, bool p_immediateInit = false)

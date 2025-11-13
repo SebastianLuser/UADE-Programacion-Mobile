@@ -2008,7 +2008,7 @@ MonoBehaviour:
   uiView: {fileID: 614009859}
   mainUIName: Main
   defaultCategory: 0
-  mainCharacterData: {fileID: 11400000, guid: 42946e771724b1541976c212bb212fc7, type: 2}
+  baseStats: {fileID: 0}
   maxHealthCap: 2000
   moveSpeedCap: 10
   magSizeCap: 50
@@ -2058,47 +2058,47 @@ MonoBehaviour:
   - id: 1
     displayName: Kevlar
     icon: {fileID: -427473698, guid: 4adfa3b7c879787498fc1f4ce4af002f, type: 3}
-    price: 20
+    price: 15
     currency: 0
     category: 0
     showSaleBadge: 0
     order: 0
     upgradeType: 1
-    upgradeValue: 100
+    upgradeValue: 25
   - id: 2
     displayName: Bots
     icon: {fileID: -1235298047, guid: 4adfa3b7c879787498fc1f4ce4af002f, type: 3}
-    price: 20
+    price: 5
     currency: 0
     category: 0
     showSaleBadge: 0
     order: 1
     upgradeType: 2
-    upgradeValue: 1
+    upgradeValue: 0.5
   - id: 3
-    displayName: Bots
+    displayName: Firerate
     icon: {fileID: -919157007, guid: 4adfa3b7c879787498fc1f4ce4af002f, type: 3}
-    price: 20
+    price: 30
     currency: 0
     category: 0
     showSaleBadge: 0
     order: 1
     upgradeType: 3
-    upgradeValue: 1
+    upgradeValue: 0.5
   - id: 4
-    displayName: Bots
+    displayName: Mag size
     icon: {fileID: 2146917673, guid: 4adfa3b7c879787498fc1f4ce4af002f, type: 3}
-    price: 20
+    price: 50
     currency: 0
     category: 0
     showSaleBadge: 0
     order: 1
     upgradeType: 4
-    upgradeValue: 1
+    upgradeValue: 3
   - id: 5
-    displayName: Bots
+    displayName: Fast Hands
     icon: {fileID: -1182569023, guid: 4adfa3b7c879787498fc1f4ce4af002f, type: 3}
-    price: 20
+    price: 10
     currency: 0
     category: 0
     showSaleBadge: 0
@@ -2106,25 +2106,25 @@ MonoBehaviour:
     upgradeType: 5
     upgradeValue: 1
   - id: 6
-    displayName: Bots
+    displayName: Bullet Speed
     icon: {fileID: 1272197630, guid: 4adfa3b7c879787498fc1f4ce4af002f, type: 3}
-    price: 20
-    currency: 0
+    price: 10
+    currency: 1
     category: 0
     showSaleBadge: 0
     order: 1
     upgradeType: 6
-    upgradeValue: 1
+    upgradeValue: 0.5
   - id: 7
-    displayName: Bots
+    displayName: Bullet DMG
     icon: {fileID: -1370969859, guid: 4adfa3b7c879787498fc1f4ce4af002f, type: 3}
     price: 20
-    currency: 0
+    currency: 1
     category: 0
     showSaleBadge: 0
     order: 1
     upgradeType: 7
-    upgradeValue: 1
+    upgradeValue: 5
 --- !u!225 &614009861
 CanvasGroup:
   m_ObjectHideFlags: 0
