@@ -20,24 +20,28 @@ namespace DevelopmentUtilities
             if (m_availables.Count > 0)
             {
                 var l_obj = m_availables.Dequeue();
-                while (l_obj == null &&  m_availables.Count > 0)
+                while (l_obj == null && m_availables.Count > 0)
                 {
                     l_obj = m_availables.Dequeue();
                 }
-                if (l_obj == null)
-                    l_obj = InstantiateAtDefaultPose();
 
-                ResetTransform(l_obj);
+                if (l_obj == null)
+                {
+                    l_obj = InstantiateInactive();
+                }
+
                 return l_obj;
             }
 
-            var l_newObj = InstantiateAtDefaultPose();
-            ResetTransform(l_newObj);
-            return l_newObj;
+            return InstantiateInactive();
         }
 
         public void ReturnToPool(T p_poolEntry)
         {
+            if (p_poolEntry == null)
+                return;
+
+            SetActiveState(p_poolEntry, false);
             m_availables.Enqueue(p_poolEntry);
         }
 
@@ -46,24 +50,23 @@ namespace DevelopmentUtilities
             m_availables.Clear();
         }
 
-        private static void ResetTransform(T p_object)
+        private T InstantiateInactive()
+        {
+            var l_instance = Object.Instantiate(m_prefab, m_parent);
+            SetActiveState(l_instance, false);
+            return l_instance;
+        }
+
+        private static void SetActiveState(T p_object, bool p_active)
         {
             if (p_object is Component l_component)
             {
-                l_component.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                l_component.gameObject.SetActive(p_active);
             }
             else if (p_object is GameObject l_gameObject)
             {
-                l_gameObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                l_gameObject.SetActive(p_active);
             }
-        }
-
-        private T InstantiateAtDefaultPose()
-        {
-            if (m_parent == null)
-                return Object.Instantiate(m_prefab, Vector3.zero, Quaternion.identity);
-
-            return Object.Instantiate(m_prefab, Vector3.zero, Quaternion.identity, m_parent);
         }
     }
 }
