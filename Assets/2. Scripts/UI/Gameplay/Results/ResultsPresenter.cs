@@ -2,7 +2,6 @@ using Services;
 using Services.MicroServices.EventsServices;
 using Services.MicroServices.EventsServices.CustomEvents;
 using Services.MicroServices.GameStateService;
-using Services.MicroServices.UserDataService.Wallet;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.SceneManagement;
@@ -18,7 +17,6 @@ namespace _2._Scripts.UI.Gameplay.Results
         private ResultsView m_view;
         private IEventService m_eventService;
         private IGameStateService m_gameStateService;
-        private IWalletService m_walletService;
         private float m_previousTimeScale = 1f;
         private bool m_isVisible;
 
@@ -34,7 +32,6 @@ namespace _2._Scripts.UI.Gameplay.Results
 
             m_eventService = ServiceLocator.Get<IEventService>();
             m_gameStateService = ServiceLocator.Get<IGameStateService>();
-            m_walletService = ServiceLocator.Get<IWalletService>();
 
             m_eventService.AddListener<GameResultEvent>(OnGameResultEvent);
             m_gameStateService.OnStateChanged += OnGameStateChanged;
@@ -65,13 +62,12 @@ namespace _2._Scripts.UI.Gameplay.Results
 
             if (resultEvent.IsVictory)
             {
-                m_view.DisplayVictory(resultEvent.Score);
-                RewardPlayer(resultEvent);
+                m_view.DisplayVictory(resultEvent.Score, resultEvent.EarnedCoins, resultEvent.EarnedDiamonds);
                 m_gameStateService?.ChangeState(GameState.Victory);
             }
             else
             {
-                m_view.DisplayDefeat(resultEvent.Score);
+                m_view.DisplayDefeat(resultEvent.Score, resultEvent.EarnedCoins, resultEvent.EarnedDiamonds);
                 m_gameStateService?.ChangeState(GameState.GameOver);
             }
 
@@ -147,10 +143,5 @@ namespace _2._Scripts.UI.Gameplay.Results
             SceneManager.LoadScene(mainMenuSceneName);
         }
 
-        private void RewardPlayer(GameResultEvent resultEvent)
-        {
-            if (resultEvent.Score <= 0) return;
-            m_walletService?.AddCoins(resultEvent.Score);
-        }
     }
 }

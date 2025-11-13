@@ -11,6 +11,8 @@ namespace _2._Scripts.UI.Gameplay.Results
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private TMP_Text scoreText;
         [SerializeField] private TMP_Text detailsText;
+        [SerializeField] private TMP_Text coinsRewardText;
+        [SerializeField] private TMP_Text diamondsRewardText;
 
         [Header("Buttons")]
         [SerializeField] private Button retryButton;
@@ -20,23 +22,25 @@ namespace _2._Scripts.UI.Gameplay.Results
         [SerializeField] private string victoryTitle = "Victoria";
         [SerializeField] private string defeatTitle = "Derrota";
         [SerializeField] private string scoreFormat = "Puntaje: {0}";
+        [SerializeField] private string coinsFormat = "+{0} Coins";
+        [SerializeField] private string diamondsFormat = "+{0} Diamonds";
         [SerializeField, TextArea] private string victoryDetails = "Excelente trabajo.";
         [SerializeField, TextArea] private string defeatDetails = "Intentá nuevamente.";
 
         public event Action OnRetry;
         public event Action OnMainMenu;
 
-        public void DisplayVictory(int score)
+        public void DisplayVictory(int score, int coins, int diamonds)
         {
-            SetTexts(victoryTitle, victoryDetails, score);
+            SetTexts(victoryTitle, victoryDetails, score, coins, diamonds);
         }
 
-        public void DisplayDefeat(int score)
+        public void DisplayDefeat(int score, int coins, int diamonds)
         {
-            SetTexts(defeatTitle, defeatDetails, score);
+            SetTexts(defeatTitle, defeatDetails, score, coins, diamonds);
         }
 
-        private void SetTexts(string title, string details, int score)
+        private void SetTexts(string title, string details, int score, int coins, int diamonds)
         {
             if (titleText)
             {
@@ -51,6 +55,16 @@ namespace _2._Scripts.UI.Gameplay.Results
             if (scoreText)
             {
                 scoreText.text = string.Format(scoreFormat, score);
+            }
+
+            if (coinsRewardText)
+            {
+                coinsRewardText.text = string.Format(coinsFormat, coins);
+            }
+
+            if (diamondsRewardText)
+            {
+                diamondsRewardText.text = string.Format(diamondsFormat, diamonds);
             }
         }
 

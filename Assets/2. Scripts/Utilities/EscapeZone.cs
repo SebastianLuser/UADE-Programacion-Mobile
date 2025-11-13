@@ -78,7 +78,7 @@ public class EscapeZone : MonoBehaviour
 
         playerCollector.gameObject.SetActive(false);
 
-        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(true, playerCollector.TotalPoints));
+        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(true, playerCollector.TotalPoints, playerCollector.SessionCoins, playerCollector.SessionDiamonds));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.Victory);
     }
 }

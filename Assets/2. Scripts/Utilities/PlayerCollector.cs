@@ -31,6 +31,8 @@ public class PlayerCollector : MonoBehaviour, ICollector
     [SerializeField] private GameObject armR;
 
     private int _totalPoints = 0;
+    private int _sessionCoinsCollected = 0;
+    private int _sessionDiamondsCollected = 0;
     private bool _canEscape = false;
     private int _currentHealth;
     private bool _isDead;
@@ -43,6 +45,8 @@ public class PlayerCollector : MonoBehaviour, ICollector
     /// Total points collected (read-only)
     /// </summary>
     public int TotalPoints => _totalPoints;
+    public int SessionCoins => _sessionCoinsCollected;
+    public int SessionDiamonds => _sessionDiamondsCollected;
 
     /// <summary>
     /// Whether player can escape (read-only)
@@ -57,6 +61,8 @@ public class PlayerCollector : MonoBehaviour, ICollector
         _mainCharacter = GetComponent<MainCharacter>();
         _playerMovement = GetComponent<PlayerTouchMovement>();
         _isDead = false;
+        _sessionCoinsCollected = 0;
+        _sessionDiamondsCollected = 0;
 
         if (_mainCharacter != null)
         {
@@ -89,6 +95,16 @@ public class PlayerCollector : MonoBehaviour, ICollector
         }
 
         UpdatePointsDisplay();
+    }
+
+    public void RegisterCoinPickup(int coinsAmount)
+    {
+        _sessionCoinsCollected += Mathf.Max(0, coinsAmount);
+    }
+
+    public void RegisterGemPickup(int diamondsAmount)
+    {
+        _sessionDiamondsCollected += Mathf.Max(0, diamondsAmount);
     }
 
     /// <summary>
@@ -176,7 +192,7 @@ public class PlayerCollector : MonoBehaviour, ICollector
         
         UpdateHealthBar();
 
-        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints));
+        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints, _sessionCoinsCollected, _sessionDiamondsCollected));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.GameOver);
 
         if (_playerMovement)
