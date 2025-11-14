@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using ScriptableObjects.Bullets;
 using Services;
+using Services.MicroServices.AudioService;
 using Services.MicroServices.PoolObjectsService;
 using Services.MicroServices.UserDataService.PlayerUpgrades;
 using UnityEngine;
@@ -9,13 +10,15 @@ using UnityEngine;
 public class MainCharacter : BaseCharacter, ICombat
 {
     [SerializeField] private MainCharacterDataSO mainCharacterData;
-    
+
     private float lastShootTime;
     private Rigidbody rb;
     private Vector3 lastMoveDirection;
     private PlayerCollector playerCollector;
     private float currentMagSize;
     private IPlayerUpgradeService m_upgradeService;
+    private IAudioService m_audioService;
+    private AudioConfig m_audioConfig;
 
     private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData.rotationSpeed;
     private BulletData BulletData => mainCharacterData?.bulletData;
@@ -29,6 +32,10 @@ public class MainCharacter : BaseCharacter, ICombat
         rb = GetComponent<Rigidbody>();
         playerCollector = GetComponent<PlayerCollector>();
         currentMagSize = mainCharacterData != null ? mainCharacterData.magSize : currentMagSize;
+
+        m_audioService = ServiceLocator.Get<IAudioService>();
+        m_audioConfig = (m_audioService as AudioService)?.Config;
+
         if (rb == null)
         {
             MyLogger.LogError($"{gameObject.name}: Rigidbody component required for MainCharacter2!");
@@ -75,10 +82,15 @@ public class MainCharacter : BaseCharacter, ICombat
     public override void Shoot(Vector3 direction)
     {
         if (!isAlive || !CanShoot()) return;
-        
+
         lastShootTime = Time.time;
         CreateBullet(direction);
         currentMagSize--;
+
+        if (m_audioService != null && m_audioConfig != null)
+        {
+            m_audioService.PlaySFX(m_audioConfig.playerPistolSingleShotSFX);
+        }
     }
     
     public bool CanShoot()

@@ -1,4 +1,6 @@
 using System;
+using Services;
+using Services.MicroServices.AudioService;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -30,13 +32,32 @@ namespace _2._Scripts.UI.Gameplay.Results
         public event Action OnRetry;
         public event Action OnMainMenu;
 
+        private IAudioService m_audioService;
+        private AudioConfig m_audioConfig;
+
+        private void Awake()
+        {
+            m_audioService = ServiceLocator.Get<IAudioService>();
+            m_audioConfig = (m_audioService as AudioService)?.Config;
+        }
+
         public void DisplayVictory(int score, int coins, int diamonds)
         {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.winSFX);
+            }
+
             SetTexts(victoryTitle, victoryDetails, score, coins, diamonds);
         }
 
         public void DisplayDefeat(int score, int coins, int diamonds)
         {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.lostSFX);
+            }
+
             SetTexts(defeatTitle, defeatDetails, score, coins, diamonds);
         }
 
@@ -112,11 +133,21 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         private void OnRetryClicked()
         {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+            }
+
             OnRetry?.Invoke();
         }
 
         private void OnMainMenuClicked()
         {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+            }
+
             OnMainMenu?.Invoke();
         }
     }

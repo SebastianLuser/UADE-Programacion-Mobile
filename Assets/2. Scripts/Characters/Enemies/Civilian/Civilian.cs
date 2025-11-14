@@ -3,6 +3,7 @@ using Scripts.FSM.Base.StateMachine;
 using Scripts.FSM.Models;
 using System.Collections.Generic;
 using System.Linq;
+using Services.MicroServices.AudioService;
 using Services.MicroServices.BlackboardService;
 using Services;
 using Services.MicroServices.UpdateService;
@@ -63,7 +64,10 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     [Header("Decision Tree")]
     [SerializeField] private bool useDecisionTree = true;   // Enable/disable decision tree system
-    
+
+    [Header("Civilian Info")]
+    [SerializeField] private NPCGender gender = NPCGender.Male;
+
     [Header("Debug")]
     [SerializeField] private bool enableDebugLogs = false;
     [SerializeField] private bool canAttack = false;        // Civilians typically don't attack
@@ -97,6 +101,8 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     private Material originalMaterial;
     private Color originalColor;
     private CivilianDecisionTreeRunner decisionTreeRunner;
+    private IAudioService m_audioService;
+    private AudioConfig m_audioConfig;
 
     // Steering components (identical to Guard)
     private Vector3 _vel;
@@ -210,7 +216,9 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     private void InitializeComponents()
     {
-        
+        m_audioService = ServiceLocator.Get<IAudioService>();
+        m_audioConfig = (m_audioService as AudioService)?.Config;
+
         // Get or add PlayerDetector
         playerDetector = GetComponent<IPlayerDetector>();
         Assert.IsNotNull(playerDetector);
@@ -579,6 +587,13 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
         float previousNorm = HealthNormalized;
 
+        // Play hurt sound based on gender
+        if (m_audioService != null && m_audioConfig != null)
+        {
+            AudioClip hurtSFX = gender == NPCGender.Male ? m_audioConfig.maleHurtSFX : m_audioConfig.femaleHurtSFX;
+            m_audioService.PlaySFX(hurtSFX);
+        }
+
         base.TakeDamage(damage);
         RecalculateDyingWeight();
 
@@ -588,6 +603,18 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         }
     }
 
+    protected override void OnDeath()
+    {
+        // Play death sound based on gender
+        if (m_audioService != null && m_audioConfig != null)
+        {
+            AudioClip deathSFX = gender == NPCGender.Male ? m_audioConfig.maleDeathSFX : m_audioConfig.femaleDeathSFX;
+            m_audioService.PlaySFX(deathSFX);
+        }
+
+        base.OnDeath();
+    }
+
     /// <summary>
     /// Apply damage to player if available
     /// </summary>
@@ -595,12 +622,18 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     {
         if (player == null) return;
 
+        // Play punch sound
+        if (m_audioService != null && m_audioConfig != null)
+        {
+            m_audioService.PlaySFX(m_audioConfig.punchSFX);
+        }
+
         // Try to get player health component
         var playerHealth = player.GetComponent<IDamageable>();
         if (playerHealth != null)
         {
             playerHealth.TakeDamage(meleeDamage);
-            
+
             if (enableDebugLogs)
                 MyLogger.LogInfo($"Civilian {gameObject.name}: Dealt {meleeDamage} melee damage to player");
         }

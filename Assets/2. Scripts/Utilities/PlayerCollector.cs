@@ -29,6 +29,9 @@ public class PlayerCollector : MonoBehaviour, ICollector
     [SerializeField] private GameObject ragdoll;
     [SerializeField] private GameObject[] objectsToDeactivateOnDeath;
 
+    [Header("Audio")]
+    [SerializeField] private AudioSource heartbeatAudioSource;
+
     private int _totalPoints = 0;
     private int _sessionCoinsCollected = 0;
     private int _sessionDiamondsCollected = 0;
@@ -39,6 +42,7 @@ public class PlayerCollector : MonoBehaviour, ICollector
     private PlayerTouchMovement _playerMovement;
     private IAudioService m_audioService;
     private AudioConfig m_audioConfig;
+    private bool _isHeartbeatPlaying = false;
     
     /// <summary>
     /// Total points collected (read-only)
@@ -147,7 +151,7 @@ public class PlayerCollector : MonoBehaviour, ICollector
     public void SyncHealth(float currentHealth, float maxHealthValue)
     {
         if (_isDead) return;
-        
+
         int previousHealth = _currentHealth;
 
         maxHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealthValue));
@@ -157,7 +161,28 @@ public class PlayerCollector : MonoBehaviour, ICollector
         {
             m_audioService.PlaySFX(m_audioConfig.maleHurtSFX);
         }
-        
+
+        // Control heartbeat sound when health is low (below 30%)
+        float healthPercentage = (float)_currentHealth / maxHealth;
+        if (healthPercentage < 0.3f && healthPercentage > 0f)
+        {
+            if (!_isHeartbeatPlaying && heartbeatAudioSource != null && m_audioConfig != null)
+            {
+                heartbeatAudioSource.clip = m_audioConfig.heartBeatingSFX;
+                heartbeatAudioSource.loop = true;
+                heartbeatAudioSource.Play();
+                _isHeartbeatPlaying = true;
+            }
+        }
+        else
+        {
+            if (_isHeartbeatPlaying && heartbeatAudioSource != null)
+            {
+                heartbeatAudioSource.Stop();
+                _isHeartbeatPlaying = false;
+            }
+        }
+
         UpdateHealthBar();
         if (_currentHealth <= 0)
         {
@@ -188,8 +213,17 @@ public class PlayerCollector : MonoBehaviour, ICollector
 
         _isDead = true;
         _currentHealth = 0;
-        
+
         UpdateHealthBar();
+
+        // Stop heartbeat if playing
+        if (_isHeartbeatPlaying && heartbeatAudioSource != null)
+        {
+            heartbeatAudioSource.Stop();
+            _isHeartbeatPlaying = false;
+        }
+
+        m_audioService.PlaySFX(m_audioConfig.maleDeathSFX);
 
         ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints, _sessionCoinsCollected, _sessionDiamondsCollected));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.GameOver);
