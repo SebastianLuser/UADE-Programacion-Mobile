@@ -41,6 +41,7 @@ public class PlayerTouchMovement : MonoBehaviour
     private Vector2 ShootingAmount;
     private bool isContinuousShooting = false;
     private bool hasBurstFired = false;
+    int _speedHash;
     private Coroutine continuousShootingCoroutine;
 
     [Header("Shooting Settings")]
@@ -51,6 +52,13 @@ public class PlayerTouchMovement : MonoBehaviour
     [SerializeField]
     private float continuousShootingDelay = 0.3f;
     private Coroutine delayedContinuousCoroutine;
+    
+    [Header("Animator")]
+    [SerializeField] private Animator characterAnimator;
+    [SerializeField] private string speedParam = "speed";
+    [SerializeField] private float speedDampTime = 0.1f;
+    [SerializeField] private bool normalizeSpeed = true;
+    [SerializeField] private float maxSpeedForParam = 3.5f;
 
     private IAudioService m_audioService;
     private AudioConfig m_audioConfig;
@@ -60,9 +68,9 @@ public class PlayerTouchMovement : MonoBehaviour
     private void Awake()
     {
         dragClosed = shootClosed = objectivesShown = false;
-
         m_audioService = ServiceLocator.Get<IAudioService>();
         m_audioConfig = (m_audioService as AudioService)?.Config;
+        _speedHash = Animator.StringToHash(speedParam);
     }
 
     private void OnEnable()
@@ -277,6 +285,10 @@ public class PlayerTouchMovement : MonoBehaviour
 
     private void Update()
     {
+        
+        if (!Player || !Player.enabled || !Player.isOnNavMesh) return;
+        
+        
         Vector3 scaledMovement = Player.speed * Time.deltaTime * new Vector3(
             MovementAmount.x,
             0,
@@ -312,6 +324,18 @@ public class PlayerTouchMovement : MonoBehaviour
         }
 
         wasMovingLastFrame = isMoving;
+
+        
+        if (characterAnimator)
+        {
+            float worldSpeed = (new Vector3(MovementAmount.x, 0, MovementAmount.y).magnitude) * Player.speed;
+
+            float paramValue = normalizeSpeed
+                ? Mathf.InverseLerp(0f, Mathf.Max(0.01f, maxSpeedForParam), worldSpeed)
+                : worldSpeed;
+
+            characterAnimator.SetFloat(_speedHash, paramValue, speedDampTime, Time.deltaTime);
+        }
     }
 
     private bool TryGetScreenPosition(Finger finger, out Vector2 screenPosition)

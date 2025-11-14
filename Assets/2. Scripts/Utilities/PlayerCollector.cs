@@ -27,8 +27,7 @@ public class PlayerCollector : MonoBehaviour, ICollector
     [SerializeField] private int maxHealth = 100;
 
     [SerializeField] private GameObject ragdoll;
-    [SerializeField] private GameObject armL;
-    [SerializeField] private GameObject armR;
+    [SerializeField] private GameObject[] objectsToDeactivateOnDeath;
 
     [Header("Audio")]
     [SerializeField] private AudioSource heartbeatAudioSource;
@@ -235,10 +234,12 @@ public class PlayerCollector : MonoBehaviour, ICollector
         }
 
         GetComponent<MeshCollider>().enabled = false;
-        GetComponent<MeshRenderer>().enabled = false;
-        armR.SetActive(false);
-        armL.SetActive(false);
 
+        foreach (GameObject objects in objectsToDeactivateOnDeath)
+        {
+            objects.SetActive(false);
+        }
+        
         ragdoll.SetActive(true);
     }
 }
