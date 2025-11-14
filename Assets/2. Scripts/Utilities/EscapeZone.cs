@@ -1,5 +1,6 @@
 using UnityEngine;
 using Services;
+using Services.MicroServices.AudioService;
 using Services.MicroServices.EventsServices;
 using Services.MicroServices.EventsServices.CustomEvents;
 using Services.MicroServices.GameStateService;
@@ -16,10 +17,15 @@ public class EscapeZone : MonoBehaviour
     private PlayerCollector _playerCollector;
     private Renderer _planeRenderer;
     private Material _originalMaterial;
+    private IAudioService m_audioService;
+    private AudioConfig m_audioConfig;
 
     void Start()
     {
         _playerCollector = FindObjectOfType<PlayerCollector>();
+
+        m_audioService = ServiceLocator.Get<IAudioService>();
+        m_audioConfig = (m_audioService as AudioService)?.Config;
 
         if (escapePlane != null)
         {
@@ -77,6 +83,11 @@ public class EscapeZone : MonoBehaviour
         }
 
         playerCollector.gameObject.SetActive(false);
+
+        if (m_audioService != null && m_audioConfig != null)
+        {
+            m_audioService.PlaySFX(m_audioConfig.escapeSFX);
+        }
 
         ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(true, playerCollector.TotalPoints, playerCollector.SessionCoins, playerCollector.SessionDiamonds));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.Victory);

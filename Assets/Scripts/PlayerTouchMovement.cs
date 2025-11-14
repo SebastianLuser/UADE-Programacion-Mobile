@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using _2._Scripts.UI.MainMenu;
+using Services;
+using Services.MicroServices.AudioService;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem.EnhancedTouch;
@@ -14,11 +16,15 @@ public class PlayerTouchMovement : MonoBehaviour
     private FloatingJoystick Joystick;
     [SerializeField]
     private NavMeshAgent Player;
-    
+
     [SerializeField] private string objectivesPanelName = "Objectives";
     [SerializeField] private GameObject dragTutorial;
     [SerializeField] private GameObject shootTutorial;
     [SerializeField] private PanelsController panelsController;
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource footstepAudioSource;
+    [SerializeField] private float footstepInterval = 0.5f;
     
     private Finger MovementFinger;
     private Vector2 MovementAmount;
@@ -46,9 +52,17 @@ public class PlayerTouchMovement : MonoBehaviour
     private float continuousShootingDelay = 0.3f;
     private Coroutine delayedContinuousCoroutine;
 
+    private IAudioService m_audioService;
+    private AudioConfig m_audioConfig;
+    private float lastFootstepTime;
+    private bool wasMovingLastFrame;
+
     private void Awake()
     {
         dragClosed = shootClosed = objectivesShown = false;
+
+        m_audioService = ServiceLocator.Get<IAudioService>();
+        m_audioConfig = (m_audioService as AudioService)?.Config;
     }
 
     private void OnEnable()
@@ -271,6 +285,33 @@ public class PlayerTouchMovement : MonoBehaviour
 
         Player.transform.LookAt(Player.transform.position + scaledMovement, Vector3.up);
         Player.Move(scaledMovement);
+
+        // Handle footstep sounds
+        bool isMoving = scaledMovement.magnitude > 0.01f;
+
+        if (isMoving)
+        {
+            if (!wasMovingLastFrame && footstepAudioSource != null && m_audioConfig != null)
+            {
+                // Just started moving, play footsteps in loop
+                footstepAudioSource.clip = m_audioConfig.concreteFootstepsSFX;
+                footstepAudioSource.loop = true;
+                if (!footstepAudioSource.isPlaying)
+                {
+                    footstepAudioSource.Play();
+                }
+            }
+        }
+        else
+        {
+            if (wasMovingLastFrame && footstepAudioSource != null)
+            {
+                // Just stopped moving, stop footsteps
+                footstepAudioSource.Stop();
+            }
+        }
+
+        wasMovingLastFrame = isMoving;
     }
 
     private bool TryGetScreenPosition(Finger finger, out Vector2 screenPosition)
