@@ -13,10 +13,6 @@ MonoBehaviour:
   m_Name: AudioConfig
   m_EditorClassIdentifier: Assembly-CSharp::AudioConfig
   audioMixer: {fileID: 24100000, guid: 01392e6e4e977294ea9f2a546209f31d, type: 2}
-  musicGroup: {fileID: 5881811816604382757, guid: 01392e6e4e977294ea9f2a546209f31d,
-    type: 2}
-  sfxGroup: {fileID: -2687696196534688571, guid: 01392e6e4e977294ea9f2a546209f31d,
-    type: 2}
   gameplayBackground: {fileID: 8300000, guid: b4e08a5a05a454444a13fce3b27b3865, type: 3}
   titleBackground: {fileID: 8300000, guid: ceaa30226f2efc94bbe2dd1b9e107d13, type: 3}
   maleHurtSFX: {fileID: 8300000, guid: d3de47199eeda024db3941a464247c22, type: 3}
@@ -31,7 +27,7 @@ MonoBehaviour:
   escapeSFX: {fileID: 8300000, guid: 8e5152681291cf2419e4b6b942fb5c2d, type: 3}
   clickButtonSFX: {fileID: 8300000, guid: d2053ea9a7d17134bbd9d89f8d520dc7, type: 3}
   hoverButtonSFX: {fileID: 8300000, guid: 3e1e1521d070686429c7cbaeae53c4ce, type: 3}
-  playerPistolSingleShotSFX: {fileID: 8300000, guid: 0e747211907189e4c99dde602caf61db,
+  playerPistolSingleShotSFX: {fileID: 8300000, guid: 40e655c94eec4ee4ca3bd034b281ef9c,
     type: 3}
   enemyPistolSingleShotSFX: {fileID: 8300000, guid: 3fed736caafbb96489167a90d4343175,
     type: 3}

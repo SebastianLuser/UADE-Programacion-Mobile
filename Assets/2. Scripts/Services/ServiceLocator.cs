@@ -49,12 +49,11 @@ namespace Services
             Register<IPoolObjectsService, PoolObjectsService>();
             Register<IGameStateService, GameStateService>();
             Register<IBlackboardService, BlackboardService>(true);
-            Register<IAudioService, AudioService>();
             Register<IWalletService, WalletService>(true, true);
             Register<IPlayerUpgradeService, PlayerUpgradeService>(true, true);
         }
 
-        private static void Register<TInterface, TInstance>(bool p_isSceneUnloaded = false, bool p_immediateInit = false)
+        public static void Register<TInterface, TInstance>(bool p_isSceneUnloaded = false, bool p_immediateInit = false)
             where TInterface : IGameService where TInstance : class, TInterface
         {
             var l_interfaceType = typeof(TInterface);
@@ -172,6 +171,19 @@ namespace Services
 
                 m_serviceInstances.Remove(l_type);
             }
+        }
+        
+        public static void RegisterInstance<TInterface>(TInterface instance, bool p_isSceneUnloaded = false)
+            where TInterface : class, IGameService
+        {
+            var iface = typeof(TInterface);
+            Assert.IsFalse(m_serviceDefinitions.ContainsKey(iface) || m_serviceInstances.ContainsKey(iface),
+                $"Service {iface} is already registered");
+            
+            m_serviceDefinitions.Add(iface, new ServiceDefinition(instance.GetType(), p_isSceneUnloaded));
+
+            m_serviceInstances.Add(iface, instance);
+            instance.Initialize();
         }
     }
 
