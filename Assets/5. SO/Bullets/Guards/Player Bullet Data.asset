@@ -16,5 +16,5 @@ MonoBehaviour:
   speed: 10
   damage: 25
   lifetime: 5
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  color: {r: 1, g: 1, b: 1, a: 1}
   useGravity: 0
