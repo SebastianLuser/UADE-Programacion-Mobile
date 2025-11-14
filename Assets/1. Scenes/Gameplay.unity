@@ -13704,6 +13704,18 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 506897078}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &507999900 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 146276, guid: 8f47f0431ffe1d3468b2b73df367c3df,
+    type: 3}
+  m_PrefabInstance: {fileID: 1034721745}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &509152344 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 183702, guid: 8f47f0431ffe1d3468b2b73df367c3df,
+    type: 3}
+  m_PrefabInstance: {fileID: 1034721745}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &511712622
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -26226,8 +26238,10 @@ MonoBehaviour:
   healthBar: {fileID: 1262776168}
   maxHealth: 200
   ragdoll: {fileID: 2014949153}
-  armL: {fileID: 0}
-  armR: {fileID: 0}
+  objectsToDeactivateOnDeath:
+  - {fileID: 2076869615}
+  - {fileID: 509152344}
+  - {fileID: 507999900}
 --- !u!54 &1034721756
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -53622,6 +53636,12 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 476340, guid: 9c7dfac792fe3ad4cb257117826df439,
     type: 3}
   m_PrefabInstance: {fileID: 379891768}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &2076869615 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 179870, guid: 8f47f0431ffe1d3468b2b73df367c3df,
+    type: 3}
+  m_PrefabInstance: {fileID: 1034721745}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2087079139
 PrefabInstance:
