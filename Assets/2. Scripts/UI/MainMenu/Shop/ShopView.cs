@@ -57,6 +57,12 @@ namespace _2._Scripts.UI.MainMenu.Shop
         {
             base.Show();
 
+            // Play title background music in shop
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlayMusic(m_audioConfig.titleBackground);
+            }
+
             if (backButton)
             {
                 backButton.onClick.AddListener(HandleBackClicked);
