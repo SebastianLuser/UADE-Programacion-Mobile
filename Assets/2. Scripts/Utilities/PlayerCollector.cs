@@ -202,8 +202,6 @@ public class PlayerCollector : MonoBehaviour, ICollector
 
         GetComponent<MeshCollider>().enabled = false;
         GetComponent<MeshRenderer>().enabled = false;
-        armR.SetActive(false);
-        armL.SetActive(false);
         
         ragdoll.SetActive(true);
     }
