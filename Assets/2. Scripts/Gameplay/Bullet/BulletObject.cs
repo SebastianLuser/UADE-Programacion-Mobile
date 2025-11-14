@@ -52,11 +52,13 @@ public class BulletObject : MonoBehaviour, IUpdateListener
             return;
 
         if (!p_other.TryGetComponent<IDamageable>(out var l_character))
+        {
+            Deactivate();
             return;
+        }
 
         if (l_character.GameObject == gameObject)
             return;
-
 
         l_character.TakeDamage(m_bulletData.Damage);
         Deactivate();
