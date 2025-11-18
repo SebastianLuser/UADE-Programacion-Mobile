@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollowDataSO
   <offset>k__BackingField: {x: 0, y: 0, z: 8}
   <smoothTime>k__BackingField: 0.6
-  <maxFollowSpeed>k__BackingField: 50
+  <maxFollowSpeed>k__BackingField: 60.9
   <maxAcceleration>k__BackingField: 100
   <maxDistanceFromIdeal>k__BackingField: 12
   <fixedRotationAngles>k__BackingField: {x: 70, y: 0, z: 0}

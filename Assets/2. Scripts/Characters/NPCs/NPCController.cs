@@ -1,5 +1,7 @@
 using Scripts.FSM.Models;
 using Scripts.FSM.Base.StateMachine;
+using Services;
+using Services.MicroServices.AudioService;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -12,6 +14,8 @@ public abstract class  NPCController : Character, IUseFsm
     protected NPCView view;
     protected StateMachine stateMachine;
     protected Transform player;
+    protected IAudioService m_audioService;
+    protected AudioConfig m_audioConfig;
 
     public NPCModel Model => model;
     public NPCView View => view;
@@ -20,6 +24,8 @@ public abstract class  NPCController : Character, IUseFsm
     protected override void Awake()
     {
         base.Awake();
+        m_audioService = ServiceLocator.Get<IAudioService>();
+        m_audioConfig = (m_audioService as AudioService)?.Config;
         InitializeComponents();
         InitializeAI();
         InitializeStateMachine();
@@ -97,6 +103,14 @@ public abstract class  NPCController : Character, IUseFsm
     {
         base.TakeDamage(damage);
         model?.RuntimeState.TakeDamage(damage);
+
+        // Play hurt sound based on gender
+        if (m_audioService != null && m_audioConfig != null && npcData != null)
+        {
+            AudioClip hurtSFX = npcData.gender == NPCGender.Male ? m_audioConfig.maleHurtSFX : m_audioConfig.femaleHurtSFX;
+            m_audioService.PlaySFX(hurtSFX);
+        }
+
         if (model?.RuntimeState.isAlive == false)
         {
             OnDeath();
@@ -105,6 +119,13 @@ public abstract class  NPCController : Character, IUseFsm
 
     protected override void OnDeath()
     {
+        // Play death sound based on gender
+        if (m_audioService != null && m_audioConfig != null && npcData != null)
+        {
+            AudioClip deathSFX = npcData.gender == NPCGender.Male ? m_audioConfig.maleDeathSFX : m_audioConfig.femaleDeathSFX;
+            m_audioService.PlaySFX(deathSFX);
+        }
+
         base.OnDeath();
     }
 

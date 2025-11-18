@@ -3,6 +3,7 @@ using Scripts.FSM.Base.StateMachine;
 using Scripts.FSM.Models;
 using System.Collections.Generic;
 using System.Linq;
+using Services.MicroServices.AudioService;
 using Services.MicroServices.BlackboardService;
 using Services;
 using Services.MicroServices.UpdateService;
@@ -63,7 +64,10 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     [Header("Decision Tree")]
     [SerializeField] private bool useDecisionTree = true;   // Enable/disable decision tree system
-    
+
+    [Header("Civilian Info")]
+    [SerializeField] private NPCGender gender = NPCGender.Male;
+
     [Header("Debug")]
     [SerializeField] private bool enableDebugLogs = false;
     [SerializeField] private bool canAttack = false;        // Civilians typically don't attack
@@ -97,6 +101,8 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     private Material originalMaterial;
     private Color originalColor;
     private CivilianDecisionTreeRunner decisionTreeRunner;
+    private IAudioService m_audioService;
+    private AudioConfig m_audioConfig;
 
     // Steering components (identical to Guard)
     private Vector3 _vel;
@@ -210,7 +216,9 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     private void InitializeComponents()
     {
-        
+        m_audioService = ServiceLocator.Get<IAudioService>();
+        m_audioConfig = (m_audioService as AudioService)?.Config;
+
         // Get or add PlayerDetector
         playerDetector = GetComponent<IPlayerDetector>();
         Assert.IsNotNull(playerDetector);
@@ -579,6 +587,13 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
         float previousNorm = HealthNormalized;
 
+        // Play hurt sound based on gender
+        if (m_audioService != null && m_audioConfig != null)
+        {
+            AudioClip hurtSFX = gender == NPCGender.Male ? m_audioConfig.maleHurtSFX : m_audioConfig.femaleHurtSFX;
+            m_audioService.PlaySFX(hurtSFX);
+        }
+
         base.TakeDamage(damage);
         RecalculateDyingWeight();
 
@@ -588,6 +603,18 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         }
     }
 
+    protected override void OnDeath()
+    {
+        // Play death sound based on gender
+        if (m_audioService != null && m_audioConfig != null)
+        {
+            AudioClip deathSFX = gender == NPCGender.Male ? m_audioConfig.maleDeathSFX : m_audioConfig.femaleDeathSFX;
+            m_audioService.PlaySFX(deathSFX);
+        }
+
+        base.OnDeath();
+    }
+
     /// <summary>
     /// Apply damage to player if available
     /// </summary>
@@ -595,12 +622,18 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     {
         if (player == null) return;
 
+        // Play punch sound
+        if (m_audioService != null && m_audioConfig != null)
+        {
+            m_audioService.PlaySFX(m_audioConfig.punchSFX);
+        }
+
         // Try to get player health component
         var playerHealth = player.GetComponent<IDamageable>();
         if (playerHealth != null)
         {
             playerHealth.TakeDamage(meleeDamage);
-            
+
             if (enableDebugLogs)
                 MyLogger.LogInfo($"Civilian {gameObject.name}: Dealt {meleeDamage} melee damage to player");
         }
@@ -874,43 +907,26 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
         // 2) Obstacle avoidance - SOLO ajuste lateral, NO retroceso
         Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(desiredVel, false);
-        Vector3 avoidDir = avoidedVel.sqrMagnitude > 1e-6f ? avoidedVel.normalized : Vector3.zero;
+        Vector3 avoidanceDelta = avoidedVel - desiredVel;
+        Vector3 avoidDir = avoidanceDelta.sqrMagnitude > 1e-6f ? avoidanceDelta.normalized : Vector3.zero;
 
-        // CRÍTICO: Proyectar avoidance al plano perpendicular al path
-        // Esto elimina cualquier componente que empuje hacia atrás o hacia adelante
-        if (avoidDir != Vector3.zero)
-        {
-            // Quitar componente paralela al path (solo mantener perpendicular)
-            avoidDir = Vector3.ProjectOnPlane(avoidDir, desiredDir);
-            if (avoidDir.sqrMagnitude > 1e-6f)
-                avoidDir.Normalize();
-            else
-                avoidDir = Vector3.zero; // Si quedó muy chico, ignorar
-        }
-
-        // 3) Blend conservador - path tiene MUCHA más prioridad
+        // 3) Blend adaptativo - permitir retroceder cuando la pared está enfrente
         float pathW = 1.0f;
-        float avoidW = 0.25f; // Reducido de 0.35 para dar más prioridad al path
+        float avoidW = 0.35f;
 
-        // Si el avoidance empuja contra el path, reducir aún más su peso
         if (avoidDir != Vector3.zero)
         {
-            float alignment = Vector3.Dot(desiredDir, avoidDir);
+            float oppositeFactor = Mathf.Clamp01(-Vector3.Dot(avoidDir, desiredDir));
+            // Más oposición => más peso para separarnos de la pared
+            float weightBoost = Mathf.Lerp(0f, 0.75f, oppositeFactor);
+            avoidW += weightBoost;
 
-            // Si hay conflicto (alignment negativo), reducir drásticamente
-            if (alignment < -0.1f)
-            {
-                avoidW *= 0.05f; // Casi anular el obstacle avoidance
-                Debug.DrawRay(transform.position, avoidDir * 2f, Color.red, 0.1f);
-            }
-            else
-            {
-                Debug.DrawRay(transform.position, avoidDir * 2f, Color.yellow, 0.1f);
-            }
+            Color debugColor = Color.Lerp(Color.yellow, Color.red, oppositeFactor);
+            Debug.DrawRay(transform.position, avoidDir * 2f, debugColor, 0.1f);
         }
 
-        // Blend: path + ajuste lateral mínimo
-        Vector3 blended = desiredVel + avoidDir * (avoidW * currentMaxSpeed);
+        // Blend: path + corrección (ahora puede empujar hacia atrás)
+        Vector3 blended = (desiredVel * pathW) + (avoidDir * (avoidW * currentMaxSpeed));
 
         // 4) Clamp manteniendo dirección del path
         float maxV = currentMaxSpeed;

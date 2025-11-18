@@ -67,12 +67,12 @@ namespace _2._Scripts.UI.Gameplay.Results
 
             if (resultEvent.IsVictory)
             {
-                m_view.DisplayVictory(resultEvent.Score);
+                m_view.DisplayVictory(resultEvent.Score, resultEvent.EarnedCoins, resultEvent.EarnedDiamonds);
                 m_gameStateService?.ChangeState(GameState.Victory);
             }
             else
             {
-                m_view.DisplayDefeat(resultEvent.Score);
+                m_view.DisplayDefeat(resultEvent.Score, resultEvent.EarnedCoins, resultEvent.EarnedDiamonds);
                 m_gameStateService?.ChangeState(GameState.GameOver);
             }
 
@@ -155,5 +155,6 @@ namespace _2._Scripts.UI.Gameplay.Results
             m_gameStateService?.ChangeState(GameState.Menu);
             SceneManager.LoadScene(mainMenuSceneName);
         }
+
     }
 }

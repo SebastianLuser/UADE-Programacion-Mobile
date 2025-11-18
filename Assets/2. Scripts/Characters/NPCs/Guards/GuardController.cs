@@ -1,6 +1,7 @@
 using UnityEngine;
 using Scripts.FSM.Base.StateMachine;
 using System.Collections.Generic;
+using Services.MicroServices.AudioService;
 using Services.MicroServices.BlackboardService;
 using Game.AI.Steering;
 using Scripts.FSM.Models;
@@ -28,6 +29,10 @@ public class GuardController : NPCController, ICombat, IAIMovementController, IU
     // Steering components
     private Vector3 _vel;
     private ObstacleAvoidance obstacleAvoidance;
+
+    // Audio
+    private IAudioService m_audioService;
+    private AudioConfig m_audioConfig;
 
     // Movement state for IAIMovementController
     private Vector3 currentMovementDirection;
@@ -66,7 +71,10 @@ public class GuardController : NPCController, ICombat, IAIMovementController, IU
         }
 
         InitializeAISystem();
-        
+
+        m_audioService = ServiceLocator.Get<IAudioService>();
+        m_audioConfig = (m_audioService as AudioService)?.Config;
+
         SubscribeUpdateService();
     }
 
@@ -157,6 +165,11 @@ public class GuardController : NPCController, ICombat, IAIMovementController, IU
 
         model.RuntimeState.ResetStateTimer();
         CreateBullet(direction);
+
+        if (m_audioService != null && m_audioConfig != null)
+        {
+            m_audioService.PlaySFX(m_audioConfig.enemyPistolSingleShotSFX);
+        }
     }
 
     public bool CanShoot()

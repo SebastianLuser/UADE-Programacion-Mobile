@@ -2,6 +2,7 @@ using System;
 using ScriptableObjects.Bullets;
 using Services;
 using Services.MicroServices.UpdateService;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public enum BulletOwner
@@ -64,16 +65,18 @@ public class BulletObject : MonoBehaviour, IUpdateListener
 
     private void OnTriggerEnter(Collider p_other)
     {
-        m_isActive = true;
+        //m_isActive = true;
         if (!m_isActive)
             return;
 
         if (!p_other.TryGetComponent<IDamageable>(out var l_character))
+        {
+            Deactivate();
             return;
+        }
 
         if (l_character.GameObject == gameObject)
             return;
-
 
         l_character.TakeDamage(m_bulletData.Damage);
 

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Services;
+using Services.MicroServices.AudioService;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,10 +27,41 @@ namespace _2._Scripts.UI.MainMenu.Shop
 
         public event Action<ShopCategory, float> OnCategorySelected;
         public event Action OnBackClicked;
+        public event Action<ShopModel.ShopItemDefinition> OnBuyRequested;
+
+        private IAudioService m_audioService;
+        private AudioConfig m_audioConfig;
+
+        private void Awake()
+        {
+            m_audioService = ServiceLocator.Get<IAudioService>();
+            m_audioConfig = (m_audioService as AudioService)?.Config;
+
+            for (var i = 0; i < itemSlots.Length; i++)
+            {
+                if (!itemSlots[i]) continue;
+                itemSlots[i].OnBuyClicked += HandleBuyClicked;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            for (var i = 0; i < itemSlots.Length; i++)
+            {
+                if (!itemSlots[i]) continue;
+                itemSlots[i].OnBuyClicked -= HandleBuyClicked;
+            }
+        }
 
         public override void Show()
         {
             base.Show();
+
+            // Play title background music in shop
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlayMusic(m_audioConfig.titleBackground);
+            }
 
             if (backButton)
             {
@@ -67,6 +100,7 @@ namespace _2._Scripts.UI.MainMenu.Shop
             base.Shutdown();
             OnCategorySelected = null;
             OnBackClicked = null;
+            OnBuyRequested = null;
         }
 
         public void SetCurrency(int coins, int diamonds)
@@ -105,12 +139,32 @@ namespace _2._Scripts.UI.MainMenu.Shop
 
         private void HandleCategoryClicked(CategoryTab tab)
         {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+            }
+
             OnCategorySelected?.Invoke(tab.category, tab.scrollPosition);
         }
 
         private void HandleBackClicked()
         {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+            }
+
             OnBackClicked?.Invoke();
+        }
+
+        private void HandleBuyClicked(ShopModel.ShopItemDefinition item)
+        {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.cashRegisterSFX);
+            }
+
+            OnBuyRequested?.Invoke(item);
         }
     }
 }

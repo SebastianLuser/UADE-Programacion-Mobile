@@ -14,8 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MainCharacterDataSO
   maxHealth: 100
   moveSpeed: 5
-  shootCooldown: 0.5
+  shootCooldown: 0.2
   rotationSpeed: 10
   characterName: Character
   characterColor: {r: 1, g: 1, b: 1, a: 1}
-  bulletData: {fileID: 11400000, guid: 6756e0916d9dd8a439d2c586d44476db, type: 2}
+  bulletData: {fileID: 11400000, guid: 4ab8c53e783679b4d8d3f6f419a46269, type: 2}
+  magSize: 10
+  reloadTime: 2.5

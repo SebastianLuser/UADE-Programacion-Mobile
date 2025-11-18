@@ -1,5 +1,6 @@
 using System.Collections;
 using Services;
+using Services.MicroServices.AudioService;
 using Services.MicroServices.EventsServices;
 using Services.MicroServices.EventsServices.CustomEvents;
 using Services.MicroServices.GameStateService;
@@ -26,31 +27,45 @@ public class PlayerCollector : MonoBehaviour, ICollector
     [SerializeField] private int maxHealth = 100;
 
     [SerializeField] private GameObject ragdoll;
-    [SerializeField] private GameObject armL;
-    [SerializeField] private GameObject armR;
+    [SerializeField] private GameObject[] objectsToDeactivateOnDeath;
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource heartbeatAudioSource;
 
     private int _totalPoints = 0;
+    private int _sessionCoinsCollected = 0;
+    private int _sessionDiamondsCollected = 0;
     private bool _canEscape = false;
     private int _currentHealth;
     private bool _isDead;
     private MainCharacter _mainCharacter;
     private PlayerTouchMovement _playerMovement;
-
+    private IAudioService m_audioService;
+    private AudioConfig m_audioConfig;
+    private bool _isHeartbeatPlaying = false;
+    
     /// <summary>
     /// Total points collected (read-only)
     /// </summary>
     public int TotalPoints => _totalPoints;
+    public int SessionCoins => _sessionCoinsCollected;
+    public int SessionDiamonds => _sessionDiamondsCollected;
 
     /// <summary>
     /// Whether player can escape (read-only)
     /// </summary>
     public bool CanEscape => _canEscape;
-
+    
     void Start()
     {
+        m_audioService = ServiceLocator.Get<IAudioService>();
+        m_audioConfig = (m_audioService as AudioService)?.Config;
+        
         _mainCharacter = GetComponent<MainCharacter>();
         _playerMovement = GetComponent<PlayerTouchMovement>();
         _isDead = false;
+        _sessionCoinsCollected = 0;
+        _sessionDiamondsCollected = 0;
 
         if (_mainCharacter != null)
         {
@@ -64,6 +79,8 @@ public class PlayerCollector : MonoBehaviour, ICollector
 
         UpdateHealthBar();
         UpdatePointsDisplay();
+        
+        m_audioService.PlayMusic(m_audioConfig.gameplayBackground);
     }
 
     /// <summary>
@@ -74,24 +91,23 @@ public class PlayerCollector : MonoBehaviour, ICollector
     {
         _totalPoints += points;
 
-        // Analytics Event 1: Item collected
-        if (UGS_Analytics.Instance != null)
-        {
-            UGS_Analytics.Instance.LogItemCollected(points, _totalPoints);
-        }
-
         if (!_canEscape && _totalPoints >= escapeThreshold)
         {
             _canEscape = true;
-
-            // Analytics Event 2: Escape unlocked
-            if (UGS_Analytics.Instance != null)
-            {
-                UGS_Analytics.Instance.LogEscapeUnlocked(_totalPoints, Time.timeSinceLevelLoad);
-            }
+            m_audioService.PlaySFX(m_audioConfig.canEscapeSFX);
         }
 
         UpdatePointsDisplay();
+    }
+
+    public void RegisterCoinPickup(int coinsAmount)
+    {
+        _sessionCoinsCollected += Mathf.Max(0, coinsAmount);
+    }
+
+    public void RegisterGemPickup(int diamondsAmount)
+    {
+        _sessionDiamondsCollected += Mathf.Max(0, diamondsAmount);
     }
 
     /// <summary>
@@ -128,20 +144,44 @@ public class PlayerCollector : MonoBehaviour, ICollector
         if (collectable != null)
         {
             collectable.Collect(this);
-            return;
+            m_audioService.PlaySFX(m_audioConfig.collectItemSFX);
         }
-
     }
 
     public void SyncHealth(float currentHealth, float maxHealthValue)
     {
-        if (_isDead)
-        {
-            return;
-        }
+        if (_isDead) return;
+
+        int previousHealth = _currentHealth;
 
         maxHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealthValue));
         _currentHealth = Mathf.Clamp(Mathf.RoundToInt(currentHealth), 0, maxHealth);
+
+        if (_currentHealth < previousHealth)
+        {
+            m_audioService.PlaySFX(m_audioConfig.maleHurtSFX);
+        }
+
+        // Control heartbeat sound when health is low (below 30%)
+        float healthPercentage = (float)_currentHealth / maxHealth;
+        if (healthPercentage < 0.3f && healthPercentage > 0f)
+        {
+            if (!_isHeartbeatPlaying && heartbeatAudioSource != null && m_audioConfig != null)
+            {
+                heartbeatAudioSource.clip = m_audioConfig.heartBeatingSFX;
+                heartbeatAudioSource.loop = true;
+                heartbeatAudioSource.Play();
+                _isHeartbeatPlaying = true;
+            }
+        }
+        else
+        {
+            if (_isHeartbeatPlaying && heartbeatAudioSource != null)
+            {
+                heartbeatAudioSource.Stop();
+                _isHeartbeatPlaying = false;
+            }
+        }
 
         UpdateHealthBar();
         if (_currentHealth <= 0)
@@ -173,15 +213,19 @@ public class PlayerCollector : MonoBehaviour, ICollector
 
         _isDead = true;
         _currentHealth = 0;
+
         UpdateHealthBar();
 
-        // Analytics Event 3: Player death
-        if (UGS_Analytics.Instance != null)
+        // Stop heartbeat if playing
+        if (_isHeartbeatPlaying && heartbeatAudioSource != null)
         {
-            UGS_Analytics.Instance.LogPlayerDeath(_totalPoints, _currentHealth);
+            heartbeatAudioSource.Stop();
+            _isHeartbeatPlaying = false;
         }
 
-        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints));
+        m_audioService.PlaySFX(m_audioConfig.maleDeathSFX);
+
+        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints, _sessionCoinsCollected, _sessionDiamondsCollected));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.GameOver);
 
         if (_playerMovement)
@@ -190,9 +234,11 @@ public class PlayerCollector : MonoBehaviour, ICollector
         }
 
         GetComponent<MeshCollider>().enabled = false;
-        GetComponent<MeshRenderer>().enabled = false;
-        armR.SetActive(false);
-        armL.SetActive(false);
+
+        foreach (GameObject objects in objectsToDeactivateOnDeath)
+        {
+            objects.SetActive(false);
+        }
         
         ragdoll.SetActive(true);
     }

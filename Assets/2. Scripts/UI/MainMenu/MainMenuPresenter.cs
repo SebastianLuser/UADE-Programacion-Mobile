@@ -1,3 +1,5 @@
+using Services;
+using Services.MicroServices.UserDataService.Wallet;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -12,6 +14,7 @@ namespace _2._Scripts.UI.MainMenu
         
         private MainMenuModel m_mainModel;
         private MainMenuView m_mainView;
+        private IWalletService m_walletService;
         
         public override void Initialize()
         {
@@ -29,6 +32,10 @@ namespace _2._Scripts.UI.MainMenu
             m_mainView.OnLoadoutClicked += OnLoadoutClickedHandler;
             m_mainView.OnShopClicked += OnShopClickedHandler;
             m_mainView.OnSettingsClicked += OnSettingsClickedHandler;
+
+            m_walletService = ServiceLocator.Get<IWalletService>();
+            m_walletService.OnWalletChanged += OnWalletChangedHandler;
+            OnWalletChangedHandler(m_walletService.Coins, m_walletService.Diamonds);
         }
         
         public override void Shutdown()
@@ -42,6 +49,11 @@ namespace _2._Scripts.UI.MainMenu
             m_mainView.OnLoadoutClicked -= OnLoadoutClickedHandler;
             m_mainView.OnShopClicked -= OnShopClickedHandler;
             m_mainView.OnSettingsClicked -= OnSettingsClickedHandler;
+
+            if (m_walletService != null)
+            {
+                m_walletService.OnWalletChanged -= OnWalletChangedHandler;
+            }
         }
 
         private void OnChangedCoinsHandler(int p_coins)
@@ -81,6 +93,11 @@ namespace _2._Scripts.UI.MainMenu
         {
             Hide();
             panelsController.ShowUI(settingsUIName);
+        }
+
+        private void OnWalletChangedHandler(int coins, int diamonds)
+        {
+            m_mainModel.SetWallet(coins, diamonds);
         }
     }
 }

@@ -20,27 +20,53 @@ namespace DevelopmentUtilities
             if (m_availables.Count > 0)
             {
                 var l_obj = m_availables.Dequeue();
-                while (l_obj == null &&  m_availables.Count > 0)
+                while (l_obj == null && m_availables.Count > 0)
                 {
                     l_obj = m_availables.Dequeue();
                 }
+
                 if (l_obj == null)
-                    l_obj = Object.Instantiate(m_prefab, m_parent);
+                {
+                    l_obj = InstantiateInactive();
+                }
+
                 return l_obj;
             }
 
-            var l_newObj = Object.Instantiate(m_prefab, m_parent);
-            return l_newObj;
+            return InstantiateInactive();
         }
 
         public void ReturnToPool(T p_poolEntry)
         {
+            if (p_poolEntry == null)
+                return;
+
+            SetActiveState(p_poolEntry, false);
             m_availables.Enqueue(p_poolEntry);
         }
 
         public void ClearData()
         {
             m_availables.Clear();
+        }
+
+        private T InstantiateInactive()
+        {
+            var l_instance = Object.Instantiate(m_prefab, m_parent);
+            SetActiveState(l_instance, false);
+            return l_instance;
+        }
+
+        private static void SetActiveState(T p_object, bool p_active)
+        {
+            if (p_object is Component l_component)
+            {
+                l_component.gameObject.SetActive(p_active);
+            }
+            else if (p_object is GameObject l_gameObject)
+            {
+                l_gameObject.SetActive(p_active);
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Game.Upgrades;
 using UnityEngine;
 
 namespace _2._Scripts.UI.MainMenu.Shop
@@ -19,6 +20,9 @@ namespace _2._Scripts.UI.MainMenu.Shop
             public bool showSaleBadge;
             [Tooltip("Used to define the order inside the carousel.")]
             public int order;
+            [Header("Upgrade Effect")]
+            public PlayerUpgradeType upgradeType;
+            public float upgradeValue;
         }
 
         [SerializeField] private List<ShopItemDefinition> placeholderItems = new();

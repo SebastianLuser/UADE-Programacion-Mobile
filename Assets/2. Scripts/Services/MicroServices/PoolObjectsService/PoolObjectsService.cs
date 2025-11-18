@@ -7,40 +7,55 @@ namespace Services.MicroServices.PoolObjectsService
 {
     public class PoolObjectsService : IPoolObjectsService
     {
-        private Dictionary<Type, IPoolWrapper> m_poolWrappers;
+        private Dictionary<Object, IPoolWrapper> m_prefabPools;
+        private Dictionary<Object, IPoolWrapper> m_instanceLookup;
         
         public void Initialize()
         {
-            m_poolWrappers = new Dictionary<Type, IPoolWrapper>();
+            m_prefabPools = new Dictionary<Object, IPoolWrapper>();
+            m_instanceLookup = new Dictionary<Object, IPoolWrapper>();
         }
 
         public T GetOrCreateObject<T>(T p_prefab, Transform p_content = null) where T : Object
         {
-            var l_type = typeof(T);
+            if (p_prefab == null)
+                throw new ArgumentNullException(nameof(p_prefab), "Prefab cannot be null.");
 
-            if (m_poolWrappers.TryGetValue(l_type, out var l_poolWrapper))
+            if (!m_prefabPools.TryGetValue(p_prefab, out var l_poolWrapper))
             {
-                if (l_poolWrapper is PoolWrapper<T> l_wrapper)
-                    return l_wrapper.GetOrCreate();
+                l_poolWrapper = new PoolWrapper<T>(p_prefab, p_content);
+                m_prefabPools.Add(p_prefab, l_poolWrapper);
             }
-            
-            var l_newPoolWrapper = new PoolWrapper<T>(p_prefab, p_content);
-            m_poolWrappers.Add(l_type, l_newPoolWrapper);
-            return l_newPoolWrapper.GetOrCreate();
+
+            if (l_poolWrapper is not PoolWrapper<T> l_wrapper)
+                throw new InvalidOperationException($"Pool wrapper for prefab {p_prefab.name} is not compatible with type {typeof(T)}.");
+
+            var l_instance = l_wrapper.GetOrCreate();
+            m_instanceLookup[l_instance] = l_poolWrapper;
+            return l_instance;
         }
 
         public void ReturnObject<T>(T p_object) where T : Object
         {
-            var l_type = typeof(T);
+            if (p_object == null)
+                return;
 
-            if (!m_poolWrappers.TryGetValue(l_type, out var l_poolWrapper))
+            if (!m_instanceLookup.TryGetValue(p_object, out var l_poolWrapper))
             {
                 Object.Destroy(p_object);
                 return;
             }
-            
+
+            m_instanceLookup.Remove(p_object);
+
             if (l_poolWrapper is PoolWrapper<T> l_wrapper)
+            {
                 l_wrapper.ReturnToPool(p_object);
+            }
+            else
+            {
+                Object.Destroy(p_object);
+            }
         }
     }
 }

@@ -1,3 +1,5 @@
+using Services;
+using Services.MicroServices.UserDataService.Wallet;
 using UnityEngine;
 
 /// <summary>
@@ -8,6 +10,7 @@ public class CollectableGem : MonoBehaviour, ICollectable
     [Header("Item Settings")]
     [SerializeField] private int pointValue = 50;
     [SerializeField] private string itemName = "Gem";
+    [SerializeField] private int walletReward = 1;
 
     /// <summary>
     /// Points awarded when collected
@@ -28,6 +31,13 @@ public class CollectableGem : MonoBehaviour, ICollectable
         Debug.Log($"Collected {ItemName} worth {Points} points!");
 
         collector.AddPoints(Points);
+
+        ServiceLocator.Get<IWalletService>()?.AddDiamonds(walletReward);
+
+        if (collector is PlayerCollector playerCollector)
+        {
+            playerCollector.RegisterGemPickup(walletReward);
+        }
 
         gameObject.SetActive(false);
     }

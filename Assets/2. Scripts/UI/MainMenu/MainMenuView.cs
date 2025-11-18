@@ -1,4 +1,6 @@
 using System;
+using Services;
+using Services.MicroServices.AudioService;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,7 +11,7 @@ namespace _2._Scripts.UI.MainMenu
     {
         [SerializeField] private TextMeshProUGUI coinsText;
         [SerializeField] private TextMeshProUGUI diamondText;
-        
+
         [SerializeField] private Button playButton;
         [SerializeField] private Button loadoutButton;
         [SerializeField] private Button shopButton;
@@ -20,6 +22,20 @@ namespace _2._Scripts.UI.MainMenu
         public event Action OnShopClicked;
         public event Action OnSettingsClicked;
 
+        private IAudioService m_audioService;
+        private AudioConfig m_audioConfig;
+
+        private void Awake()
+        {
+            m_audioService = ServiceLocator.Get<IAudioService>();
+            m_audioConfig = (m_audioService as AudioService)?.Config;
+            
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlayMusic(m_audioConfig.titleBackground);
+            }
+        }
+
         public override void Initialize(UIPresenter p_presenter)
         {
             base.Initialize(p_presenter);
@@ -29,6 +45,7 @@ namespace _2._Scripts.UI.MainMenu
         public override void Show()
         {
             base.Show();
+
             playButton.onClick.AddListener(OnPlayButtonHandler);
             loadoutButton.onClick.AddListener(OnLoadoutButtonHandler);
             shopButton.onClick.AddListener(OnShopButtonHandler);
@@ -57,21 +74,41 @@ namespace _2._Scripts.UI.MainMenu
 
         private void OnPlayButtonHandler()
         {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+            }
+
             OnPlayClicked?.Invoke();
         }
-        
+
         private void OnLoadoutButtonHandler()
         {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+            }
+
             OnLoadoutClicked?.Invoke();
         }
 
         private void OnShopButtonHandler()
         {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+            }
+
             OnShopClicked?.Invoke();
         }
 
         private void OnSettingsButtonHandler()
         {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+            }
+
             OnSettingsClicked?.Invoke();
         }
         

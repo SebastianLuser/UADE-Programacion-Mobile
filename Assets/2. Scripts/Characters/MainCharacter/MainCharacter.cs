@@ -1,17 +1,24 @@
 using System;
+using System.Collections;
 using ScriptableObjects.Bullets;
 using Services;
+using Services.MicroServices.AudioService;
 using Services.MicroServices.PoolObjectsService;
+using Services.MicroServices.UserDataService.PlayerUpgrades;
 using UnityEngine;
 
 public class MainCharacter : BaseCharacter, ICombat
 {
     [SerializeField] private MainCharacterDataSO mainCharacterData;
-    
+
     private float lastShootTime;
     private Rigidbody rb;
     private Vector3 lastMoveDirection;
     private PlayerCollector playerCollector;
+    private float currentMagSize;
+    private IPlayerUpgradeService m_upgradeService;
+    private IAudioService m_audioService;
+    private AudioConfig m_audioConfig;
 
     private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData.rotationSpeed;
     private BulletData BulletData => mainCharacterData?.bulletData;
@@ -20,13 +27,42 @@ public class MainCharacter : BaseCharacter, ICombat
 
     protected override void Awake()
     {
+        PrepareRuntimeData();
         base.Awake();
         rb = GetComponent<Rigidbody>();
         playerCollector = GetComponent<PlayerCollector>();
-        
+        currentMagSize = mainCharacterData != null ? mainCharacterData.magSize : currentMagSize;
+
+        m_audioService = ServiceLocator.Get<IAudioService>();
+        m_audioConfig = (m_audioService as AudioService)?.Config;
+
         if (rb == null)
         {
             MyLogger.LogError($"{gameObject.name}: Rigidbody component required for MainCharacter2!");
+        }
+    }
+
+    private void PrepareRuntimeData()
+    {
+        if (mainCharacterData != null)
+        {
+            var cloned = ScriptableObject.Instantiate(mainCharacterData);
+            if (cloned.bulletData != null)
+            {
+                cloned.bulletData = ScriptableObject.Instantiate(cloned.bulletData);
+            }
+            mainCharacterData = cloned;
+            characterData = cloned;
+        }
+        else if (characterData != null)
+        {
+            characterData = ScriptableObject.Instantiate(characterData);
+        }
+
+        m_upgradeService = ServiceLocator.Get<IPlayerUpgradeService>();
+        if (m_upgradeService != null && mainCharacterData != null)
+        {
+            m_upgradeService.ApplyUpgrades(mainCharacterData);
         }
     }
     
@@ -46,14 +82,35 @@ public class MainCharacter : BaseCharacter, ICombat
     public override void Shoot(Vector3 direction)
     {
         if (!isAlive || !CanShoot()) return;
-        
+
         lastShootTime = Time.time;
         CreateBullet(direction);
+        currentMagSize--;
+
+        if (m_audioService != null && m_audioConfig != null)
+        {
+            m_audioService.PlaySFX(m_audioConfig.playerPistolSingleShotSFX);
+        }
     }
     
     public bool CanShoot()
     {
-        return Time.time >= lastShootTime + characterData.shootCooldown;
+        if (mainCharacterData.magSize != 0)
+        {
+            return Time.time >= lastShootTime + characterData.shootCooldown;   
+        }
+        else
+        {
+            return Time.time >= lastShootTime + mainCharacterData.reloadTime;
+            StartCoroutine(ReloadGun());
+        }
+    }
+    
+    private IEnumerator ReloadGun()
+    {
+        yield return new WaitForSeconds(mainCharacterData.reloadTime);
+
+        currentMagSize = mainCharacterData.magSize;
     }
     
     private void CreateBullet(Vector3 p_direction)
