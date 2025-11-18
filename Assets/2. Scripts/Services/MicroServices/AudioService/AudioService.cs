@@ -1,35 +1,68 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Audio;
+using Object = UnityEngine.Object;
 
 namespace Services.MicroServices.AudioService
 {
-    public class AudioService : IAudioService
+    [DefaultExecutionOrder(-10000)]
+    public class AudioService : MonoBehaviour, IAudioService
     {
-        private const string MASTER_VOLUME_PARAM = "MasterVolume";
-        private const string MUSIC_VOLUME_PARAM = "MusicVolume";
-        private const string SFX_VOLUME_PARAM = "SFXVolume";
+        const string MASTER = "MasterVolume", MUSIC = "MusicVolume", SFX = "SFXVolume";
+        GameObject m_root;
 
-        private AudioSource m_musicSource;
-        private AudioSource m_sfxSource;
+        public AudioConfig Config;
         
-        public AudioConfig Config { get; set; }
+        private static AudioService _instance;
+        
+        [Header("Audio Sources")]
+        [SerializeField] private AudioSource m_musicSource;
+        [SerializeField] private AudioSource m_sfxSource;
 
-        public void Initialize()
+        public void Initialize() { }
+
+        private void Awake()
         {
+            if (_instance != null && _instance != this) { Destroy(gameObject); return; }
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+            
+            if (!m_musicSource)
+            {
+                var go = new GameObject("~MusicSource");
+                DontDestroyOnLoad(go);
+                m_musicSource = go.AddComponent<AudioSource>();
+                m_musicSource.playOnAwake = false;
+                m_musicSource.loop = true;
+                m_musicSource.spatialBlend = 0f;
+            }
+            else m_musicSource.spatialBlend = 0f;
+
+            if (!m_sfxSource)
+            {
+                var go = new GameObject("~SFXSource");
+                DontDestroyOnLoad(go);
+                m_sfxSource = go.AddComponent<AudioSource>();
+                m_sfxSource.playOnAwake = false;
+                m_sfxSource.spatialBlend = 0f;
+            }
+            else m_sfxSource.spatialBlend = 0f;
+            
+            ServiceLocator.RegisterInstance<IAudioService>(this);
         }
-        public void SetAudioSources(AudioSource p_musicSource, AudioSource p_sfxSource)
+
+        public void SetAudioSources(AudioSource music, AudioSource sfx)
         {
-            m_musicSource = p_musicSource;
-            m_sfxSource = p_sfxSource;
+            if (music)  { Object.DontDestroyOnLoad(music.gameObject);  m_musicSource = music;  m_musicSource.spatialBlend = 0f; }
+            if (sfx)    { Object.DontDestroyOnLoad(sfx.gameObject);    m_sfxSource   = sfx;    m_sfxSource.spatialBlend   = 0f; }
         }
-
-        public void PlayMusic(AudioClip p_clip, bool p_loop = true)
+        
+        public void PlayMusic(AudioClip clip, bool loop = true)
         {
-            if (p_clip == null || m_musicSource == null) return;
-            if (m_musicSource.clip == p_clip && m_musicSource.isPlaying) return;
-
-            m_musicSource.clip = p_clip;
-            m_musicSource.loop = p_loop;
+            if (!clip) return;
+            if (m_musicSource.clip == clip && m_musicSource.isPlaying) return;
+            m_musicSource.clip = clip;
+            m_musicSource.loop = loop;
             m_musicSource.Play();
         }
 
@@ -51,10 +84,11 @@ namespace Services.MicroServices.AudioService
                 m_musicSource.UnPause();
         }
 
-        public void PlaySFX(AudioClip p_clip)
+        public void PlaySFX(AudioClip clip)
         {
-            if (p_clip == null || m_sfxSource == null) return;
-            m_sfxSource.PlayOneShot(p_clip);
+            if (!clip) return;
+            if (!clip.preloadAudioData) clip.LoadAudioData();
+            m_sfxSource.PlayOneShot(clip);
         }
 
         public bool IsMusicPlaying()
@@ -71,7 +105,7 @@ namespace Services.MicroServices.AudioService
                 return;
             }
 
-            SetMixerVolume(MUSIC_VOLUME_PARAM, p_volume);
+            SetMixerVolume(MUSIC, p_volume);
         }
 
         public void SetSFXVolume(float p_volume)
@@ -83,13 +117,13 @@ namespace Services.MicroServices.AudioService
                 return;
             }
 
-            SetMixerVolume(SFX_VOLUME_PARAM, p_volume);
+            SetMixerVolume(SFX, p_volume);
         }
 
         public void SetMasterVolume(float p_volume)
         {
             if (Config?.audioMixer == null) return;
-            SetMixerVolume(MASTER_VOLUME_PARAM, p_volume);
+            SetMixerVolume(MASTER, p_volume);
         }
 
         private void SetMixerVolume(string p_parameterName, float p_normalizedVolume)

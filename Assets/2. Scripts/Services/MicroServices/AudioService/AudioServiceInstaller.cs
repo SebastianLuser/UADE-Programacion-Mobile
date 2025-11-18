@@ -2,6 +2,7 @@
 using Services.MicroServices.AudioService;
 using UnityEngine;
 
+[DefaultExecutionOrder(-1000)]
 public class AudioServiceInstaller : MonoBehaviour
 {
     [Header("Configuration")]
@@ -10,6 +11,7 @@ public class AudioServiceInstaller : MonoBehaviour
     [Header("Audio Sources")]
     [SerializeField] private AudioSource musicSource;
     [SerializeField] private AudioSource sfxSource;
+    
     private void Awake()
     {
         if (audioConfig == null || musicSource == null || sfxSource == null)

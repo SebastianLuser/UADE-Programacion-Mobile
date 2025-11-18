@@ -29,6 +29,11 @@ namespace _2._Scripts.UI.MainMenu
         {
             m_audioService = ServiceLocator.Get<IAudioService>();
             m_audioConfig = (m_audioService as AudioService)?.Config;
+            
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlayMusic(m_audioConfig.titleBackground);
+            }
         }
 
         public override void Initialize(UIPresenter p_presenter)
@@ -40,12 +45,6 @@ namespace _2._Scripts.UI.MainMenu
         public override void Show()
         {
             base.Show();
-
-            // Play title background music
-            if (m_audioService != null && m_audioConfig != null)
-            {
-                m_audioService.PlayMusic(m_audioConfig.titleBackground);
-            }
 
             playButton.onClick.AddListener(OnPlayButtonHandler);
             loadoutButton.onClick.AddListener(OnLoadoutButtonHandler);
