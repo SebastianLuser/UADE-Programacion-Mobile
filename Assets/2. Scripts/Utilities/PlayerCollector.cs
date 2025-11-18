@@ -91,10 +91,20 @@ public class PlayerCollector : MonoBehaviour, ICollector
     {
         _totalPoints += points;
 
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogItemCollected(points, _totalPoints);
+        }
+
         if (!_canEscape && _totalPoints >= escapeThreshold)
         {
             _canEscape = true;
             m_audioService.PlaySFX(m_audioConfig.canEscapeSFX);
+
+            if (UGS_Analytics.Instance != null)
+            {
+                UGS_Analytics.Instance.LogEscapeUnlocked(_totalPoints, Time.timeSinceLevelLoad);
+            }
         }
 
         UpdatePointsDisplay();
@@ -224,6 +234,11 @@ public class PlayerCollector : MonoBehaviour, ICollector
         }
 
         m_audioService.PlaySFX(m_audioConfig.maleDeathSFX);
+
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogPlayerDeath(_totalPoints, _currentHealth);
+        }
 
         ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints, _sessionCoinsCollected, _sessionDiamondsCollected));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.GameOver);

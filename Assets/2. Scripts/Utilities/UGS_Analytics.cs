@@ -153,6 +153,19 @@ public class UGS_Analytics : MonoBehaviour
         Debug.Log($"Analytics: Shop opened from {sourcePanel}");
     }
 
+    // Event 7a: Shop category viewed
+    public void LogShopCategoryViewed(string categoryName, float scrollPosition)
+    {
+        var ev = new CustomEvent("shopCategoryViewed")
+        {
+            ["category"] = categoryName,
+            ["scroll_position"] = scrollPosition,
+            ["scene"] = SceneManager.GetActiveScene().name
+        };
+        AnalyticsService.Instance.RecordEvent(ev);
+        Debug.Log($"Analytics: Shop category viewed - {categoryName} (scroll {scrollPosition:F2})");
+    }
+
     // Event 7b: Escape zone reached (level completion trigger)
     public void LogEscapeZoneReached(int totalPoints, float timeSinceStartSeconds)
     {
@@ -164,6 +177,46 @@ public class UGS_Analytics : MonoBehaviour
         };
         AnalyticsService.Instance.RecordEvent(ev);
         Debug.Log($"Analytics: Escape zone reached after {timeSinceStartSeconds:F1}s with {totalPoints} points");
+    }
+
+    // Event 7c: Shop purchase attempt
+    public void LogShopPurchaseAttempt(string itemId, string currency, int price)
+    {
+        var ev = new CustomEvent("shopPurchaseAttempt")
+        {
+            ["item_id"] = itemId,
+            ["currency"] = currency,
+            ["price"] = price,
+            ["scene"] = SceneManager.GetActiveScene().name
+        };
+        AnalyticsService.Instance.RecordEvent(ev);
+        Debug.Log($"Analytics: Shop purchase attempt - {itemId} for {price} {currency}");
+    }
+
+    // Event 7d: Shop purchase success
+    public void LogShopPurchaseSuccess(string itemId, string currency, int price)
+    {
+        var ev = new CustomEvent("shopPurchaseSuccess")
+        {
+            ["item_id"] = itemId,
+            ["currency"] = currency,
+            ["price"] = price,
+            ["scene"] = SceneManager.GetActiveScene().name
+        };
+        AnalyticsService.Instance.RecordEvent(ev);
+        Debug.Log($"Analytics: Shop purchase success - {itemId} for {price} {currency}");
+    }
+
+    // Event 7e: Shop closed without purchase
+    public void LogShopClosedWithoutPurchase(float timeInShopSeconds)
+    {
+        var ev = new CustomEvent("shopClosedWithoutPurchase")
+        {
+            ["time_in_shop"] = timeInShopSeconds,
+            ["scene"] = SceneManager.GetActiveScene().name
+        };
+        AnalyticsService.Instance.RecordEvent(ev);
+        Debug.Log($"Analytics: Shop closed without purchase after {timeInShopSeconds:F1}s");
     }
 
     // Event 8: Session completed (victory or defeat)
