@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8108393f1d779c744bead46d3653a802, type: 3}
   m_Name: Guard
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
-  maxHealth: 100
+  maxHealth: 200
   moveSpeed: 5
   shootCooldown: 0.5
   rotationSpeed: 10

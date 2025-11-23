@@ -38,7 +38,7 @@ namespace Scripts.FSM.Base.StateMachine
 
             float distanceToPlayer = Vector3.Distance(guard.transform.position, target.position);
 
-            // If too far from attack range, pursue the player using steering
+            // If too far from attackrange, pursue the player using steering
             if (distanceToPlayer > guard.AttackRange)
             {
                 // Use Pursuit behavior for intelligent chasing
@@ -61,8 +61,15 @@ namespace Scripts.FSM.Base.StateMachine
             }
             else
             {
-                // Within attack range - stop moving and attack
-                guard.ApplySteering(Vector3.zero);
+                // Within attack range - apply braking force to stop
+                // Using Arrive behavior with current position as target causes deceleration
+                Vector3 currentVel = guard.CurrentVelocity;
+                if (currentVel.sqrMagnitude > 0.01f)
+                {
+                    // Apply braking force opposite to current velocity
+                    Vector3 brakingForce = -currentVel * guard.MaxForce;
+                    guard.ApplySteering(brakingForce);
+                }
 
                 // Face the target
                 Vector3 direction = (target.position - guard.transform.position).normalized;

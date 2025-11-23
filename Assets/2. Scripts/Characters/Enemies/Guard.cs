@@ -55,6 +55,20 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float avoidRadius = 2f;
     [SerializeField] private float avoidAngle = 90f;
     [SerializeField] private float personalArea = 0.5f;
+
+    [Header("Cover Behavior")]
+    [SerializeField] private float coverProbeRadius = 0.9f;
+    [SerializeField] private float coverProbeDistance = 4f;
+    [SerializeField] private float coverOffsetFromObstacle = 1.25f;
+    [SerializeField] private float coverRepositionCooldown = 1.2f;
+    [SerializeField] private float losePlayerTimeout = 4f;
+
+    [Header("Health Regeneration")]
+    [SerializeField] private bool enableHealthRegen = true;
+    [SerializeField] private float regenDelay = 3f;
+    [SerializeField] private float regenRate = 4f;
+    [SerializeField, Range(0f, 1f)] private float lowHealthThreshold = 0.35f;
+    [SerializeField, Range(0f, 1f)] private float recoveredHealthThreshold = 0.8f;
     
     private Transform player;
     private Vector3 lastKnownPlayerPosition;
@@ -90,6 +104,13 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private Transform steeringTarget;
     private Bounds movementConstraints;
     private bool hasMovementConstraints = false;
+    private float lastDamageTime = Mathf.NegativeInfinity;
+    private float lastTimeSawPlayer = Mathf.NegativeInfinity;
+    private Vector3 currentCoverPoint;
+    private bool hasCoverPoint;
+    private Collider lastCoverCollider;
+    private Vector3 lastCoverHitPoint;
+    private Vector3 lastCoverHitNormal;
     
     // Callbacks
     public System.Action OnMovementComplete { get; set; }
@@ -153,8 +174,45 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public float MaxSpeed => maxSpeed;
     public float SlowingDistance => slowingDistance;
     public Vector3 CurrentVelocity => _vel;
+    public LayerMask ObstaclesMask => obstaclesMask;
+    public float CoverProbeRadius => coverProbeRadius;
+    public float CoverProbeDistance => coverProbeDistance;
+    public float CoverOffsetFromObstacle => coverOffsetFromObstacle;
+    public float CoverRepositionCooldown => coverRepositionCooldown;
+    public float LosePlayerTimeout => losePlayerTimeout;
+    public float HealthNormalized => MaxHealth <= 0f ? 0f : currentHealth / MaxHealth;
+    public float TimeSinceLastSeenPlayer => Time.time - lastTimeSawPlayer;
+    public bool RecentlySawPlayer(float window) => Time.time - lastTimeSawPlayer <= window;
+    public Vector3 CoverPoint => currentCoverPoint;
+    public bool HasCoverPoint => hasCoverPoint;
+    public string CurrentStateName => stateMachine?.GetCurrentState()?.State?.StateName ?? "None";
+    public Collider LastCoverCollider => lastCoverCollider;
+    public Vector3 LastCoverHitPoint => lastCoverHitPoint;
+    public Vector3 LastCoverHitNormal => lastCoverHitNormal;
     
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
+
+    public void SetCoverPoint(Vector3 coverPoint)
+    {
+        currentCoverPoint = coverPoint;
+        hasCoverPoint = true;
+    }
+
+    public void ClearCoverPoint()
+    {
+        hasCoverPoint = false;
+        currentCoverPoint = Vector3.zero;
+        lastCoverCollider = null;
+        lastCoverHitPoint = Vector3.zero;
+        lastCoverHitNormal = Vector3.zero;
+    }
+
+    public void SetCoverDebug(Collider collider, Vector3 hitPoint, Vector3 hitNormal)
+    {
+        lastCoverCollider = collider;
+        lastCoverHitPoint = hitPoint;
+        lastCoverHitNormal = hitNormal;
+    }
     
     // MEJORA: Improved player detection using new AI system
     public bool CanSeePlayer()
@@ -403,16 +461,23 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     private void UpdateAISystem()
     {
-        if (enableNewAISystem && m_blackboardService != null && player != null)
+        bool hasPlayer = player != null;
+        bool canSeePlayerNow = hasPlayer && CanSeePlayer();
+
+        if (canSeePlayerNow)
+        {
+            lastKnownPlayerPosition = player.position;
+            lastTimeSawPlayer = Time.time;
+        }
+
+        if (enableNewAISystem && m_blackboardService != null && hasPlayer)
         {
             // Update blackboard with current player information
             m_blackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
             m_blackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
             
-            // Update last known position if we can see the player
-            if (CanSeePlayer())
+            if (canSeePlayerNow)
             {
-                lastKnownPlayerPosition = player.position;
                 m_blackboardService.SetValue(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION, lastKnownPlayerPosition);
             }
             
@@ -421,6 +486,15 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_DetectionLevel", detectionResult.level);
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.level > PlayerDetectionLevel.None);
         }
+    }
+
+    private void HandleHealthRegen()
+    {
+        if (!enableHealthRegen || !isAlive) return;
+        if (currentHealth >= MaxHealth) return;
+        if (Time.time - lastDamageTime < regenDelay) return;
+
+        currentHealth = Mathf.Min(currentHealth + regenRate * Time.deltaTime, MaxHealth);
     }
 
     private void OnDisable()
@@ -707,7 +781,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_ShootDirection", direction);
         }
     }
-    
+
     private void CreateBullet(Vector3 p_direction)
     {
         var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
@@ -720,6 +794,12 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         p_bullet.OnDeactivate -= OnDeactivateBulletHandler;
         PoolObjectsService.ReturnObject(p_bullet);
+    }
+
+    public override void TakeDamage(float damage)
+    {
+        base.TakeDamage(damage);
+        lastDamageTime = Time.time;
     }
 
     #region AI System Integration
@@ -1340,6 +1420,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             UpdateMovementSystem(Time.deltaTime);
             stateTimer += Time.deltaTime; // Keep timer for conditions in legacy mode
         }
+
+        HandleHealthRegen();
     }
 
     public void SubscribeUpdateService()
@@ -1351,4 +1433,43 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         ServiceLocator.Get<IUpdateService>().RemoveUpdateListener(this);
     }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        // Visual debug of current FSM state above the guard in the Scene view
+        var style = new UnityEngine.GUIStyle(UnityEditor.EditorStyles.boldLabel)
+        {
+            normal = { textColor = Color.cyan }
+        };
+
+        UnityEditor.Handles.Label(transform.position + Vector3.up * 2f, $"State: {CurrentStateName}", style);
+
+        // Cover point debug
+        if (HasCoverPoint)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawSphere(CoverPoint, 0.2f);
+            Gizmos.DrawLine(transform.position, CoverPoint);
+        }
+
+        // Obstacle collider debug for cover
+        if (LastCoverCollider != null)
+        {
+            var bounds = LastCoverCollider.bounds;
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireCube(bounds.center, bounds.size);
+
+            if (LastCoverHitPoint != Vector3.zero)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawSphere(LastCoverHitPoint, 0.1f);
+                if (LastCoverHitNormal != Vector3.zero)
+                {
+                    Gizmos.DrawRay(LastCoverHitPoint, LastCoverHitNormal * 0.75f);
+                }
+            }
+        }
+    }
+#endif
 }
