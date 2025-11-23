@@ -19,6 +19,7 @@ namespace _2._Scripts.UI.Gameplay.Results
         [Header("Buttons")]
         [SerializeField] private Button retryButton;
         [SerializeField] private Button mainMenuButton;
+        [SerializeField] private Button rewardedAdButton;
 
         [Header("Copy")]
         [SerializeField] private string victoryTitle = "Victoria";
@@ -31,6 +32,7 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         public event Action OnRetry;
         public event Action OnMainMenu;
+        public event Action OnRewardedAd;
 
         private IAudioService m_audioService;
         private AudioConfig m_audioConfig;
@@ -101,6 +103,11 @@ namespace _2._Scripts.UI.Gameplay.Results
             {
                 mainMenuButton.onClick.AddListener(OnMainMenuClicked);
             }
+            
+            if (rewardedAdButton)
+            {
+                rewardedAdButton.onClick.AddListener(OnRewardedAdClicked);
+            }
         }
 
         public override void Hide()
@@ -115,6 +122,11 @@ namespace _2._Scripts.UI.Gameplay.Results
             {
                 mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
             }
+            
+            if (rewardedAdButton)
+            {
+                rewardedAdButton.onClick.RemoveListener(OnRewardedAdClicked);
+            }
         }
 
         public override void Shutdown()
@@ -128,6 +140,11 @@ namespace _2._Scripts.UI.Gameplay.Results
             if (mainMenuButton)
             {
                 mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
+            }
+            
+            if (rewardedAdButton)
+            {
+                rewardedAdButton.onClick.RemoveListener(OnRewardedAdClicked);
             }
         }
 
@@ -149,6 +166,18 @@ namespace _2._Scripts.UI.Gameplay.Results
             }
 
             OnMainMenu?.Invoke();
+        }
+        
+        private void OnRewardedAdClicked()
+        {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+            }
+            
+            Debug.Log("ResultsView, Clickeamos el boton");
+
+            OnRewardedAd?.Invoke();
         }
     }
 }

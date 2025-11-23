@@ -1,3 +1,4 @@
+using System;
 using Services;
 using Services.MicroServices.EventsServices;
 using Services.MicroServices.EventsServices.CustomEvents;
@@ -12,6 +13,7 @@ namespace _2._Scripts.UI.Gameplay.Results
     {
         [SerializeField] private string mainMenuSceneName = "MainMenuScene";
         [SerializeField] private bool pauseGameWhileVisible = true;
+        [SerializeField] private RewardedAd rewardedAdManager;
 
         private ResultsModel m_model;
         private ResultsView m_view;
@@ -103,6 +105,7 @@ namespace _2._Scripts.UI.Gameplay.Results
 
             m_view.OnRetry += OnRetryPressed;
             m_view.OnMainMenu += OnMainMenuPressed;
+            m_view.OnRewardedAd += OnRewardedAdPressed;
 
             base.Show();
         }
@@ -124,6 +127,7 @@ namespace _2._Scripts.UI.Gameplay.Results
 
             m_view.OnRetry -= OnRetryPressed;
             m_view.OnMainMenu -= OnMainMenuPressed;
+            m_view.OnRewardedAd -= OnRewardedAdPressed;
 
             base.Hide();
         }
@@ -141,6 +145,13 @@ namespace _2._Scripts.UI.Gameplay.Results
             Time.timeScale = 1f;
             m_gameStateService?.ChangeState(GameState.Menu);
             SceneManager.LoadScene(mainMenuSceneName);
+        }
+
+        private void OnRewardedAdPressed()
+        {
+            Debug.Log("ResultsPresenter, Clickeamos el boton");
+            
+            rewardedAdManager.ClickShowAdReward();
         }
 
     }
