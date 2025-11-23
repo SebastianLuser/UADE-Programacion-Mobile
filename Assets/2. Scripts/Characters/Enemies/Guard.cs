@@ -68,6 +68,12 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float investigationMoveSpeedFactor = 0.7f;
     [SerializeField] private float investigationArrivalTolerance = 1.2f;
 
+    [Header("Reinforcement/Smoke")]
+    [SerializeField] private float damageRecentWindow = 3f;
+    [SerializeField] private float smokeLifetime = 5f;
+    [SerializeField] private float smokeScale = 3f;
+    [SerializeField] private string obstacleLayerName = "ObstacleAI";
+
     [Header("Health Regeneration")]
     [SerializeField] private bool enableHealthRegen = true;
     [SerializeField] private float regenDelay = 3f;
@@ -116,6 +122,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private Collider lastCoverCollider;
     private Vector3 lastCoverHitPoint;
     private Vector3 lastCoverHitNormal;
+    private GameObject smokeInstance;
+    private float smokeEndTime;
     private bool investigationComplete;
     private float investigationRotationRemaining;
     private bool investigationAtLocation;
@@ -217,6 +225,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         get => investigationTarget;
         set => investigationTarget = value;
     }
+    public bool TookDamageRecently(float window) => Time.time - lastDamageTime <= window;
+    public bool IsSmokeActive => smokeInstance != null && Time.time < smokeEndTime;
     
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
 
@@ -259,6 +269,35 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         investigationComplete = true;
         investigationRotationRemaining = 0f;
+    }
+
+    public void DeploySmoke()
+    {
+        int obstacleLayer = LayerMask.NameToLayer(obstacleLayerName);
+        if (smokeInstance != null)
+        {
+            Destroy(smokeInstance);
+        }
+
+        smokeInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        smokeInstance.transform.position = transform.position;
+        smokeInstance.transform.localScale = Vector3.one * smokeScale;
+        smokeInstance.layer = obstacleLayer;
+
+        var renderer = smokeInstance.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            renderer.material.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+        }
+
+        var collider = smokeInstance.GetComponent<Collider>();
+        if (collider != null)
+        {
+            collider.isTrigger = false;
+        }
+
+        smokeEndTime = Time.time + smokeLifetime;
+        Destroy(smokeInstance, smokeLifetime);
     }
     
     // MEJORA: Improved player detection using new AI system
