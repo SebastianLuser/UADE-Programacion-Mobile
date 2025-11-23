@@ -4447,7 +4447,7 @@ PrefabInstance:
     - target: {fileID: 2502322239598372139, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2502322239598372139, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -6342,15 +6342,60 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1787603580}
     m_Modifications:
+    - target: {fileID: 2787530440254539783, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: config.detectionRange
+      value: 6.85
+      objectReference: {fileID: 0}
+    - target: {fileID: 2787530440254539783, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: config.peripheralThreshold
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2787530440254539783, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: autoConfigureFromPersonality
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5023397492663896809, guid: 728c239681890b644978130b242e17da,
         type: 3}
       propertyPath: m_Name
       value: Civilian
       objectReference: {fileID: 0}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: sightFOV
+      value: 124.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: meleeRange
+      value: 1.01
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: sightRange
+      value: 6.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: meleeDamage
+      value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: fleeTargetNodeIndex
+      value: 57
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910034802265952309, guid: 728c239681890b644978130b242e17da,
+        type: 3}
+      propertyPath: dyingSpeedMultiplier
+      value: 0.4
+      objectReference: {fileID: 0}
     - target: {fileID: 7941317387358255683, guid: 728c239681890b644978130b242e17da,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 7.1436105
+      value: 11.56
       objectReference: {fileID: 0}
     - target: {fileID: 7941317387358255683, guid: 728c239681890b644978130b242e17da,
         type: 3}
@@ -6360,7 +6405,7 @@ PrefabInstance:
     - target: {fileID: 7941317387358255683, guid: 728c239681890b644978130b242e17da,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: -7.083109
+      value: -27.2
       objectReference: {fileID: 0}
     - target: {fileID: 7941317387358255683, guid: 728c239681890b644978130b242e17da,
         type: 3}
@@ -6494,7 +6539,7 @@ PrefabInstance:
     - target: {fileID: 2502322239598372139, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2502322239598372139, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -10672,7 +10717,7 @@ PrefabInstance:
     - target: {fileID: 2502322239598372139, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2502322239598372139, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -13853,6 +13898,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2787530440254539783, guid: 728c239681890b644978130b242e17da,
         type: 3}
+      propertyPath: config.detectionRange
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 2787530440254539783, guid: 728c239681890b644978130b242e17da,
+        type: 3}
       propertyPath: config.obstacleLayerMask.m_Bits
       value: 8192
       objectReference: {fileID: 0}
@@ -13894,7 +13944,7 @@ PrefabInstance:
     - target: {fileID: 5023397492663896809, guid: 728c239681890b644978130b242e17da,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5023397492663896809, guid: 728c239681890b644978130b242e17da,
         type: 3}

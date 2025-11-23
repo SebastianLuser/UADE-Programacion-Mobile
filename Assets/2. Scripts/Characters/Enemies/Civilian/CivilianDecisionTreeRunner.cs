@@ -18,6 +18,7 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
         Attack,
         Dying
     }
+    
     [Header("Decision Tree Configuration")]
     [SerializeField] private float evaluationInterval = 0.15f;  // Reduced frequency now that we have locks/hysteresis
     [SerializeField] private float alertChanceWhenNoLoS = 0.5f;
@@ -51,6 +52,8 @@ public class CivilianDecisionTreeRunner : MonoBehaviour
     // Separated LoS timers to avoid overlap/conflicts
     private float m_pursuitLoseSightTimerVisible = 0f;   // Timer for breaking stance lock when LoS lost in visible branch
     private float m_pursuitLoseSightTimerInvisible = 0f; // Timer for commitment when LoS lost in invisible branch
+    private float m_timeWithoutLoS = 0f;                 // Tiempo acumulado sin LoS (para decaimiento de intención)
+    private Vector3 m_lastKnownPlayerPosition = Vector3.zero;
 
     // Attack cycle tracking
     private bool m_isInAttackCycle = false;   // Whether we're in a non-interruptible attack cycle
@@ -255,15 +258,26 @@ m_root = new QuestionNode(
 
         if (p_startPostHitFlee)
         {
-            m_postHitFleeActive = true;
-            m_postHitFleeStartTime = Time.time;
-            
-            // Break stance lock and force ESCAPE for hit-and-run
-            BreakStanceLock("Post-hit flee - forcing hit-and-run");
-            LockStance(CivilianStance.Escape, "Post-hit flee - hit-and-run behavior");
+            // Solo activar hit-and-run si estamos cerca del safe node (tiene sentido huir)
+            float remainingDistance = m_civilian != null ? m_civilian.GetRemainingFleeDistance() : float.PositiveInfinity;
+            bool nearSafeNode = !float.IsInfinity(remainingDistance) && remainingDistance <= m_civilian.SafeDistance;
 
-            if (debugDT)
-                MyLogger.LogInfo($"Ended attack cycle, started post-hit flee for {postHitFleeTime}s");
+            if (nearSafeNode)
+            {
+                m_postHitFleeActive = true;
+                m_postHitFleeStartTime = Time.time;
+                
+                // Break stance lock y forzar ESCAPE
+                BreakStanceLock("Post-hit flee - forcing hit-and-run");
+                LockStance(CivilianStance.Escape, "Post-hit flee - near safe node");
+
+                if (debugDT)
+                    MyLogger.LogInfo($"Ended attack cycle, post-hit flee near safe node (dist {remainingDistance:F1}, safe {m_civilian.SafeDistance:F1})");
+            }
+            else if (debugDT)
+            {
+                MyLogger.LogInfo("Ended attack cycle, staying in offensive posture (far from safe node)");
+            }
         }
         else if (debugDT)
         {
@@ -307,6 +321,15 @@ m_root = new QuestionNode(
 
     private CivilianStance EvaluateStance()
     {
+        bool hasLoS = m_civilian.HasLoS();
+        UpdateLoSTimer(hasLoS);
+
+        // Solo tirar la ruleta cuando hay LoS; de lo contrario mantener la postura actual
+        if (!hasLoS)
+        {
+            return m_currentStance;
+        }
+
         if (IsInPostHitFlee())
         {
             if (debugDT)
@@ -327,9 +350,13 @@ m_root = new QuestionNode(
             BreakStanceLock("Stance lock expired");
         }
 
+        // Pesos 100% dinámicos (sin depender del inspector)
+        ComputeDynamicCoreWeights(out float attackWeight, out float escapeWeight);
+
         bool canAttack = m_civilian.CanAttack;
-        float attackWeight = canAttack ? Mathf.Max(0f, m_civilian.AttackWeight) : 0f;
-        float escapeWeight = Mathf.Max(0f, m_civilian.EscapeWeight);
+        if (!canAttack)
+            attackWeight = 0f;
+
         float dyingWeight = Mathf.Max(0f, m_civilian.DyingWeight);
 
         if (!canAttack && dyingWeight <= 0.0001f)
@@ -354,7 +381,7 @@ m_root = new QuestionNode(
 
         CivilianStance choice = RouletteWheel<CivilianStance>.Run(l_decisions);
 
-        Debug.Log($"NEW ROULETTE: Choice={choice}, Attack={attackWeight:F2}, Escape={escapeWeight:F2}, Dying={dyingWeight:F2}");
+        LogDT($"NEW ROULETTE: Choice={choice}, Attack={attackWeight:F2}, Escape={escapeWeight:F2}, Dying={dyingWeight:F2}");
 
         if (choice == CivilianStance.Escape && !m_civilian.CanAttack)
         {
@@ -380,6 +407,102 @@ m_root = new QuestionNode(
     }
 
     /// <summary>
+    /// Calcula pesos Attack/Escape de forma dinámica (sin inspector).
+    /// Lejos del safe node y con LoS: favorece Attack; cerca: favorece Escape.
+    /// Sin path: se asume sin escape claro → favorece Attack.
+    /// </summary>
+    private void ComputeDynamicCoreWeights(out float attackWeight, out float escapeWeight)
+    {
+        attackWeight = 1f;
+        escapeWeight = 1f;
+
+        if (m_civilian == null)
+            return;
+
+        bool hasLoS = m_civilian.HasLoS();
+
+        // Usamos señales múltiples para determinar si hay camino viable.
+        bool hasPath = m_civilian.HasFleePath;
+        float remainingDistance = m_civilian.GetRemainingFleeDistance();
+
+        // Si no tenemos path aún, intentar estimar con la distancia directa al nodo objetivo.
+        float estimatedSafeDist = m_civilian.GetEstimatedDistanceToSafeNode();
+
+        if (!float.IsInfinity(remainingDistance) && remainingDistance > 0f)
+        {
+            hasPath = true;
+        }
+        else if (!float.IsInfinity(estimatedSafeDist))
+        {
+            hasPath = true;
+            remainingDistance = estimatedSafeDist;
+        }
+
+        float reference = Mathf.Max(1f, m_civilian.SafeDistance * 2f);
+        float far01 = hasPath
+            ? Mathf.Clamp01((remainingDistance - m_civilian.SafeDistance) / reference) // 0 = cerca, 1 = lejos
+            : 1f; // sin path: tratar como “no hay salida clara”
+
+        if (!hasPath)
+        {
+            attackWeight = 3f;
+            escapeWeight = 0.35f;
+            LogDT($"[Roulette] No path/Infinity: atk {attackWeight:F2}, esc {escapeWeight:F2}");
+            return;
+        }
+
+        // Más lejos del nodo seguro => subir ataque y bajar escape.
+        // Más cerca del nodo seguro => bajar ataque y subir escape.
+        float escapeBoost = Mathf.Lerp(3.5f, 0.35f, far01);
+        float attackBoost = Mathf.Lerp(0.5f, 3.5f, far01);
+
+        attackWeight *= attackBoost;
+        escapeWeight *= escapeBoost;
+
+        // Decaimiento gradual si estamos sin LoS: reduce intención de ataque y sube escape con el tiempo
+        if (!hasLoS)
+        {
+            float t = Mathf.Clamp01(m_timeWithoutLoS / 3f); // en 3s sin LoS llega al máximo decaimiento
+            float attackDecay = Mathf.Lerp(1f, 0.3f, t);
+            float escapeGrowth = Mathf.Lerp(1f, 2.5f, t);
+
+            attackWeight *= attackDecay;
+            escapeWeight *= escapeGrowth;
+
+            LogDT($"[Roulette] no LoS decay t={t:F2}, attackDecay={attackDecay:F2}, escapeGrowth={escapeGrowth:F2}, timeNoLoS={m_timeWithoutLoS:F2}s");
+        }
+
+        LogDT($"[Roulette] remDist={remainingDistance:F1}, far01={far01:F2}, hasLoS={hasLoS}, atk={attackWeight:F2} (x{attackBoost:F2}), esc={escapeWeight:F2} (x{escapeBoost:F2})");
+    }
+
+    /// <summary>
+    /// Actualiza el timer de tiempo sin LoS para aplicar decaimiento gradual de intención.
+    /// </summary>
+    private void UpdateLoSTimer(bool hasLoS)
+    {
+        if (m_civilian == null) return;
+
+        if (hasLoS)
+        {
+            m_timeWithoutLoS = 0f;
+        }
+        else
+        {
+            m_timeWithoutLoS += evaluationInterval;
+        }
+    }
+
+    /// <summary>
+    /// Helper to log DT messages both via MyLogger and Debug.Log when debugDT is enabled.
+    /// </summary>
+    private void LogDT(string message)
+    {
+        if (!debugDT) return;
+        MyLogger.LogInfo(message);
+        Debug.Log(message);
+    }
+
+    /// <summary>
     /// Lock the civilian into a specific stance to prevent flip-flop
     /// </summary>
     private void LockStance(CivilianStance p_stance, string p_reason)
@@ -391,7 +514,8 @@ m_root = new QuestionNode(
         m_hasCachedStanceEvaluation = true;
         m_civilian.SetDyingEvadeMode(p_stance == CivilianStance.Dying);
 
-        Debug.Log($"STANCE LOCKED: {p_stance} for {m_stanceLockDuration}s - Reason: {p_reason}");
+        if (debugDT)
+            MyLogger.LogInfo($"STANCE LOCKED: {p_stance} for {m_stanceLockDuration}s - Reason: {p_reason}");
     }
 
     /// <summary>
@@ -401,7 +525,8 @@ m_root = new QuestionNode(
     {
         if (m_hasActiveStanceLock)
         {
-            Debug.Log($"STANCE LOCK BROKEN: {p_reason}");
+            if (debugDT)
+                MyLogger.LogInfo($"STANCE LOCK BROKEN: {p_reason}");
             m_hasActiveStanceLock = false;
             m_stanceLockUntil = 0f;
             m_hasCachedStanceEvaluation = false;
@@ -432,21 +557,37 @@ m_root = new QuestionNode(
             return;
         }
 
-        // Break lock if player gets too far away (beyond SafeDistance)
         float l_distanceToPlayer = Vector3.Distance(m_civilian.transform.position, m_civilian.Player.position);
-        if (l_distanceToPlayer >= m_civilian.SafeDistance)
+        // Solo romper por distancia en ATTACK; en ESCAPE no cortamos la huida solo por alejamiento.
+        if (m_currentStance == CivilianStance.Attack && l_distanceToPlayer >= m_civilian.SafeDistance)
         {
             BreakStanceLock($"Player too far ({l_distanceToPlayer:F1} >= {m_civilian.SafeDistance})");
             return;
+        }
+
+        // Si estamos en Attack pero ya llegamos al área del safe node, soltar lock para permitir huida
+        if (m_currentStance == CivilianStance.Attack)
+        {
+            float remDist = m_civilian.GetRemainingFleeDistance();
+            if (!float.IsInfinity(remDist) && remDist <= m_civilian.SafeDistance)
+            {
+                BreakStanceLock($"Reached safe node area (remaining {remDist:F1} <= {m_civilian.SafeDistance})");
+                return;
+            }
         }
 
         // Break ATTACK stance lock if lost LoS for too long (using VISIBLE timer)
         if (m_currentStance == CivilianStance.Attack && !m_civilian.HasLoS())
         {
             m_pursuitLoseSightTimerVisible += evaluationInterval;
-            if (m_pursuitLoseSightTimerVisible >= m_civilian.AttackLoseSightGrace * 2f) // Double the normal grace
+            // Lejos del nodo seguro: permitir mayor gracia antes de soltar Attack
+            float remainingDist = m_civilian.GetRemainingFleeDistance();
+            float graceMultiplier = (remainingDist > m_civilian.SafeDistance * 2f) ? 6f : 2f;
+            float graceThreshold = m_civilian.AttackLoseSightGrace * graceMultiplier;
+
+            if (m_pursuitLoseSightTimerVisible >= graceThreshold)
             {
-                BreakStanceLock($"Lost LoS too long in ATTACK stance ({m_pursuitLoseSightTimerVisible:F2}s)");
+                BreakStanceLock($"Lost LoS too long in ATTACK stance ({m_pursuitLoseSightTimerVisible:F2}s >= {graceThreshold:F2}s)");
                 return;
             }
         }
@@ -503,7 +644,8 @@ m_root = new QuestionNode(
     /// </summary>
     private bool ShouldReturnToIdle()
     {
-        Debug.Log("=== ShouldReturnToIdle() START ===");
+        if (debugDT)
+            MyLogger.LogInfo("=== ShouldReturnToIdle() START ===");
 
         // CivilianDecisionTreeRunner.cs  (dentro de ShouldReturnToIdle, al inicio)
         if (IsCurrentlyFleeing() && m_civilian != null)
@@ -514,14 +656,16 @@ m_root = new QuestionNode(
             {
                 // resetear cualquier safe timer local de DT, seguimos huyendo
                 m_safeTimer = 0f;
-                Debug.Log("FLEE A*: aún no llegué al nodo seguro → continuar huyendo (ignorar SafeDistance)");
+                if (debugDT)
+                    MyLogger.LogInfo("FLEE A*: aún no llegué al nodo seguro → continuar huyendo (ignorar SafeDistance)");
                 return false;
             }
         }
 
         if (m_civilian == null || m_civilian.Player == null)
         {
-            Debug.Log("CIVILIAN OR PLAYER IS NULL - RETURNING TRUE");
+            if (debugDT)
+                MyLogger.LogInfo("CIVILIAN OR PLAYER IS NULL - RETURNING TRUE");
             return true;
         }
 
@@ -529,13 +673,15 @@ m_root = new QuestionNode(
         bool l_isSafeDistance = l_distanceToPlayer >= m_civilian.SafeDistance;
         bool l_hasLoS = m_civilian.HasLoS();
 
-        Debug.Log($"Distance: {l_distanceToPlayer:F1}, SafeDistance: {m_civilian.SafeDistance}, HasLoS: {l_hasLoS}");
+        if (debugDT)
+            MyLogger.LogInfo($"Distance: {l_distanceToPlayer:F1}, SafeDistance: {m_civilian.SafeDistance}, HasLoS: {l_hasLoS}");
 
         // SafeDistance is only for STOPPING fleeing, not for starting it
         // If player is in safe area (beyond SafeDistance), return to idle immediately
         if (l_isSafeDistance)
         {
-            Debug.Log($"PLAYER IN SAFE AREA - STOP FLEEING");
+            if (debugDT)
+                MyLogger.LogInfo("PLAYER IN SAFE AREA - STOP FLEEING");
             m_safeTimer = 0f;
             return true;
         }
@@ -546,12 +692,14 @@ m_root = new QuestionNode(
             m_safeTimer += evaluationInterval;
             bool l_shouldReturn = m_safeTimer >= m_civilian.SafeTime;
 
-            Debug.Log($"CLOSE BUT NO LoS - GRACE TIMER: Timer={m_safeTimer:F2}/{m_civilian.SafeTime}, ShouldReturn={l_shouldReturn}");
+            if (debugDT)
+                MyLogger.LogInfo($"CLOSE BUT NO LoS - GRACE TIMER: Timer={m_safeTimer:F2}/{m_civilian.SafeTime}, ShouldReturn={l_shouldReturn}");
             return l_shouldReturn;
         }
 
         // Player is close and visible - keep fleeing
-        Debug.Log($"PLAYER CLOSE AND VISIBLE - CONTINUE FLEEING");
+        if (debugDT)
+            MyLogger.LogInfo("PLAYER CLOSE AND VISIBLE - CONTINUE FLEEING");
         m_safeTimer = 0f;
         return false;
     }
@@ -586,7 +734,8 @@ m_root = new QuestionNode(
         // Always commit for at least 1 second after starting pursuit
         if (l_timeSincePursuitStart < 1f)
         {
-            Debug.Log($"PURSUIT COMMITMENT: Within minimum commitment time ({l_timeSincePursuitStart:F2}s < 1.0s)");
+            if (debugDT)
+                MyLogger.LogInfo($"PURSUIT COMMITMENT: Within minimum commitment time ({l_timeSincePursuitStart:F2}s < 1.0s)");
             return true;
         }
 
@@ -602,7 +751,8 @@ m_root = new QuestionNode(
 
         bool l_stillCommitted = m_pursuitLoseSightTimerInvisible < l_commitmentTime;
 
-        Debug.Log($"PURSUIT COMMITMENT: Invisible LoS timer={m_pursuitLoseSightTimerInvisible:F2}s < {l_commitmentTime:F2}s = {l_stillCommitted}");
+        if (debugDT)
+            MyLogger.LogInfo($"PURSUIT COMMITMENT: Invisible LoS timer={m_pursuitLoseSightTimerInvisible:F2}s < {l_commitmentTime:F2}s = {l_stillCommitted}");
         return l_stillCommitted;
     }
 
