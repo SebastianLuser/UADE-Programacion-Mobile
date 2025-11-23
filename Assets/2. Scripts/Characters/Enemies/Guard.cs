@@ -63,6 +63,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float coverRepositionCooldown = 1.2f;
     [SerializeField] private float losePlayerTimeout = 4f;
 
+    [Header("Investigation State")]
+    [SerializeField] private float investigationRotateSpeed = 180f;
+    [SerializeField] private float investigationMoveSpeedFactor = 0.7f;
+    [SerializeField] private float investigationArrivalTolerance = 1.2f;
+
     [Header("Health Regeneration")]
     [SerializeField] private bool enableHealthRegen = true;
     [SerializeField] private float regenDelay = 3f;
@@ -111,6 +116,10 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private Collider lastCoverCollider;
     private Vector3 lastCoverHitPoint;
     private Vector3 lastCoverHitNormal;
+    private bool investigationComplete;
+    private float investigationRotationRemaining;
+    private bool investigationAtLocation;
+    private Vector3 investigationTarget;
     
     // Callbacks
     public System.Action OnMovementComplete { get; set; }
@@ -189,6 +198,25 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public Collider LastCoverCollider => lastCoverCollider;
     public Vector3 LastCoverHitPoint => lastCoverHitPoint;
     public Vector3 LastCoverHitNormal => lastCoverHitNormal;
+    public float InvestigationRotateSpeed => investigationRotateSpeed;
+    public float InvestigationMoveSpeedFactor => investigationMoveSpeedFactor;
+    public float InvestigationArrivalTolerance => investigationArrivalTolerance;
+    public bool InvestigationComplete => investigationComplete;
+    public float InvestigationRotationRemaining
+    {
+        get => investigationRotationRemaining;
+        set => investigationRotationRemaining = value;
+    }
+    public bool InvestigationAtLocation
+    {
+        get => investigationAtLocation;
+        set => investigationAtLocation = value;
+    }
+    public Vector3 InvestigationTarget
+    {
+        get => investigationTarget;
+        set => investigationTarget = value;
+    }
     
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
 
@@ -212,6 +240,25 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         lastCoverCollider = collider;
         lastCoverHitPoint = hitPoint;
         lastCoverHitNormal = hitNormal;
+    }
+
+    public void BeginInvestigation(Vector3 targetPosition)
+    {
+        investigationTarget = targetPosition;
+        investigationComplete = false;
+        investigationRotationRemaining = 360f;
+        investigationAtLocation = false;
+    }
+
+    public void MarkInvestigationArrived()
+    {
+        investigationAtLocation = true;
+    }
+
+    public void CompleteInvestigation()
+    {
+        investigationComplete = true;
+        investigationRotationRemaining = 0f;
     }
     
     // MEJORA: Improved player detection using new AI system
