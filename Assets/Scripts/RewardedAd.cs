@@ -1,4 +1,5 @@
 using System;
+using _2._Scripts.UI.Gameplay.Results;
 using Newtonsoft.Json;
 using Services;
 using Services.MicroServices.EventsServices;
@@ -8,15 +9,24 @@ using Unity.Services.LevelPlay;
 using UnityEngine;
 
 
+/*
+Org Core Id: 4673777054199
+Apple Id: 5990864
+Android Id: 5990865
+Monetization Stats API Key: 9efc50a100668aaeedaf2fd8a6b38cee05e6a1f38ac908d308771b47875e72c7
+*/
+
 
 public class RewardedAd : MonoBehaviour
 
 {
 // App Configuration - LevelPlay Dashboard
-    private const string k_AndroidAppKey = "2457c894d";
+    private const string k_AndroidAppKey = "5990865";
+    private const string k_AppleApplKey = "5990864";
 
     // Dependencies
     [SerializeField] private PlayerCollector _playerCollector;
+    [SerializeField] private ResultsView _resultsView;
 
     // Ad Unit/Placement
     [SerializeField]
@@ -32,7 +42,6 @@ public class RewardedAd : MonoBehaviour
     
     private void Start()
     {
-        Debug.Log("Start rewardedAd");
         RegisterSDKEvents();
 
         InitializeRewardedAds();
@@ -54,7 +63,6 @@ public class RewardedAd : MonoBehaviour
         string appKey = GetPlatformAppKey();
 
         LevelPlay.SetMetaData("is_test_suite", "enable");
-        Debug.Log("Call LevelPlay Init");
 
         LevelPlay.Init(appKey);
 
@@ -67,7 +75,14 @@ public class RewardedAd : MonoBehaviour
     /// <returns>The platform-specific app key</returns>
     private string GetPlatformAppKey()
     {
-        return k_AndroidAppKey;
+#if UNITY_ANDROID
+    return k_AndroidAppKey;
+#elif UNITY_IPHONE
+    return k_AppleAppKey;
+#else
+MyLogger.LogWarning("Unexpected platform for ads");
+        return "unexpected_platform";
+#endif
     }
     
     /// <summary>
@@ -79,14 +94,14 @@ public class RewardedAd : MonoBehaviour
         if (m_IsInitialized) return;
 
         m_IsInitialized = true;
-        Debug.Log("LevelPlay SDK initialized successfully");
+        MyLogger.LogDebug("LevelPlay SDK initialized successfully");
 
 #if DEVELOPMENT_BUILD
     // TODO Remove ValidateIntegration once logs confirm networks are VERIFIED and you have your device's Advertising ID setup as a test device
     LevelPlay.ValidateIntegration();
     
     LaunchTestSuite();
-    Debug.Log("Launching test suite");
+        MyLogger.LogDebug("Launching test suite");
 
 #endif
 
@@ -100,7 +115,7 @@ public class RewardedAd : MonoBehaviour
 
     private void sdkInitializationFailed(LevelPlayInitError error)
     {
-        Debug.Log("Error al inizializar el SDK: " + error.ErrorMessage);
+        MyLogger.LogWarning("Error al inizializar el SDK: " + error.ErrorMessage);
     }
 
     /// <summary>
@@ -167,7 +182,8 @@ public class RewardedAd : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"Cannot show ad.");
+                
+                MyLogger.LogWarning($"Cannot show ad.");
             }
         }
         
@@ -175,13 +191,13 @@ public class RewardedAd : MonoBehaviour
         {
             if (!m_IsInitialized)
             {
-                Debug.LogWarning("SDK not initialized");
+                MyLogger.LogWarning("SDK not initialized");
                 return false;
             }
 
             if (m_RewardedAd == null)
             {
-                Debug.LogWarning("Rewarded ad object not created");
+                MyLogger.LogWarning("Rewarded ad object not created");
                 return false;
             }
 
@@ -189,7 +205,7 @@ public class RewardedAd : MonoBehaviour
 
             if (!isAdReady)
             {
-                Debug.LogWarning("Ad not ready - still loading or no inventory available");
+                MyLogger.LogWarning("Ad not ready - still loading or no inventory available");
             }
             
             return isAdReady;
@@ -203,12 +219,12 @@ public class RewardedAd : MonoBehaviour
     private void HandleAdLoadedSuccessfully(LevelPlayAdInfo adInfo)
     {
         AdAvailable?.Invoke(true);
-        Debug.Log($"Rewarded ad loaded: {adInfo.AdNetwork}");
+        MyLogger.LogDebug($"Rewarded ad loaded: {adInfo.AdNetwork}");
     }
     
     private void HandleLoadFailed(LevelPlayAdError error)
     {
-        Debug.LogError($"Rewarded ad failed to load: {error.ErrorMessage} (Code: {error.ErrorCode})");
+        MyLogger.LogWarning($"Rewarded ad failed to load: {error.ErrorMessage} (Code: {error.ErrorCode})");
         Invoke(nameof(LoadRewardedAd), 2f);
     }
     
@@ -216,12 +232,12 @@ public class RewardedAd : MonoBehaviour
 
     private void HandleAdDisplayed(LevelPlayAdInfo adInfo)
     {
-        Debug.Log("Rewardede ad displayed");
+        MyLogger.LogDebug("Rewarded ad displayed");
     }
 
     private void HandleAdFailedToDisplay(LevelPlayAdInfo adInfo, LevelPlayAdError error)
     {
-        Debug.LogError($"$Rewarded ad failed to display: {error}");
+        MyLogger.LogWarning($"$Rewarded ad failed to display: {error}");
         AdSuccessfullyCompleted?.Invoke(false);
     }
 
@@ -239,20 +255,21 @@ public class RewardedAd : MonoBehaviour
             {
                 gameWinned = false;
             }
-            
-            
+
+            _resultsView.RewardedAdShowed = true;
+
             ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(gameWinned, 
                 _playerCollector.TotalPoints * 2, _playerCollector.SessionCoins  * 2, 
                 _playerCollector.SessionDiamonds  * 2));
         
 
-            Debug.Log($"Ad reward granted successfully: {reward.Name} x{reward.Amount}");
+            MyLogger.LogDebug($"Ad reward granted successfully: {reward.Name} x{reward.Amount}");
     }
     
     // Completion events
     private void HandleAdClosed(LevelPlayAdInfo adInfo)
     {
-        Debug.Log("Rewarded ad closed");
+        MyLogger.LogDebug("Rewarded ad closed");
 
         // Load another ad for next time
         LoadRewardedAd();
@@ -260,16 +277,16 @@ public class RewardedAd : MonoBehaviour
 
     private void HandleAdClicked(LevelPlayAdInfo adInfo)
     {
-        Debug.Log("Rewarded ad clicked");
+        MyLogger.LogDebug("Rewarded ad clicked");
     }
 
     private void HandleAdInfoChanged(LevelPlayAdInfo adInfo)
     {
-        Debug.Log($"Rewarded ad info changed: {adInfo.AdNetwork}");
+        MyLogger.LogDebug($"Rewarded ad info changed: {adInfo.AdNetwork}");
 
         if (adInfo != null)
         {
-            Debug.Log($"Updated ad info - Network: {adInfo.AdNetwork}, Instance: {adInfo.InstanceId}");
+            MyLogger.LogDebug($"Updated ad info - Network: {adInfo.AdNetwork}, Instance: {adInfo.InstanceId}");
         }
     }
     

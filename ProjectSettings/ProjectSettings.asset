@@ -146,6 +146,8 @@ PlayerSettings:
   preloadedAssets:
   - {fileID: -944628639613478452, guid: 8fd443eef89e73243b366308e593d9b8, type: 3}
   - {fileID: 11400000, guid: 212f1c261e355e24387af8730be94c94, type: 2}
+  - {fileID: -2265675708843948312, guid: 19aceeb6a1d48c549bc5c98c154bbb3e, type: 2}
+  - {fileID: 11400000, guid: 77330c5b24bc01144b747c76dc34b2cf, type: 2}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -869,6 +871,7 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
+    Android: LEVELPLAY_DEPENDENCIES_INSTALLED
     Standalone: APP_UI_EDITOR_ONLY;LEVELPLAY_DEPENDENCIES_INSTALLED
     iPhone: APP_UI_EDITOR_ONLY
   additionalCompilerArguments: {}
@@ -964,6 +967,7 @@ PlayerSettings:
   vrEditorSettings: {}
   cloudServicesEnabled:
     UNet: 1
+    Unity Ads: 1
   luminIcon:
     m_Name: 
     m_ModelFolderPath: 

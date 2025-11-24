@@ -149,8 +149,6 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         private void OnRewardedAdPressed()
         {
-            Debug.Log("ResultsPresenter, Clickeamos el boton");
-            
             rewardedAdManager.ClickShowAdReward();
         }
 
