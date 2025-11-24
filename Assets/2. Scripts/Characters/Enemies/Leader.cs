@@ -26,6 +26,14 @@ public class Leader : Guard
     [SerializeField] private float holdRadius = 6f;
     [SerializeField] private float holdDuration = 6f;
 
+    [Header("Leader Targeting")]
+    [SerializeField] private float targetRescanInterval = 1.5f;
+
+    [Header("Cover Fire")]
+    [SerializeField] private float coverFireDuration = 4f;
+    [SerializeField] private float coverFireFireRate = 0.25f;
+    [SerializeField] private float coverFireDistanceThreshold = 3f;
+
     private StateMachine leaderStateMachine;
     private IBlackboardService blackboard;
     private float nextPollTime;
@@ -38,6 +46,7 @@ public class Leader : Guard
     private Vector3 lastHoldCenter;
     private float holdEndTime;
     private float leaderStateTimer;
+    private float nextTargetScanTime;
 
     public bool HasPendingRequest => hasPendingRequest;
     public Vector3 PendingRequestPos => pendingRequestPos;
@@ -49,12 +58,24 @@ public class Leader : Guard
         set => leaderStateTimer = value;
     }
     public IReadOnlyList<Guard> ManagedGuards => managedGuards;
+    public float CoverFireDuration => coverFireDuration;
+    public float CoverFireFireRate => coverFireFireRate;
+    public float CoverFireDistanceThreshold => coverFireDistanceThreshold;
 
     protected override void Awake()
     {
         base.Awake();
         blackboard = ServiceLocator.Get<IBlackboardService>();
         InitializeLeaderFSM();
+
+        if (blackboard == null)
+        {
+            Debug.LogWarning("[Leader] Blackboard service is NULL in Awake");
+        }
+        else
+        {
+            Debug.Log("[Leader] Blackboard service acquired in Awake");
+        }
     }
 
     private void Start()
@@ -66,6 +87,10 @@ public class Leader : Guard
             {
                 Debug.LogWarning("[Leader] Blackboard service not found at Start");
             }
+            else
+            {
+                Debug.Log("[Leader] Blackboard service acquired in Start");
+            }
         }
     }
 
@@ -74,7 +99,17 @@ public class Leader : Guard
         if (blackboard == null)
         {
             blackboard = ServiceLocator.Get<IBlackboardService>();
+            if (blackboard == null)
+            {
+                Debug.LogWarning("[Leader] Blackboard service still NULL in Update");
+            }
+            else
+            {
+                Debug.Log("[Leader] Blackboard service acquired in Update");
+            }
         }
+
+        EnsurePlayerTarget();
 
         PollReinforcementRequests();
         leaderStateMachine?.RunStateMachine();
@@ -173,6 +208,20 @@ public class Leader : Guard
         {
             if (guard == null) continue;
             guard.ClearLeaderOverride();
+        }
+    }
+
+    private void EnsurePlayerTarget()
+    {
+        if (Player != null) return;
+        if (Time.time < nextTargetScanTime) return;
+        nextTargetScanTime = Time.time + targetRescanInterval;
+
+        var playerGO = GameObject.FindGameObjectWithTag("Player");
+        if (playerGO != null)
+        {
+            SetTargetTransform(playerGO.transform);
+            Debug.Log($"[Leader] Player target assigned automatically: {playerGO.name}");
         }
     }
 }
