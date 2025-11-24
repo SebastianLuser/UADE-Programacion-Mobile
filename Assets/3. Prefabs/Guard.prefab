@@ -136,6 +136,26 @@ MonoBehaviour:
   avoidRadius: 1
   avoidAngle: 180
   personalArea: 0.2
+  coverProbeRadius: 0.9
+  coverProbeDistance: 4
+  coverOffsetFromObstacle: 1.25
+  coverRepositionCooldown: 1.2
+  losePlayerTimeout: 4
+  investigationRotateSpeed: 180
+  investigationMoveSpeedFactor: 0.7
+  investigationArrivalTolerance: 3.25
+  damageRecentWindow: 3
+  smokeLifetime: 5
+  smokeScale: 3
+  obstacleLayerName: ObstacleAI
+  overrideArrivalTolerance: 1.5
+  overrideDuration: 8
+  overrideDwellTime: 2
+  enableHealthRegen: 1
+  regenDelay: 3
+  regenRate: 4
+  lowHealthThreshold: 0.35
+  recoveredHealthThreshold: 0.8
 --- !u!114 &7696721049475684638
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -74,6 +74,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float smokeScale = 3f;
     [SerializeField] private string obstacleLayerName = "ObstacleAI";
 
+    [Header("Leader Override")]
+    [SerializeField] private float overrideArrivalTolerance = 1.5f;
+    [SerializeField] private float overrideDuration = 8f;
+    [SerializeField] private float overrideDwellTime = 2f;
+
     [Header("Health Regeneration")]
     [SerializeField] private bool enableHealthRegen = true;
     [SerializeField] private float regenDelay = 3f;
@@ -128,6 +133,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private float investigationRotationRemaining;
     private bool investigationAtLocation;
     private Vector3 investigationTarget;
+    private bool leaderOverrideActive;
+    private Vector3 leaderOverrideTarget;
+    private float leaderOverrideExpiresAt;
+    private float leaderOverrideReachedAt;
+    private string leaderOverrideRole;
     
     // Callbacks
     public System.Action OnMovementComplete { get; set; }
@@ -227,6 +237,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     }
     public bool TookDamageRecently(float window) => Time.time - lastDamageTime <= window;
     public bool IsSmokeActive => smokeInstance != null && Time.time < smokeEndTime;
+    public bool LeaderOverrideActive => leaderOverrideActive;
     
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
 
@@ -294,10 +305,41 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         if (collider != null)
         {
             collider.isTrigger = false;
+
+            // Evita empujar al guard que lo genera (y colliders hijos)
+            var selfColliders = GetComponentsInChildren<Collider>();
+            foreach (var selfCol in selfColliders)
+            {
+                if (selfCol != null && selfCol != collider)
+                {
+                    Physics.IgnoreCollision(collider, selfCol, true);
+                }
+            }
         }
 
         smokeEndTime = Time.time + smokeLifetime;
         Destroy(smokeInstance, smokeLifetime);
+    }
+
+    public void SetLeaderOverride(Vector3 target, float duration, string role = "")
+    {
+        leaderOverrideActive = true;
+        leaderOverrideTarget = target;
+        leaderOverrideExpiresAt = Time.time + (duration > 0f ? duration : overrideDuration);
+        leaderOverrideReachedAt = -1f;
+        leaderOverrideRole = role;
+
+        Debug.Log($"[LeaderOverride] {name} override set -> target {target}, duration {duration}, role {role}");
+    }
+
+    public void ClearLeaderOverride()
+    {
+        leaderOverrideActive = false;
+        leaderOverrideTarget = Vector3.zero;
+        leaderOverrideRole = string.Empty;
+        leaderOverrideExpiresAt = 0f;
+        leaderOverrideReachedAt = -1f;
+        Debug.Log($"[LeaderOverride] {name} override cleared");
     }
     
     // MEJORA: Improved player detection using new AI system
@@ -1483,6 +1525,56 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 
     #endregion
 
+    private bool HandleLeaderOverride()
+    {
+        if (!leaderOverrideActive)
+            return false;
+
+        if (Time.time >= leaderOverrideExpiresAt)
+        {
+            ClearLeaderOverride();
+            return false;
+        }
+
+        // Move toward override target unless reached and dwell time satisfied
+        float distance = Vector3.Distance(transform.position, leaderOverrideTarget);
+        if (distance > overrideArrivalTolerance)
+        {
+            // Mantiene viva la orden mientras se esté desplazando
+            leaderOverrideExpiresAt = Time.time + overrideDuration;
+
+            Vector3 steering = Game.AI.Steering.Steering.Arrive(
+                transform.position,
+                leaderOverrideTarget,
+                _vel,
+                patrolSpeed,
+                slowingDistance);
+
+            ApplySteering(steering);
+
+            currentMovementStatus = MovementStatus.Moving;
+        }
+        else
+        {
+            if (leaderOverrideReachedAt < 0f)
+            {
+                leaderOverrideReachedAt = Time.time;
+            }
+            else if (Time.time - leaderOverrideReachedAt >= overrideDwellTime)
+            {
+                ClearLeaderOverride();
+                return false;
+            }
+            else
+            {
+                ApplySteering(Vector3.zero);
+                currentMovementStatus = MovementStatus.Idle;
+            }
+        }
+
+        return leaderOverrideActive;
+    }
+
     public void MyUpdate()
     {
         if (!isAlive) return;
@@ -1494,6 +1586,9 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         }
 
         UpdateAISystem();
+
+        if (HandleLeaderOverride())
+            return;
 
         // Run FSM if enabled, otherwise use legacy movement system
         if (useFSM && stateMachine != null)

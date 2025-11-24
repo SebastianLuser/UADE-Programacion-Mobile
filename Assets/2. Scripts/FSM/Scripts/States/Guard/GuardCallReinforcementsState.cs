@@ -13,6 +13,12 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is Guard guard)
             {
                 guard.StateTimer = 0f;
+                // Asegura última posición de player antes de compartir
+                if (guard.LastKnownPlayerPosition == Vector3.zero && guard.GetTargetTransform() != null)
+                {
+                    guard.LastKnownPlayerPosition = guard.GetTargetTransform().position;
+                }
+
                 ShareInfo(guard);
                 guard.DeploySmoke();
                 Debug.Log($"[ReinforceDebug] Guard {guard.name} requesting reinforcements at {guard.transform.position}, lastPlayer {guard.LastKnownPlayerPosition}");
