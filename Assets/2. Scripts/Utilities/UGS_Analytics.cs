@@ -219,6 +219,46 @@ public class UGS_Analytics : MonoBehaviour
         Debug.Log($"Analytics: Shop closed without purchase after {timeInShopSeconds:F1}s");
     }
 
+    // Event 9: Rewarded ad started (e.g., duplicate reward button)
+    public void LogRewardAdStarted(string placementId, string sourcePanel)
+    {
+        var ev = new CustomEvent("rewardAdStarted")
+        {
+            ["placement_id"] = placementId,
+            ["source_panel"] = sourcePanel,
+            ["scene"] = SceneManager.GetActiveScene().name
+        };
+        AnalyticsService.Instance.RecordEvent(ev);
+        Debug.Log($"Analytics: Rewarded ad started - {placementId} from {sourcePanel}");
+    }
+
+    // Event 10: Rewarded ad completed (reward granted)
+    public void LogRewardAdCompleted(string placementId, string sourcePanel)
+    {
+        var ev = new CustomEvent("rewardAdCompleted")
+        {
+            ["placement_id"] = placementId,
+            ["source_panel"] = sourcePanel,
+            ["scene"] = SceneManager.GetActiveScene().name
+        };
+        AnalyticsService.Instance.RecordEvent(ev);
+        Debug.Log($"Analytics: Rewarded ad completed - {placementId} from {sourcePanel}");
+    }
+
+    // Event 11: Rewarded ad aborted (closed/failed/not ready)
+    public void LogRewardAdAborted(string placementId, string sourcePanel, string reason)
+    {
+        var ev = new CustomEvent("rewardAdAborted")
+        {
+            ["placement_id"] = placementId,
+            ["source_panel"] = sourcePanel,
+            ["reason"] = reason,
+            ["scene"] = SceneManager.GetActiveScene().name
+        };
+        AnalyticsService.Instance.RecordEvent(ev);
+        Debug.Log($"Analytics: Rewarded ad aborted - {placementId} from {sourcePanel} (reason: {reason})");
+    }
+
     // Event 8: Session completed (victory or defeat)
     public void LogSessionCompleted(bool isVictory, int score, float durationSeconds)
     {

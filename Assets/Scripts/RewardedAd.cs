@@ -28,6 +28,9 @@ public class RewardedAd : MonoBehaviour
     // Ad Unit/Placement
     [SerializeField]
     private string m_AdUnitId = "2sv49kubzjpb3rfq";
+    [Header("Analytics")]
+    [SerializeField] private string analyticsPlacementId = "duplicate_reward";
+    [SerializeField] private string analyticsSourcePanel = "Results";
 
     // Runtime State
     private bool m_IsInitialized;
@@ -176,10 +179,12 @@ MyLogger.LogWarning("Unexpected platform for ads");
     {
         if (CanShowAd())
         {
+            UGS_Analytics.Instance?.LogRewardAdStarted(analyticsPlacementId, analyticsSourcePanel);
             ShowRewardedAd();
         }
         else
         {
+            UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, "not_ready");
             MyLogger.LogWarning($"Cannot show ad.");
         }
     }
@@ -222,6 +227,7 @@ MyLogger.LogWarning("Unexpected platform for ads");
     private void HandleLoadFailed(LevelPlayAdError error)
     {
         MyLogger.LogWarning($"Rewarded ad failed to load: {error.ErrorMessage} (Code: {error.ErrorCode})");
+        UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, $"load_failed_{error.ErrorCode}");
         Invoke(nameof(LoadRewardedAd), 2f);
     }
     
@@ -236,6 +242,7 @@ MyLogger.LogWarning("Unexpected platform for ads");
     {
         MyLogger.LogWarning($"$Rewarded ad failed to display: {error}");
         AdSuccessfullyCompleted?.Invoke(false);
+        UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, $"display_failed_{error.ErrorCode}");
     }
 
     private async void ProcessAdReward(LevelPlayAdInfo adInfo, LevelPlayReward reward)
@@ -285,12 +292,18 @@ MyLogger.LogWarning("Unexpected platform for ads");
         
 
         MyLogger.LogDebug($"Ad reward granted successfully: {reward.Name} x{reward.Amount}");
+        UGS_Analytics.Instance?.LogRewardAdCompleted(analyticsPlacementId, analyticsSourcePanel);
     }
     
     // Completion events
     private void HandleAdClosed(LevelPlayAdInfo adInfo)
     {
         MyLogger.LogDebug("Rewarded ad closed");
+
+        if (!m_RewardGranted)
+        {
+            UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, "closed_no_reward");
+        }
 
         m_RewardGranted = false;
         // Load another ad for next time
