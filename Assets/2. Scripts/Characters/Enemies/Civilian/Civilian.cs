@@ -28,10 +28,6 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float idleSecondsAfterSafe = 3f; // Idle time after reaching safety
     [SerializeField] private float loseSightGrace = 2f;     // Grace period after losing sight
 
-    [Header("Roulette Decision System")]
-    [SerializeField] private float escapeWeight = 0.8f;     // Weight for escape path
-    [SerializeField] private float attackWeight = 0.2f;     // Weight for attack path
-
     [Header("Dying Behavior")]
     [SerializeField] private float dyingWeightMax = 1.5f;
     [SerializeField] private AnimationCurve dyingWeightCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
@@ -145,8 +141,8 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     public float IdleSecondsAfterSafe => idleSecondsAfterSafe;
     public float EvadeTime => evadeTime;
     public float SafeTime => safeTime;
-    public float EscapeWeight => escapeWeight;
-    public float AttackWeight => attackWeight;
+    public float EscapeWeight => 1f; // Dinámico: se ajusta en runtime en el DecisionTreeRunner
+    public float AttackWeight => 1f; // Dinámico: se ajusta en runtime en el DecisionTreeRunner
     public float DyingWeight => dyingRouletteWeight;
     public float DyingSpeed => Mathf.Max(0.1f, fleeSpeed * dyingSpeedMultiplier);
     public float HealthNormalized => Mathf.Clamp01(currentHealth / Mathf.Max(0.0001f, MaxHealth));
@@ -544,6 +540,37 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     public void ClearFleePath()
     {
         _pathLen = 0;
+    }
+
+    /// <summary>
+    /// Distancia restante (aproximada) hasta el nodo seguro actual.
+    /// Devuelve PositiveInfinity si no hay path/grafo para que el caller trate el caso como "sin salida clara".
+    /// </summary>
+    public float GetRemainingFleeDistance()
+    {
+        if (_pathFollower == null || _worldPath == null || _pathLen <= 0)
+            return float.PositiveInfinity;
+
+        int idx = Mathf.Clamp(_pathFollower.CurrentIndex, 0, _pathLen - 1);
+
+        float distance = Vector3.Distance(transform.position, _worldPath[idx]);
+        for (int i = idx; i < _pathLen - 1; i++)
+        {
+            distance += Vector3.Distance(_worldPath[i], _worldPath[i + 1]);
+        }
+
+        return distance;
+    }
+
+    /// <summary>
+    /// Estimación de distancia directa al nodo objetivo por si aún no hay path construido.
+    /// </summary>
+    public float GetEstimatedDistanceToSafeNode()
+    {
+        if (!HasFleeGraph || fleeGraph == null || fleeTargetNodeIndex < 0 || fleeTargetNodeIndex >= fleeGraph.NodeCount)
+            return float.PositiveInfinity;
+
+        return Vector3.Distance(transform.position, fleeGraph.nodePositions[fleeTargetNodeIndex]);
     }
 
     #endregion
