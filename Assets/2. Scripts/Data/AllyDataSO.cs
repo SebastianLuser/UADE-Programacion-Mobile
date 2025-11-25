@@ -1,12 +1,11 @@
 using UnityEngine;
-using Scripts.FSM.Models;
-using System.Collections.Generic;
 using ScriptableObjects.Bullets;
-using Scripts.FSM.Base.StateMachine;
 
 /// <summary>
 /// Configuration data for Ally NPCs.
-/// Allies escort the player and attack Guards using flocking behavior.
+/// Allies escort the player and attack Guards using a priority-based behavior system.
+/// Priority: Leader Override > Attack Guard > Follow Player
+/// Note: Does NOT use FSM - uses simple priority system for efficiency.
 /// </summary>
 [CreateAssetMenu(fileName = "AllyData", menuName = "Game Data/Ally Data")]
 public class AllyDataSO : NPCDataSO
@@ -39,10 +38,6 @@ public class AllyDataSO : NPCDataSO
     [Range(0f, 1f)]
     [field: SerializeField] public float flockingWeight { get; private set; } = 0.4f;
 
-    [Header("State Machine Configuration")]
-    [field: SerializeField] public List<StateData> stateDataList { get; private set; } = new List<StateData>();
-    [field: SerializeField] public bool useFSM { get; private set; } = false;
-
     [Header("Steering Physics")]
     [field: SerializeField] public float mass { get; set; } = 1f;
     [field: SerializeField] public float maxForce { get; set; } = 20f;
@@ -50,7 +45,8 @@ public class AllyDataSO : NPCDataSO
     [field: SerializeField] public float slowingDistance { get; set; } = 2f;
 
     [Header("Obstacle Avoidance")]
-    [field: SerializeField] public LayerMask obstaclesMask { get; set; } = -1;
+    [Tooltip("Layer mask for obstacles (walls, static objects). NEVER use 'Everything' or Ally will avoid player/guards!")]
+    [field: SerializeField] public LayerMask obstaclesMask { get; set; } = 1 << 8;  // Layer 8 = Obstacles
     [field: SerializeField] public float avoidRadius { get; set; } = 2f;
     [field: SerializeField] public float avoidAngle { get; set; } = 90f;
     [field: SerializeField] public float personalArea { get; set; } = 0.5f;

@@ -296,19 +296,8 @@ public class FactionSpawner : MonoBehaviour
             return;
         }
 
-        // Use reflection to set private field
-        var l_field = typeof(Guard).GetField("patrolPoints",
-            System.Reflection.BindingFlags.NonPublic |
-            System.Reflection.BindingFlags.Instance);
-
-        if (l_field != null)
-        {
-            l_field.SetValue(p_guard, p_waypoints);
-        }
-        else
-        {
-            Debug.LogError("[FactionSpawner] Could not find 'patrolPoints' field in Guard!");
-        }
+        // Use public method instead of reflection
+        p_guard.SetPatrolPoints(p_waypoints);
     }
 
     #endregion
@@ -387,15 +376,8 @@ public class FactionSpawner : MonoBehaviour
                 l_guards.Add(l_guard);
         }
 
-        var l_field = typeof(Leader).GetField("managedGuards",
-            System.Reflection.BindingFlags.NonPublic |
-            System.Reflection.BindingFlags.Instance);
-
-        if (l_field != null)
-        {
-            l_field.SetValue(p_leader, l_guards);
-            Debug.Log($"[FactionSpawner] Leader assigned {l_guards.Count} Guards");
-        }
+        // Use public method instead of reflection
+        p_leader.SetManagedGuards(l_guards);
     }
 
     private void AssignAlliesToLeader(AllyLeader p_allyLeader)
@@ -408,15 +390,8 @@ public class FactionSpawner : MonoBehaviour
                 l_allies.Add(l_ally);
         }
 
-        var l_field = typeof(AllyLeader).GetField("managedAllies",
-            System.Reflection.BindingFlags.NonPublic |
-            System.Reflection.BindingFlags.Instance);
-
-        if (l_field != null)
-        {
-            l_field.SetValue(p_allyLeader, l_allies);
-            Debug.Log($"[FactionSpawner] AllyLeader assigned {l_allies.Count} Allies");
-        }
+        // Use public method instead of reflection
+        p_allyLeader.SetManagedAllies(l_allies);
     }
 
     #endregion
@@ -473,17 +448,38 @@ public class FactionSpawner : MonoBehaviour
         foreach (GameObject l_unit in spawnedUnits)
         {
             if (l_unit != null)
-                DestroyImmediate(l_unit);
+            {
+                #if UNITY_EDITOR
+                if (!Application.isPlaying)
+                    DestroyImmediate(l_unit);
+                else
+                #endif
+                    Destroy(l_unit);
+            }
         }
         spawnedUnits.Clear();
 
         if (spawnedLeader != null)
-            DestroyImmediate(spawnedLeader);
+        {
+            #if UNITY_EDITOR
+            if (!Application.isPlaying)
+                DestroyImmediate(spawnedLeader);
+            else
+            #endif
+                Destroy(spawnedLeader);
+        }
 
         ClearGeneratedWaypoints();
 
         if (waypointContainer != null)
-            DestroyImmediate(waypointContainer.gameObject);
+        {
+            #if UNITY_EDITOR
+            if (!Application.isPlaying)
+                DestroyImmediate(waypointContainer.gameObject);
+            else
+            #endif
+                Destroy(waypointContainer.gameObject);
+        }
     }
 
     private void ClearGeneratedWaypoints()
@@ -491,7 +487,14 @@ public class FactionSpawner : MonoBehaviour
         foreach (Transform l_wp in generatedWaypoints)
         {
             if (l_wp != null)
-                DestroyImmediate(l_wp.gameObject);
+            {
+                #if UNITY_EDITOR
+                if (!Application.isPlaying)
+                    DestroyImmediate(l_wp.gameObject);
+                else
+                #endif
+                    Destroy(l_wp.gameObject);
+            }
         }
         generatedWaypoints.Clear();
     }

@@ -29,7 +29,8 @@ MonoBehaviour:
   <patrolPoints>k__BackingField: []
   <attackRange>k__BackingField: 8
   <chaseSpeed>k__BackingField: 5
-  <bulletData>k__BackingField: {fileID: 0}
+  <bulletData>k__BackingField: {fileID: 11400000, guid: 29336a3ef3dee654d95f3bea6a27249c,
+    type: 2}
   <followDistance>k__BackingField: 3
   <followSpeed>k__BackingField: 4
   <useFlocking>k__BackingField: 1

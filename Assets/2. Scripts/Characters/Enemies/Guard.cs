@@ -1525,6 +1525,64 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 
     #endregion
 
+    #region Configuration Methods for Subclasses and External Systems
+
+    /// <summary>
+    /// Configure FSM usage. Protected for subclasses like Ally to disable FSM.
+    /// </summary>
+    protected void SetUseFSM(bool value)
+    {
+        useFSM = value;
+    }
+
+    /// <summary>
+    /// Configure flocking parameters. Protected for subclasses like Ally.
+    /// </summary>
+    protected void SetFlockingConfiguration(bool useFlockingValue, float baseWeight, float flockWeight)
+    {
+        useFlocking = useFlockingValue;
+        baseForceWeight = baseWeight;
+        flockForceWeight = flockWeight;
+    }
+
+    /// <summary>
+    /// Configure AI personality type. Protected for subclasses.
+    /// </summary>
+    protected void SetPersonalityType(AIPersonalityType personality)
+    {
+        personalityType = personality;
+        if (aiContext != null)
+        {
+            aiContext.SetPersonalityType(personality);
+        }
+    }
+
+    /// <summary>
+    /// Set patrol points for this guard. Public because it's used by external spawners.
+    /// </summary>
+    public void SetPatrolPoints(Transform[] points)
+    {
+        patrolPoints = points;
+    }
+
+    /// <summary>
+    /// Configure player detector settings. Protected for subclasses like Ally to detect Guards instead of Player.
+    /// </summary>
+    protected void ConfigurePlayerDetector(string targetTag, LayerMask targetLayerMask)
+    {
+        if (playerDetector != null)
+        {
+            var detectorType = playerDetector.GetType();
+            var tagField = detectorType.GetField("playerTag", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var layerField = detectorType.GetField("playerLayerMask", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            tagField?.SetValue(playerDetector, targetTag);
+            layerField?.SetValue(playerDetector, targetLayerMask);
+        }
+    }
+
+    #endregion
+
     private bool HandleLeaderOverride()
     {
         if (!leaderOverrideActive)

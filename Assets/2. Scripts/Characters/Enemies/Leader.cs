@@ -211,6 +211,15 @@ public class Leader : Guard
         }
     }
 
+    /// <summary>
+    /// Set the list of guards managed by this leader. Used by spawners.
+    /// </summary>
+    public void SetManagedGuards(List<Guard> guards)
+    {
+        managedGuards = guards ?? new List<Guard>();
+        Debug.Log($"[Leader] {name} assigned {managedGuards.Count} Guards");
+    }
+
     private void EnsurePlayerTarget()
     {
         if (Player != null) return;

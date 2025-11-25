@@ -24,7 +24,8 @@ MonoBehaviour:
   <waypointMode>k__BackingField: 1
   <waypointRadius>k__BackingField: 8
   <waypointsPerGuard>k__BackingField: 4
-  <allyFlockingProfile>k__BackingField: {fileID: 0}
+  <allyFlockingProfile>k__BackingField: {fileID: 11400000, guid: 30691810f383d2a4384bd5a3a9cdade5,
+    type: 2}
   <followDistance>k__BackingField: 3
   <spawnDelay>k__BackingField: 0
   <delayBetweenSpawns>k__BackingField: 0.1

@@ -209,4 +209,13 @@ public class AllyLeader : Ally
             managedAllies.Remove(p_ally);
         }
     }
+
+    /// <summary>
+    /// Set the list of allies managed by this leader. Used by spawners.
+    /// </summary>
+    public void SetManagedAllies(List<Ally> allies)
+    {
+        managedAllies = allies ?? new List<Ally>();
+        Debug.Log($"[AllyLeader] {name} assigned {managedAllies.Count} Allies");
+    }
 }
