@@ -123,7 +123,7 @@ public class MainCharacter : BaseCharacter, ICombat
         var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
         var l_bullet = PoolObjectsService.GetOrCreateObject(BulletData.Prefab);
         l_bullet.OnDeactivate += OnDeactivateBulletHandler;
-        l_bullet.InitializeBullet(BulletData, l_spawnPosition, p_direction);
+        l_bullet.InitializeBullet(BulletData, l_spawnPosition, p_direction, BulletOwner.Player, gameObject.name);
     }
 
     private static void OnDeactivateBulletHandler(BulletObject p_bullet)

@@ -27,6 +27,10 @@ namespace _2._Scripts.UI.MainMenu.Shop
         private ShopCategory m_currentCategory;
         private IWalletService m_walletService;
         private IPlayerUpgradeService m_upgradeService;
+        private bool m_isVisible;
+        private bool m_purchaseMadeThisSession;
+        private float m_shopOpenedTime;
+        private float m_lastScrollPosition;
 
         public override void Initialize()
         {
@@ -67,6 +71,27 @@ namespace _2._Scripts.UI.MainMenu.Shop
             }
         }
 
+        public override void Show()
+        {
+            base.Show();
+            m_isVisible = true;
+            m_purchaseMadeThisSession = false;
+            m_shopOpenedTime = Time.timeSinceLevelLoad;
+            LogCurrentCategoryView();
+        }
+
+        public override void Hide()
+        {
+            if (m_isVisible && !m_purchaseMadeThisSession && UGS_Analytics.Instance != null)
+            {
+                float duration = Mathf.Max(0f, Time.timeSinceLevelLoad - m_shopOpenedTime);
+                UGS_Analytics.Instance.LogShopClosedWithoutPurchase(duration);
+            }
+
+            m_isVisible = false;
+            base.Hide();
+        }
+
         private void OnCategorySelectedHandler(ShopCategory category, float scrollPosition)
         {
             ShowCategory(category, scrollPosition);
@@ -75,10 +100,16 @@ namespace _2._Scripts.UI.MainMenu.Shop
         private void ShowCategory(ShopCategory category, float scrollPosition)
         {
             m_currentCategory = category;
+             m_lastScrollPosition = scrollPosition;
 
             IReadOnlyList<ShopModel.ShopItemDefinition> items = m_model.GetItemsForCategory(category);
             m_view.DisplayItems(items);
             m_view.ScrollTo(scrollPosition);
+
+            if (m_isVisible && UGS_Analytics.Instance != null)
+            {
+                UGS_Analytics.Instance.LogShopCategoryViewed(category.ToString(), scrollPosition);
+            }
         }
 
         private void OnBackClickedHandler()
@@ -89,10 +120,24 @@ namespace _2._Scripts.UI.MainMenu.Shop
 
         private void OnBuyRequestedHandler(ShopModel.ShopItemDefinition item)
         {
+            string itemId = string.IsNullOrEmpty(item.id) ? item.displayName : item.id;
+            var analytics = UGS_Analytics.Instance;
+            if (analytics != null)
+            {
+                analytics.LogShopPurchaseAttempt(itemId, item.currency.ToString(), item.price);
+            }
+
             if (!TrySpendCurrency(item))
             {
                 MyLogger.LogWarning($"Not enough {(item.currency == ShopCurrency.Coins ? "coins" : "diamonds")} to buy {item.displayName}");
                 return;
+            }
+
+            m_purchaseMadeThisSession = true;
+
+            if (analytics != null)
+            {
+                analytics.LogShopPurchaseSuccess(itemId, item.currency.ToString(), item.price);
             }
 
             ApplyUpgrade(item);
@@ -136,6 +181,14 @@ namespace _2._Scripts.UI.MainMenu.Shop
         private void OnWalletChangedHandler(int coins, int diamonds)
         {
             m_view.SetCurrency(coins, diamonds);
+        }
+
+        private void LogCurrentCategoryView()
+        {
+            if (UGS_Analytics.Instance != null)
+            {
+                UGS_Analytics.Instance.LogShopCategoryViewed(m_currentCategory.ToString(), m_lastScrollPosition);
+            }
         }
 
         private float CalculateAllowedDelta(PlayerUpgradeType type, float requestedDelta)

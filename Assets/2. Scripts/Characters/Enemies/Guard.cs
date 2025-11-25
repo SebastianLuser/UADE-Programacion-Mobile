@@ -915,7 +915,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
         var l_bullet = PoolObjectsService.GetOrCreateObject(bulletData.Prefab);
         l_bullet.OnDeactivate += OnDeactivateBulletHandler;
-        l_bullet.InitializeBullet(bulletData, l_spawnPosition, p_direction);
+        l_bullet.InitializeBullet(bulletData, l_spawnPosition, p_direction, BulletOwner.Guard, gameObject.name);
     }
 
     private void OnDeactivateBulletHandler(BulletObject p_bullet)
@@ -1512,6 +1512,16 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     }
 
     #endregion
+
+    protected override void OnDeath()
+    {
+        base.OnDeath();
+
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogGuardKilled(gameObject.name, transform.position);
+        }
+    }
 
     #region IUseFsm Implementation
 

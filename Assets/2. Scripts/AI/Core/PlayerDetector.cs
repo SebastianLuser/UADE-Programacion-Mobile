@@ -59,7 +59,18 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     {
         if (autoConfigureFromPersonality)
         {
+            // Preserve designer overrides (layer masks, tag) when reapplying defaults
+            var preservedObstacleMask = config.obstacleLayerMask;
+            var preservedPlayerMask = config.playerLayerMask;
+            var preservedPlayerTag = config.playerTag;
+
             config = DetectionConfig.GetDefault(personalityType);
+            config.obstacleLayerMask = preservedObstacleMask;
+            config.playerLayerMask = preservedPlayerMask;
+            if (!string.IsNullOrEmpty(preservedPlayerTag))
+            {
+                config.playerTag = preservedPlayerTag;
+            }
         }
     }
     

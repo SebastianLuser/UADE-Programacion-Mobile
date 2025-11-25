@@ -62,6 +62,11 @@ namespace _2._Scripts.UI.Gameplay.Results
         {
             m_model.SetResult(resultEvent);
 
+            if (UGS_Analytics.Instance != null)
+            {
+                UGS_Analytics.Instance.LogSessionCompleted(resultEvent.IsVictory, resultEvent.Score, Time.timeSinceLevelLoad);
+            }
+
             if (resultEvent.IsVictory)
             {
                 m_view.DisplayVictory(resultEvent.Score, resultEvent.EarnedCoins, resultEvent.EarnedDiamonds);
@@ -134,6 +139,14 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         private void OnRetryPressed()
         {
+            if (UGS_Analytics.Instance != null)
+            {
+                var lastResult = m_model?.LastResult;
+                int lastScore = lastResult?.Score ?? 0;
+                bool lastWasVictory = lastResult?.IsVictory ?? false;
+                UGS_Analytics.Instance.LogRetryPressed(lastScore, lastWasVictory);
+            }
+
             Time.timeScale = 1f;
             var activeScene = SceneManager.GetActiveScene();
             SceneManager.LoadScene(activeScene.name);

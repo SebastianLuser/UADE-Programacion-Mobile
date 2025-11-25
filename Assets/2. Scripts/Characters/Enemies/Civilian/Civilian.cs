@@ -1807,6 +1807,16 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     #endregion
 
+    protected override void OnDeath()
+    {
+        base.OnDeath();
+
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogCivilianKilled(gameObject.name, transform.position);
+        }
+    }
+
     #region Cleanup
 
     private void OnDisable()
