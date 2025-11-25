@@ -15,6 +15,10 @@ namespace Scripts.FSM.Base.StateMachine
                 civilian.SafeTimer = 0f;
                 civilian.SetCurrentMaxSpeed(civilian.FleeSpeed);
 
+                // 1. LIMPIAR RUTA VIEJA (Esto arregla tu bug)
+                // Fuerza a que RecomputeFleePathIfNeeded crea que no hay camino
+                civilian.ClearFleePath();
+
                 // A*: asegurar init (no hace alloc si ya estaba)
                 civilian.EnsureFleePathfindingInitialized();
 
@@ -52,8 +56,8 @@ namespace Scripts.FSM.Base.StateMachine
                     var steering = civilian.TickFleePathSteering();
 
                     // USAR EL MÉTODO ESPECIALIZADO
-                    civilian.ApplySteeringFlee(steering); // <- CAMBIO AQUÍ
-
+                    civilian.ApplySteeringFleeOriginal(steering); // <- CAMBIO AQUÍ
+                    //civilian.ApplySteering(steering);
                     if (civilian.FleePathReachedEnd())
                     {
                         civilian.SafeTimer += Time.deltaTime;
