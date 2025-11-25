@@ -397,9 +397,6 @@ public class PlayerTouchMovement : MonoBehaviour
 
         bool dragDone  = (dragTutorial  == null) || !dragTutorial.activeInHierarchy || dragClosed;
         bool shootDone = (shootTutorial == null) || !shootTutorial.activeInHierarchy || shootClosed;
-        
-        Debug.Log(dragDone);
-        Debug.Log(shootDone);
 
         if (dragDone && shootDone)
         {
