@@ -9,19 +9,17 @@ namespace _2._Scripts.UI.Gameplay.Results
 {
     public class ResultsView : UIView
     {
-        [Header("Texts")]
-        [SerializeField] private TMP_Text titleText;
+        [Header("Texts")] [SerializeField] private TMP_Text titleText;
         [SerializeField] private TMP_Text scoreText;
         [SerializeField] private TMP_Text detailsText;
         [SerializeField] private TMP_Text coinsRewardText;
         [SerializeField] private TMP_Text diamondsRewardText;
 
-        [Header("Buttons")]
-        [SerializeField] private Button retryButton;
+        [Header("Buttons")] [SerializeField] private Button retryButton;
         [SerializeField] private Button mainMenuButton;
+        [SerializeField] private Button rewardedAdButton;
 
-        [Header("Copy")]
-        [SerializeField] private string victoryTitle = "Victoria";
+        [Header("Copy")] [SerializeField] private string victoryTitle = "Victoria";
         [SerializeField] private string defeatTitle = "Derrota";
         [SerializeField] private string scoreFormat = "Puntaje: {0}";
         [SerializeField] private string coinsFormat = "+{0} Coins";
@@ -31,9 +29,22 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         public event Action OnRetry;
         public event Action OnMainMenu;
+        public event Action OnRewardedAd;
 
         private IAudioService m_audioService;
         private AudioConfig m_audioConfig;
+
+        private bool showRewardedAd; // bool to know if rewardedAdButton has to be show by score
+        private bool rewardedAdShowed = false; // bool to know if rewarded ad has already been shown
+
+        public bool RewardedAdShowed
+        {
+            set
+            {
+                rewardedAdShowed = value;
+                rewardedAdButton.gameObject.SetActive(!value);
+            }
+        }
 
         private void Awake()
         {
@@ -87,6 +98,10 @@ namespace _2._Scripts.UI.Gameplay.Results
             {
                 diamondsRewardText.text = string.Format(diamondsFormat, diamonds);
             }
+            
+            bool hasPoints = (diamonds != 0 || coins != 0 || score != 0);
+            
+            showRewardedAd = hasPoints && !rewardedAdShowed;
         }
 
         public override void Show()
@@ -100,6 +115,17 @@ namespace _2._Scripts.UI.Gameplay.Results
             if (mainMenuButton)
             {
                 mainMenuButton.onClick.AddListener(OnMainMenuClicked);
+            }
+
+            if (rewardedAdButton)
+            {
+                rewardedAdButton.onClick.AddListener(OnRewardedAdClicked);
+            }
+        
+        if (!showRewardedAd)
+            {
+                rewardedAdButton.gameObject.SetActive(false);
+                rewardedAdButton.onClick.RemoveListener(OnRewardedAdClicked);
             }
         }
 
@@ -115,6 +141,11 @@ namespace _2._Scripts.UI.Gameplay.Results
             {
                 mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
             }
+            
+            if (rewardedAdButton)
+            {
+                rewardedAdButton.onClick.RemoveListener(OnRewardedAdClicked);
+            }
         }
 
         public override void Shutdown()
@@ -128,6 +159,11 @@ namespace _2._Scripts.UI.Gameplay.Results
             if (mainMenuButton)
             {
                 mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
+            }
+            
+            if (rewardedAdButton)
+            {
+                rewardedAdButton.onClick.RemoveListener(OnRewardedAdClicked);
             }
         }
 
@@ -150,5 +186,16 @@ namespace _2._Scripts.UI.Gameplay.Results
 
             OnMainMenu?.Invoke();
         }
+        
+        private void OnRewardedAdClicked()
+        {
+            if (m_audioService != null && m_audioConfig != null)
+            {
+                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+            }
+            
+            OnRewardedAd?.Invoke();
+        }
+
     }
 }

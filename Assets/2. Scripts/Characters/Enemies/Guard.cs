@@ -55,6 +55,36 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float avoidRadius = 2f;
     [SerializeField] private float avoidAngle = 90f;
     [SerializeField] private float personalArea = 0.5f;
+
+    [Header("Cover Behavior")]
+    [SerializeField] private float coverProbeRadius = 0.9f;
+    [SerializeField] private float coverProbeDistance = 4f;
+    [SerializeField] private float coverOffsetFromObstacle = 1.25f;
+    [SerializeField] private float coverRepositionCooldown = 1.2f;
+    [SerializeField] private float losePlayerTimeout = 4f;
+
+    [Header("Investigation State")]
+    [SerializeField] private float investigationRotateSpeed = 180f;
+    [SerializeField] private float investigationMoveSpeedFactor = 0.7f;
+    [SerializeField] private float investigationArrivalTolerance = 1.2f;
+
+    [Header("Reinforcement/Smoke")]
+    [SerializeField] private float damageRecentWindow = 3f;
+    [SerializeField] private float smokeLifetime = 5f;
+    [SerializeField] private float smokeScale = 3f;
+    [SerializeField] private string obstacleLayerName = "ObstacleAI";
+
+    [Header("Leader Override")]
+    [SerializeField] private float overrideArrivalTolerance = 1.5f;
+    [SerializeField] private float overrideDuration = 8f;
+    [SerializeField] private float overrideDwellTime = 2f;
+
+    [Header("Health Regeneration")]
+    [SerializeField] private bool enableHealthRegen = true;
+    [SerializeField] private float regenDelay = 3f;
+    [SerializeField] private float regenRate = 4f;
+    [SerializeField, Range(0f, 1f)] private float lowHealthThreshold = 0.35f;
+    [SerializeField, Range(0f, 1f)] private float recoveredHealthThreshold = 0.8f;
     
     private Transform player;
     private Vector3 lastKnownPlayerPosition;
@@ -90,6 +120,24 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private Transform steeringTarget;
     private Bounds movementConstraints;
     private bool hasMovementConstraints = false;
+    private float lastDamageTime = Mathf.NegativeInfinity;
+    private float lastTimeSawPlayer = Mathf.NegativeInfinity;
+    private Vector3 currentCoverPoint;
+    private bool hasCoverPoint;
+    private Collider lastCoverCollider;
+    private Vector3 lastCoverHitPoint;
+    private Vector3 lastCoverHitNormal;
+    private GameObject smokeInstance;
+    private float smokeEndTime;
+    private bool investigationComplete;
+    private float investigationRotationRemaining;
+    private bool investigationAtLocation;
+    private Vector3 investigationTarget;
+    private bool leaderOverrideActive;
+    private Vector3 leaderOverrideTarget;
+    private float leaderOverrideExpiresAt;
+    private float leaderOverrideReachedAt;
+    private string leaderOverrideRole;
     
     // Callbacks
     public System.Action OnMovementComplete { get; set; }
@@ -153,8 +201,146 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public float MaxSpeed => maxSpeed;
     public float SlowingDistance => slowingDistance;
     public Vector3 CurrentVelocity => _vel;
+    public LayerMask ObstaclesMask => obstaclesMask;
+    public float CoverProbeRadius => coverProbeRadius;
+    public float CoverProbeDistance => coverProbeDistance;
+    public float CoverOffsetFromObstacle => coverOffsetFromObstacle;
+    public float CoverRepositionCooldown => coverRepositionCooldown;
+    public float LosePlayerTimeout => losePlayerTimeout;
+    public float HealthNormalized => MaxHealth <= 0f ? 0f : currentHealth / MaxHealth;
+    public float TimeSinceLastSeenPlayer => Time.time - lastTimeSawPlayer;
+    public bool RecentlySawPlayer(float window) => Time.time - lastTimeSawPlayer <= window;
+    public Vector3 CoverPoint => currentCoverPoint;
+    public bool HasCoverPoint => hasCoverPoint;
+    public string CurrentStateName => stateMachine?.GetCurrentState()?.State?.StateName ?? "None";
+    public Collider LastCoverCollider => lastCoverCollider;
+    public Vector3 LastCoverHitPoint => lastCoverHitPoint;
+    public Vector3 LastCoverHitNormal => lastCoverHitNormal;
+    public float InvestigationRotateSpeed => investigationRotateSpeed;
+    public float InvestigationMoveSpeedFactor => investigationMoveSpeedFactor;
+    public float InvestigationArrivalTolerance => investigationArrivalTolerance;
+    public bool InvestigationComplete => investigationComplete;
+    public float InvestigationRotationRemaining
+    {
+        get => investigationRotationRemaining;
+        set => investigationRotationRemaining = value;
+    }
+    public bool InvestigationAtLocation
+    {
+        get => investigationAtLocation;
+        set => investigationAtLocation = value;
+    }
+    public Vector3 InvestigationTarget
+    {
+        get => investigationTarget;
+        set => investigationTarget = value;
+    }
+    public bool TookDamageRecently(float window) => Time.time - lastDamageTime <= window;
+    public bool IsSmokeActive => smokeInstance != null && Time.time < smokeEndTime;
+    public bool LeaderOverrideActive => leaderOverrideActive;
     
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
+
+    public void SetCoverPoint(Vector3 coverPoint)
+    {
+        currentCoverPoint = coverPoint;
+        hasCoverPoint = true;
+    }
+
+    public void ClearCoverPoint()
+    {
+        hasCoverPoint = false;
+        currentCoverPoint = Vector3.zero;
+        lastCoverCollider = null;
+        lastCoverHitPoint = Vector3.zero;
+        lastCoverHitNormal = Vector3.zero;
+    }
+
+    public void SetCoverDebug(Collider collider, Vector3 hitPoint, Vector3 hitNormal)
+    {
+        lastCoverCollider = collider;
+        lastCoverHitPoint = hitPoint;
+        lastCoverHitNormal = hitNormal;
+    }
+
+    public void BeginInvestigation(Vector3 targetPosition)
+    {
+        investigationTarget = targetPosition;
+        investigationComplete = false;
+        investigationRotationRemaining = 360f;
+        investigationAtLocation = false;
+    }
+
+    public void MarkInvestigationArrived()
+    {
+        investigationAtLocation = true;
+    }
+
+    public void CompleteInvestigation()
+    {
+        investigationComplete = true;
+        investigationRotationRemaining = 0f;
+    }
+
+    public void DeploySmoke()
+    {
+        int obstacleLayer = LayerMask.NameToLayer(obstacleLayerName);
+        if (smokeInstance != null)
+        {
+            Destroy(smokeInstance);
+        }
+
+        smokeInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        smokeInstance.transform.position = transform.position;
+        smokeInstance.transform.localScale = Vector3.one * smokeScale;
+        smokeInstance.layer = obstacleLayer;
+
+        var renderer = smokeInstance.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            renderer.material.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+        }
+
+        var collider = smokeInstance.GetComponent<Collider>();
+        if (collider != null)
+        {
+            collider.isTrigger = false;
+
+            // Evita empujar al guard que lo genera (y colliders hijos)
+            var selfColliders = GetComponentsInChildren<Collider>();
+            foreach (var selfCol in selfColliders)
+            {
+                if (selfCol != null && selfCol != collider)
+                {
+                    Physics.IgnoreCollision(collider, selfCol, true);
+                }
+            }
+        }
+
+        smokeEndTime = Time.time + smokeLifetime;
+        Destroy(smokeInstance, smokeLifetime);
+    }
+
+    public void SetLeaderOverride(Vector3 target, float duration, string role = "")
+    {
+        leaderOverrideActive = true;
+        leaderOverrideTarget = target;
+        leaderOverrideExpiresAt = Time.time + (duration > 0f ? duration : overrideDuration);
+        leaderOverrideReachedAt = -1f;
+        leaderOverrideRole = role;
+
+        Debug.Log($"[LeaderOverride] {name} override set -> target {target}, duration {duration}, role {role}");
+    }
+
+    public void ClearLeaderOverride()
+    {
+        leaderOverrideActive = false;
+        leaderOverrideTarget = Vector3.zero;
+        leaderOverrideRole = string.Empty;
+        leaderOverrideExpiresAt = 0f;
+        leaderOverrideReachedAt = -1f;
+        Debug.Log($"[LeaderOverride] {name} override cleared");
+    }
     
     // MEJORA: Improved player detection using new AI system
     public bool CanSeePlayer()
@@ -403,16 +589,23 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     private void UpdateAISystem()
     {
-        if (enableNewAISystem && m_blackboardService != null && player != null)
+        bool hasPlayer = player != null;
+        bool canSeePlayerNow = hasPlayer && CanSeePlayer();
+
+        if (canSeePlayerNow)
+        {
+            lastKnownPlayerPosition = player.position;
+            lastTimeSawPlayer = Time.time;
+        }
+
+        if (enableNewAISystem && m_blackboardService != null && hasPlayer)
         {
             // Update blackboard with current player information
             m_blackboardService.SetValue(BlackboardKeys.PLAYER_TRANSFORM, player);
             m_blackboardService.SetValue(BlackboardKeys.PLAYER_POSITION, player.position);
             
-            // Update last known position if we can see the player
-            if (CanSeePlayer())
+            if (canSeePlayerNow)
             {
-                lastKnownPlayerPosition = player.position;
                 m_blackboardService.SetValue(BlackboardKeys.LAST_KNOWN_PLAYER_POSITION, lastKnownPlayerPosition);
             }
             
@@ -421,6 +614,15 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_DetectionLevel", detectionResult.level);
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.level > PlayerDetectionLevel.None);
         }
+    }
+
+    private void HandleHealthRegen()
+    {
+        if (!enableHealthRegen || !isAlive) return;
+        if (currentHealth >= MaxHealth) return;
+        if (Time.time - lastDamageTime < regenDelay) return;
+
+        currentHealth = Mathf.Min(currentHealth + regenRate * Time.deltaTime, MaxHealth);
     }
 
     private void OnDisable()
@@ -707,7 +909,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_ShootDirection", direction);
         }
     }
-    
+
     private void CreateBullet(Vector3 p_direction)
     {
         var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
@@ -720,6 +922,12 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         p_bullet.OnDeactivate -= OnDeactivateBulletHandler;
         PoolObjectsService.ReturnObject(p_bullet);
+    }
+
+    public override void TakeDamage(float damage)
+    {
+        base.TakeDamage(damage);
+        lastDamageTime = Time.time;
     }
 
     #region AI System Integration
@@ -1317,6 +1525,56 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 
     #endregion
 
+    private bool HandleLeaderOverride()
+    {
+        if (!leaderOverrideActive)
+            return false;
+
+        if (Time.time >= leaderOverrideExpiresAt)
+        {
+            ClearLeaderOverride();
+            return false;
+        }
+
+        // Move toward override target unless reached and dwell time satisfied
+        float distance = Vector3.Distance(transform.position, leaderOverrideTarget);
+        if (distance > overrideArrivalTolerance)
+        {
+            // Mantiene viva la orden mientras se esté desplazando
+            leaderOverrideExpiresAt = Time.time + overrideDuration;
+
+            Vector3 steering = Game.AI.Steering.Steering.Arrive(
+                transform.position,
+                leaderOverrideTarget,
+                _vel,
+                patrolSpeed,
+                slowingDistance);
+
+            ApplySteering(steering);
+
+            currentMovementStatus = MovementStatus.Moving;
+        }
+        else
+        {
+            if (leaderOverrideReachedAt < 0f)
+            {
+                leaderOverrideReachedAt = Time.time;
+            }
+            else if (Time.time - leaderOverrideReachedAt >= overrideDwellTime)
+            {
+                ClearLeaderOverride();
+                return false;
+            }
+            else
+            {
+                ApplySteering(Vector3.zero);
+                currentMovementStatus = MovementStatus.Idle;
+            }
+        }
+
+        return leaderOverrideActive;
+    }
+
     public void MyUpdate()
     {
         if (!isAlive) return;
@@ -1329,6 +1587,9 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 
         UpdateAISystem();
 
+        if (HandleLeaderOverride())
+            return;
+
         // Run FSM if enabled, otherwise use legacy movement system
         if (useFSM && stateMachine != null)
         {
@@ -1340,6 +1601,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             UpdateMovementSystem(Time.deltaTime);
             stateTimer += Time.deltaTime; // Keep timer for conditions in legacy mode
         }
+
+        HandleHealthRegen();
     }
 
     public void SubscribeUpdateService()
@@ -1351,4 +1614,43 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         ServiceLocator.Get<IUpdateService>().RemoveUpdateListener(this);
     }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        // Visual debug of current FSM state above the guard in the Scene view
+        var style = new UnityEngine.GUIStyle(UnityEditor.EditorStyles.boldLabel)
+        {
+            normal = { textColor = Color.cyan }
+        };
+
+        UnityEditor.Handles.Label(transform.position + Vector3.up * 2f, $"State: {CurrentStateName}", style);
+
+        // Cover point debug
+        if (HasCoverPoint)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawSphere(CoverPoint, 0.2f);
+            Gizmos.DrawLine(transform.position, CoverPoint);
+        }
+
+        // Obstacle collider debug for cover
+        if (LastCoverCollider != null)
+        {
+            var bounds = LastCoverCollider.bounds;
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireCube(bounds.center, bounds.size);
+
+            if (LastCoverHitPoint != Vector3.zero)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawSphere(LastCoverHitPoint, 0.1f);
+                if (LastCoverHitNormal != Vector3.zero)
+                {
+                    Gizmos.DrawRay(LastCoverHitPoint, LastCoverHitNormal * 0.75f);
+                }
+            }
+        }
+    }
+#endif
 }
