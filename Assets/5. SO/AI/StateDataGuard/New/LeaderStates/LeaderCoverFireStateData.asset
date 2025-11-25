@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 01f542c06373b254891eed3f2dc2e2ec, type: 3}
-  m_Name: IdleStateDataLEader
+  m_Name: LeaderCoverFireStateData
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.StateData
-  <State>k__BackingField: {fileID: 11400000, guid: 336917140c0c17042bae3e50230c0764,
+  <State>k__BackingField: {fileID: 11400000, guid: 88c71b01d94bea6499198add7ba96299,
     type: 2}
   <StateConditions>k__BackingField:
-  - {fileID: 11400000, guid: 27a01ccfbf7a3b94d9105650a03c7bd5, type: 2}
-  - {fileID: 11400000, guid: 292cee410a1069a4f8c7a9b22b2e8736, type: 2}
+  - {fileID: 11400000, guid: 86f980940deb5ff489e50d12fe302991, type: 2}
+  - {fileID: 11400000, guid: 5ba9a2997cc601e4faa8478ee91a3c86, type: 2}
   <ExitStates>k__BackingField:
-  - {fileID: 11400000, guid: 6635797daea2c4e498123d5bf3760f92, type: 2}
-  - {fileID: 11400000, guid: 4f41251b88854f84bae3694aadc9a493, type: 2}
+  - {fileID: 11400000, guid: ca4214a35c9a6434dada9f18e195bca5, type: 2}
+  - {fileID: 11400000, guid: ca4214a35c9a6434dada9f18e195bca5, type: 2}
