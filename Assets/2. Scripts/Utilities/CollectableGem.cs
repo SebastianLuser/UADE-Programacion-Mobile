@@ -1,5 +1,4 @@
 using Services;
-using Services.MicroServices.UserDataService.Wallet;
 using UnityEngine;
 
 /// <summary>
@@ -31,8 +30,6 @@ public class CollectableGem : MonoBehaviour, ICollectable
         Debug.Log($"Collected {ItemName} worth {Points} points!");
 
         collector.AddPoints(Points);
-
-        ServiceLocator.Get<IWalletService>()?.AddDiamonds(walletReward);
 
         if (collector is PlayerCollector playerCollector)
         {
