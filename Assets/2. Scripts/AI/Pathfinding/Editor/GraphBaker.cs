@@ -11,7 +11,7 @@ public static class GraphBaker
         var nodes = Object.FindObjectsOfType<GraphNode>();
         if (nodes == null || nodes.Length == 0)
         {
-            Debug.LogWarning("GraphBaker: No GraphNode found in scene.");
+            MyLogger.LogWarning("GraphBaker: No GraphNode found in scene.");
             return;
         }
 
@@ -41,12 +41,12 @@ public static class GraphBaker
         {
             AssetDatabase.CreateAsset(asset, path);
             AssetDatabase.SaveAssets();
-            Debug.Log($"GraphBaker: Saved GraphAsset at {path} (nodes={asset.NodeCount}).");
+            MyLogger.LogInfo($"GraphBaker: Saved GraphAsset at {path} (nodes={asset.NodeCount}).");
         }
         else
         {
             Object.DestroyImmediate(asset);
-            Debug.Log("GraphBaker: Canceled.");
+            MyLogger.LogInfo("GraphBaker: Canceled.");
         }
     }
 }

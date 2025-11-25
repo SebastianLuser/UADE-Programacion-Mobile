@@ -368,17 +368,17 @@ public class GameTuningSO : ScriptableObject
     [ContextMenu("Print Current Configuration")]
     public void PrintCurrentConfiguration()
     {
-        Debug.Log("=== GAME TUNING CONFIGURATION ===");
-        Debug.Log($"AI Update Interval: {aiUpdateInterval}s");
-        Debug.Log($"Base Detection Range: {baseDetectionRange}");
-        Debug.Log($"Base FOV Angle: {baseFOVAngle}°");
-        Debug.Log($"Base Patrol Speed: {basePatrolSpeed}");
-        Debug.Log($"Base Chase Speed: {baseChaseSpeed}");
-        Debug.Log($"Peripheral Threshold: {peripheralThreshold}");
-        Debug.Log($"Partial Threshold: {partialThreshold}");
-        Debug.Log($"Clear Threshold: {clearThreshold}");
-        Debug.Log($"Immediate Threshold: {immediateThreshold}");
-        Debug.Log("================================");
+        MyLogger.LogInfo("=== GAME TUNING CONFIGURATION ===");
+        MyLogger.LogInfo($"AI Update Interval: {aiUpdateInterval}s");
+        MyLogger.LogInfo($"Base Detection Range: {baseDetectionRange}");
+        MyLogger.LogInfo($"Base FOV Angle: {baseFOVAngle}°");
+        MyLogger.LogInfo($"Base Patrol Speed: {basePatrolSpeed}");
+        MyLogger.LogInfo($"Base Chase Speed: {baseChaseSpeed}");
+        MyLogger.LogInfo($"Peripheral Threshold: {peripheralThreshold}");
+        MyLogger.LogInfo($"Partial Threshold: {partialThreshold}");
+        MyLogger.LogInfo($"Clear Threshold: {clearThreshold}");
+        MyLogger.LogInfo($"Immediate Threshold: {immediateThreshold}");
+        MyLogger.LogInfo("================================");
     }
     
     #endregion

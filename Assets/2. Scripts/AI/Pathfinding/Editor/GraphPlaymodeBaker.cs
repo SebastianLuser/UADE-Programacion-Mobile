@@ -51,7 +51,7 @@ public static class GraphPlaymodeBaker
 
         EditorUtility.SetDirty(asset);
         AssetDatabase.SaveAssets();
-        Debug.Log($"GraphPlaymodeBaker: Baked GraphAsset refreshed before Play (nodes={asset.NodeCount}).");
+        MyLogger.LogInfo($"GraphPlaymodeBaker: Baked GraphAsset refreshed before Play (nodes={asset.NodeCount}).");
     }
 }
 #endif

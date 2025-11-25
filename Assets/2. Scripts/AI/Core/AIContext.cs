@@ -460,23 +460,23 @@ public class AIContext : MonoBehaviour, IAIContext
     [ContextMenu("Print Current Context")]
     private void PrintCurrentContext()
     {
-        Debug.Log("=== AI CONTEXT STATUS ===");
-        Debug.Log($"Personality: {personalityType}");
-        Debug.Log($"Player Visible: {IsPlayerVisible()}");
-        Debug.Log($"Player Position: {GetPlayerPosition()}");
-        Debug.Log($"Distance to Player: {GetDistanceToPlayer():F2}");
-        Debug.Log($"Threat Level: {GetThreatLevel():F2}");
-        Debug.Log($"Information Confidence: {GetInformationConfidence():F2}");
-        Debug.Log($"Cache Frame: {cacheFrame} (Current: {Time.frameCount})");
+        MyLogger.LogInfo("=== AI CONTEXT STATUS ===");
+        MyLogger.LogInfo($"Personality: {personalityType}");
+        MyLogger.LogInfo($"Player Visible: {IsPlayerVisible()}");
+        MyLogger.LogInfo($"Player Position: {GetPlayerPosition()}");
+        MyLogger.LogInfo($"Distance to Player: {GetDistanceToPlayer():F2}");
+        MyLogger.LogInfo($"Threat Level: {GetThreatLevel():F2}");
+        MyLogger.LogInfo($"Information Confidence: {GetInformationConfidence():F2}");
+        MyLogger.LogInfo($"Cache Frame: {cacheFrame} (Current: {Time.frameCount})");
         
         var detectionResult = GetDetectionResult();
-        Debug.Log($"Detection Level: {detectionResult.level}");
-        Debug.Log($"Time Since Last Seen: {detectionResult.timeSinceLastSeen:F1}s");
+        MyLogger.LogInfo($"Detection Level: {detectionResult.level}");
+        MyLogger.LogInfo($"Time Since Last Seen: {detectionResult.timeSinceLastSeen:F1}s");
         if (!string.IsNullOrEmpty(detectionResult.blockedBy))
         {
-            Debug.Log($"Blocked By: {detectionResult.blockedBy}");
+            MyLogger.LogInfo($"Blocked By: {detectionResult.blockedBy}");
         }
-        Debug.Log("========================");
+        MyLogger.LogInfo("========================");
     }
     
     [ContextMenu("Force Cache Refresh")]
@@ -489,7 +489,7 @@ public class AIContext : MonoBehaviour, IAIContext
         _ = GetPlayerPosition();
         _ = GetDistanceToPlayer();
         
-        Debug.Log("AIContext: Cache forcefully refreshed");
+        MyLogger.LogInfo("AIContext: Cache forcefully refreshed");
     }
     
     [ContextMenu("Test All Targets")]
@@ -497,7 +497,7 @@ public class AIContext : MonoBehaviour, IAIContext
     {
         string[] testTags = { "Player", "Enemy", "Civilian", "Guard" };
         
-        Debug.Log("=== TARGET TEST RESULTS ===");
+        MyLogger.LogInfo("=== TARGET TEST RESULTS ===");
         foreach (string tag in testTags)
         {
             var target = GetTarget(tag);
@@ -505,14 +505,14 @@ public class AIContext : MonoBehaviour, IAIContext
             {
                 float distance = GetDistanceToTarget(tag);
                 bool visible = IsTargetVisible(tag);
-                Debug.Log($"{tag}: Found at {distance:F2} units, Visible: {visible}");
+                MyLogger.LogInfo($"{tag}: Found at {distance:F2} units, Visible: {visible}");
             }
             else
             {
-                Debug.Log($"{tag}: Not found");
+                MyLogger.LogInfo($"{tag}: Not found");
             }
         }
-        Debug.Log("===========================");
+        MyLogger.LogInfo("===========================");
     }
     
     #endregion

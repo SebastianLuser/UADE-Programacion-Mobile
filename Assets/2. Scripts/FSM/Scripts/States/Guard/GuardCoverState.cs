@@ -31,7 +31,7 @@ namespace Scripts.FSM.Base.StateMachine
 
                 AcquireCover(guard, true, referencePosition, guard.GetTargetTransform());
                 MyLogger.LogDebug($"Guard {guard.name}: Entered Cover State - seeking cover");
-                Debug.Log($"[CoverDebug] Guard {guard.name} entered Cover State");
+                MyLogger.LogInfo($"[CoverDebug] Guard {guard.name} entered Cover State");
             }
         }
 
@@ -139,14 +139,14 @@ namespace Scripts.FSM.Base.StateMachine
                 coverPoint.y = guard.transform.position.y;
                 guard.SetCoverPoint(coverPoint);
                 guard.SetCoverDebug(bestHit.collider, impactPoint, normal);
-                Debug.Log($"[CoverDebug] Guard {guard.name} found cover on {bestHit.collider.name} at {impactPoint}, normal {normal}, coverPoint {coverPoint}, guardPos {guard.transform.position}, colliderPos {bestHit.collider.transform.position}");
+                MyLogger.LogInfo($"[CoverDebug] Guard {guard.name} found cover on {bestHit.collider.name} at {impactPoint}, normal {normal}, coverPoint {coverPoint}, guardPos {guard.transform.position}, colliderPos {bestHit.collider.transform.position}");
             }
             else
             {
                 Vector3 fallbackCover = guard.transform.position + awayDir * Mathf.Max(guard.CoverOffsetFromObstacle, 1f);
                 guard.SetCoverPoint(fallbackCover);
                 guard.SetCoverDebug(null, Vector3.zero, Vector3.zero);
-                Debug.Log($"[CoverDebug] Guard {guard.name} no obstacle hit. Fallback coverPoint {fallbackCover}");
+                MyLogger.LogInfo($"[CoverDebug] Guard {guard.name} no obstacle hit. Fallback coverPoint {fallbackCover}");
             }
 
             guard.StateTimer = 0f;

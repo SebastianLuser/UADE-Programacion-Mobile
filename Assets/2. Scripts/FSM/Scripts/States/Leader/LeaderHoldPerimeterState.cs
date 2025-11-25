@@ -19,7 +19,7 @@ namespace Scripts.FSM.Base.StateMachine
                 leader.BeginHold(center);
                 leader.LeaderStateTimer = 0f;
 
-                Debug.Log($"[Leader] HoldPerimeter -> center {center}");
+                MyLogger.LogInfo($"[Leader] HoldPerimeter -> center {center}");
             }
         }
 
@@ -36,7 +36,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is Leader leader)
             {
                 leader.ClearAllOverrides();
-                Debug.Log("[Leader] HoldPerimeter exit - cleared overrides");
+                MyLogger.LogInfo("[Leader] HoldPerimeter exit - cleared overrides");
             }
         }
     }

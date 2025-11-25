@@ -41,7 +41,7 @@ namespace _2._Scripts.UI.Gameplay.Objectives
 
         public override void Show()
         {
-            Debug.Log("SE MUESTRAN LOS OBJETIVOS");
+            MyLogger.LogInfo("SE MUESTRAN LOS OBJETIVOS");
             base.Show();
 
             if (pauseGameWhileVisible)

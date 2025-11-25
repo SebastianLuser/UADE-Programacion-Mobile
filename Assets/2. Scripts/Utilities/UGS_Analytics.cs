@@ -30,22 +30,22 @@ public class UGS_Analytics : MonoBehaviour
         }
         catch (ServicesInitializationException e) // from Unity.Services.Core
         {
-            Debug.LogError(e);
+            MyLogger.LogError(e);
         }
         catch (RequestFailedException e) // from Unity.Services.Core
         {
-            Debug.LogError(e);
+            MyLogger.LogError(e);
         }
         catch (System.Exception e) // fallback
         {
-            Debug.LogError(e);
+            MyLogger.LogError(e);
         }
     }
 
     public void GiveConsent()
     {
         AnalyticsService.Instance.StartDataCollection();
-        Debug.Log("Consent has been provided. The SDK is now collecting data!");
+        MyLogger.LogInfo("Consent has been provided. The SDK is now collecting data!");
     }
 
     // Event 1: Item collected
@@ -57,7 +57,7 @@ public class UGS_Analytics : MonoBehaviour
             ["total_points"]  = totalPoints
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Item collected - Points added: {pointsAdded}, Total: {totalPoints}");
+        MyLogger.LogInfo($"Analytics: Item collected - Points added: {pointsAdded}, Total: {totalPoints}");
     }
 
     // Event 2: Escape unlocked
@@ -69,7 +69,7 @@ public class UGS_Analytics : MonoBehaviour
             ["time_to_unlock"] = timeToUnlockSeconds
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Escape unlocked at {totalPoints} points after {timeToUnlockSeconds:F1}s");
+        MyLogger.LogInfo($"Analytics: Escape unlocked at {totalPoints} points after {timeToUnlockSeconds:F1}s");
     }
 
     // Event 3: Player death
@@ -81,7 +81,7 @@ public class UGS_Analytics : MonoBehaviour
             ["final_health"] = finalHealth
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Player died - Points: {finalPoints}, Health: {finalHealth}");
+        MyLogger.LogInfo($"Analytics: Player died - Points: {finalPoints}, Health: {finalHealth}");
     }
 
     // Event 4: Retry button pressed
@@ -94,7 +94,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Retry pressed - Score {lastScore}, Victory: {lastResultWasVictory}");
+        MyLogger.LogInfo($"Analytics: Retry pressed - Score {lastScore}, Victory: {lastResultWasVictory}");
     }
 
     // Event 5: Guard killed
@@ -109,7 +109,7 @@ public class UGS_Analytics : MonoBehaviour
             ["pos_z"] = position.z
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Guard killed - {guardName} at {position}");
+        MyLogger.LogInfo($"Analytics: Guard killed - {guardName} at {position}");
     }
 
     // Event 5b: Player hit by guard projectile
@@ -123,7 +123,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Player hit by guard {guardName} for {damage} dmg (health now {resultingHealth})");
+        MyLogger.LogInfo($"Analytics: Player hit by guard {guardName} for {damage} dmg (health now {resultingHealth})");
     }
 
     // Event 6: Civilian killed
@@ -138,7 +138,7 @@ public class UGS_Analytics : MonoBehaviour
             ["pos_z"] = position.z
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Civilian killed - {civilianName} at {position}");
+        MyLogger.LogInfo($"Analytics: Civilian killed - {civilianName} at {position}");
     }
 
     // Event 7: Shop panel opened
@@ -150,7 +150,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Shop opened from {sourcePanel}");
+        MyLogger.LogInfo($"Analytics: Shop opened from {sourcePanel}");
     }
 
     // Event 7a: Shop category viewed
@@ -163,7 +163,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Shop category viewed - {categoryName} (scroll {scrollPosition:F2})");
+        MyLogger.LogInfo($"Analytics: Shop category viewed - {categoryName} (scroll {scrollPosition:F2})");
     }
 
     // Event 7b: Escape zone reached (level completion trigger)
@@ -176,7 +176,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Escape zone reached after {timeSinceStartSeconds:F1}s with {totalPoints} points");
+        MyLogger.LogInfo($"Analytics: Escape zone reached after {timeSinceStartSeconds:F1}s with {totalPoints} points");
     }
 
     // Event 7c: Shop purchase attempt
@@ -190,7 +190,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Shop purchase attempt - {itemId} for {price} {currency}");
+        MyLogger.LogInfo($"Analytics: Shop purchase attempt - {itemId} for {price} {currency}");
     }
 
     // Event 7d: Shop purchase success
@@ -204,7 +204,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Shop purchase success - {itemId} for {price} {currency}");
+        MyLogger.LogInfo($"Analytics: Shop purchase success - {itemId} for {price} {currency}");
     }
 
     // Event 7e: Shop closed without purchase
@@ -216,7 +216,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Shop closed without purchase after {timeInShopSeconds:F1}s");
+        MyLogger.LogInfo($"Analytics: Shop closed without purchase after {timeInShopSeconds:F1}s");
     }
 
     // Event 9: Rewarded ad started (e.g., duplicate reward button)
@@ -229,7 +229,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Rewarded ad started - {placementId} from {sourcePanel}");
+        MyLogger.LogInfo($"Analytics: Rewarded ad started - {placementId} from {sourcePanel}");
     }
 
     // Event 10: Rewarded ad completed (reward granted)
@@ -242,7 +242,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Rewarded ad completed - {placementId} from {sourcePanel}");
+        MyLogger.LogInfo($"Analytics: Rewarded ad completed - {placementId} from {sourcePanel}");
     }
 
     // Event 11: Rewarded ad aborted (closed/failed/not ready)
@@ -256,7 +256,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Rewarded ad aborted - {placementId} from {sourcePanel} (reason: {reason})");
+        MyLogger.LogInfo($"Analytics: Rewarded ad aborted - {placementId} from {sourcePanel} (reason: {reason})");
     }
 
     // Event 8: Session completed (victory or defeat)
@@ -270,7 +270,7 @@ public class UGS_Analytics : MonoBehaviour
             ["scene"] = SceneManager.GetActiveScene().name
         };
         AnalyticsService.Instance.RecordEvent(ev);
-        Debug.Log($"Analytics: Session completed - Victory: {isVictory}, Score: {score}, Duration: {durationSeconds:F1}s");
+        MyLogger.LogInfo($"Analytics: Session completed - Victory: {isVictory}, Score: {score}, Duration: {durationSeconds:F1}s");
     }
     
     void OnApplicationQuit()

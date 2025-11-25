@@ -18,7 +18,7 @@ namespace Scripts.FSM.Base.StateMachine
                 // A*: asegurar init (no hace alloc si ya estaba)
                 civilian.EnsureFleePathfindingInitialized();
 
-                Debug.Log($"------------------------- Civilian scaping using A* -------------------------------");
+                MyLogger.LogInfo($"------------------------- Civilian scaping using A* -------------------------------");
 
                 if (civilian.EnableDebugLogs)
                     MyLogger.LogInfo($"Civilian {civilian.name}: Entered Flee State - Fleeing at speed {civilian.FleeSpeed:F1}");
