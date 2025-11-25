@@ -11,7 +11,7 @@ using Services.MicroServices.PoolObjectsService;
 using Services.MicroServices.UpdateService;
 using Unity.Assertions;
 
-//todo revisar pasar a MVC
+//TODO: pasar a MVP
 public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 {
     //todo utilizar scriptable object

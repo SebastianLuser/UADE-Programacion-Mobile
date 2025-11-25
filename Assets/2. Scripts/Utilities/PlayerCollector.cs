@@ -240,7 +240,8 @@ public class PlayerCollector : MonoBehaviour, ICollector
             UGS_Analytics.Instance.LogPlayerDeath(_totalPoints, _currentHealth);
         }
 
-        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, _totalPoints, _sessionCoinsCollected, _sessionDiamondsCollected));
+        // On defeat we do not award run earnings; send zeros to results.
+        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(false, 0, 0, 0));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.GameOver);
 
         if (_playerMovement)
