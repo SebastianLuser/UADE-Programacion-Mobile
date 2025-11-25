@@ -1,10 +1,8 @@
 using System;
 using _2._Scripts.UI.Gameplay.Results;
-using Newtonsoft.Json;
 using Services;
-using Services.MicroServices.EventsServices;
-using Services.MicroServices.EventsServices.CustomEvents;
 using Services.MicroServices.GameStateService;
+using Services.MicroServices.UserDataService.Wallet;
 using Unity.Services.LevelPlay;
 using UnityEngine;
 
@@ -18,9 +16,8 @@ Monetization Stats API Key: 9efc50a100668aaeedaf2fd8a6b38cee05e6a1f38ac908d30877
 
 
 public class RewardedAd : MonoBehaviour
-
 {
-// App Configuration - LevelPlay Dashboard
+    // App Configuration - LevelPlay Dashboard
     private const string k_AndroidAppKey = "5990865";
     private const string k_AppleApplKey = "5990864";
 
@@ -34,6 +31,7 @@ public class RewardedAd : MonoBehaviour
 
     // Runtime State
     private bool m_IsInitialized;
+    private bool m_RewardGranted;
     private LevelPlayRewardedAd m_RewardedAd;
 
     // Convenience events for UI updates
@@ -162,57 +160,56 @@ MyLogger.LogWarning("Unexpected platform for ads");
         }
     }
 
-        private void ShowRewardedAd()
-        {
-            m_RewardedAd.ShowAd();
-        }
+    private void ShowRewardedAd()
+    {
+        m_RewardedAd.ShowAd();
+    }
 
-        #endregion
+    #endregion
 
-        #region Public Interface
-        /// <summary>
-        /// User-facing method to show a rewarded ad when a button is clicked.
-        /// Checks availability before showing the ad.
-        /// </summary>
-        public void ClickShowAdReward()
+    #region Public Interface
+    /// <summary>
+    /// User-facing method to show a rewarded ad when a button is clicked.
+    /// Checks availability before showing the ad.
+    /// </summary>
+    public void ClickShowAdReward()
+    {
+        if (CanShowAd())
         {
-            if (CanShowAd())
-            {
-                ShowRewardedAd();
-            }
-            else
-            {
-                
-                MyLogger.LogWarning($"Cannot show ad.");
-            }
+            ShowRewardedAd();
         }
+        else
+        {
+            MyLogger.LogWarning($"Cannot show ad.");
+        }
+    }
         
-        public bool CanShowAd()
+    public bool CanShowAd()
+    {
+        if (!m_IsInitialized)
         {
-            if (!m_IsInitialized)
-            {
-                MyLogger.LogWarning("SDK not initialized");
-                return false;
-            }
-
-            if (m_RewardedAd == null)
-            {
-                MyLogger.LogWarning("Rewarded ad object not created");
-                return false;
-            }
-
-            bool isAdReady = m_RewardedAd.IsAdReady();
-
-            if (!isAdReady)
-            {
-                MyLogger.LogWarning("Ad not ready - still loading or no inventory available");
-            }
-            
-            return isAdReady;
+            MyLogger.LogWarning("SDK not initialized");
+            return false;
         }
-        #endregion
 
-        #region Ad event Callbacks
+        if (m_RewardedAd == null)
+        {
+            MyLogger.LogWarning("Rewarded ad object not created");
+            return false;
+        }
+
+        bool isAdReady = m_RewardedAd.IsAdReady();
+
+        if (!isAdReady)
+        {
+            MyLogger.LogWarning("Ad not ready - still loading or no inventory available");
+        }
+            
+        return isAdReady;
+    }
+    #endregion
+
+    #region Ad event Callbacks
         
     // Load Events
 
@@ -243,27 +240,51 @@ MyLogger.LogWarning("Unexpected platform for ads");
 
     private async void ProcessAdReward(LevelPlayAdInfo adInfo, LevelPlayReward reward)
     {
-            AdSuccessfullyCompleted?.Invoke(true);
+        if (m_RewardGranted)
+        {
+            MyLogger.LogWarning("Reward already granted for this ad impression, ignoring duplicate callback.");
+            return;
+        }
 
-            bool gameWinned;
+        m_RewardGranted = true;
+        AdSuccessfullyCompleted?.Invoke(true);
 
-            if (ServiceLocator.Get<IGameStateService>().GetCurrentState() == GameState.Victory)
-            {
-                gameWinned = true;
-            }
-            else
-            {
-                gameWinned = false;
-            }
+        bool gameWinned;
 
-            _resultsView.RewardedAdShowed = true;
+        if (ServiceLocator.Get<IGameStateService>().GetCurrentState() == GameState.Victory)
+        {
+            gameWinned = true;
+        }
+        else
+        {
+            gameWinned = false;
+        }
 
-            ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(gameWinned, 
-                _playerCollector.TotalPoints * 2, _playerCollector.SessionCoins  * 2, 
-                _playerCollector.SessionDiamonds  * 2));
+        _resultsView.RewardedAdShowed = true;
+
+        var walletService = ServiceLocator.Get<IWalletService>();
+        int bonusCoins = _playerCollector.SessionCoins;
+        int bonusDiamonds = _playerCollector.SessionDiamonds;
+
+        // Grant only the bonus once to avoid duplicating the original session rewards.
+        walletService?.AddCoins(bonusCoins);
+        walletService?.AddDiamonds(bonusDiamonds);
+
+        int finalScore = _playerCollector.TotalPoints * 2;
+        int finalCoins = _playerCollector.SessionCoins + bonusCoins;
+        int finalDiamonds = _playerCollector.SessionDiamonds + bonusDiamonds;
+
+        if (gameWinned)
+        {
+            _resultsView.DisplayVictory(finalScore, finalCoins, finalDiamonds);
+        }
+        else
+        {
+            _resultsView.DisplayDefeat(finalScore, finalCoins, finalDiamonds);
+        }
         
 
-            MyLogger.LogDebug($"Ad reward granted successfully: {reward.Name} x{reward.Amount}");
+        MyLogger.LogDebug($"Ad reward granted successfully: {reward.Name} x{reward.Amount}");
     }
     
     // Completion events
@@ -271,6 +292,7 @@ MyLogger.LogWarning("Unexpected platform for ads");
     {
         MyLogger.LogDebug("Rewarded ad closed");
 
+        m_RewardGranted = false;
         // Load another ad for next time
         LoadRewardedAd();
     }
