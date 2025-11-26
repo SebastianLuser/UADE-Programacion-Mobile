@@ -5080,6 +5080,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: smokePrefab
+      value: 
+      objectReference: {fileID: 163066, guid: 53777b8572d1e7242bc90044f62667ce, type: 3}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: personalArea
       value: 0.2
       objectReference: {fileID: 0}
@@ -9140,7 +9145,7 @@ PrefabInstance:
     - target: {fileID: 314961781403160870, guid: 69ebbbce8ceb55e4890226196b9e7c8f,
         type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -6.999878
+      value: -7
       objectReference: {fileID: 0}
     - target: {fileID: 314961781403160870, guid: 69ebbbce8ceb55e4890226196b9e7c8f,
         type: 3}
@@ -9166,6 +9171,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: TutorialSlider
+      objectReference: {fileID: 0}
+    - target: {fileID: 6649016168246629237, guid: 69ebbbce8ceb55e4890226196b9e7c8f,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -11452,6 +11462,11 @@ PrefabInstance:
       propertyPath: avoidRadius
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: smokePrefab
+      value: 
+      objectReference: {fileID: 193902, guid: 9b967c5de3c01184889d94aa4f20fd19, type: 3}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: personalArea
@@ -29363,6 +29378,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: smokePrefab
+      value: 
+      objectReference: {fileID: 163066, guid: 53777b8572d1e7242bc90044f62667ce, type: 3}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: personalArea
       value: 0.2
       objectReference: {fileID: 0}
@@ -30982,6 +31002,7 @@ MonoBehaviour:
   investigationMoveSpeedFactor: 0.7
   investigationArrivalTolerance: 3
   damageRecentWindow: 3
+  smokePrefab: {fileID: 163066, guid: 53777b8572d1e7242bc90044f62667ce, type: 3}
   smokeLifetime: 5
   smokeScale: 3
   obstacleLayerName: ObstacleAI
@@ -42779,6 +42800,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: TutorialShoot
+      objectReference: {fileID: 0}
+    - target: {fileID: 8783318198643342815, guid: a9989c48fe7f9264894e62543c4e14a7,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

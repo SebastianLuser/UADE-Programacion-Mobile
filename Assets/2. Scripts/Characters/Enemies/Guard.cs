@@ -70,6 +70,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 
     [Header("Reinforcement/Smoke")]
     [SerializeField] private float damageRecentWindow = 3f;
+    [SerializeField] private GameObject smokePrefab;
     [SerializeField] private float smokeLifetime = 5f;
     [SerializeField] private float smokeScale = 3f;
     [SerializeField] private string obstacleLayerName = "ObstacleAI";
@@ -290,16 +291,25 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             Destroy(smokeInstance);
         }
 
-        smokeInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        smokeInstance.transform.position = transform.position;
-        smokeInstance.transform.localScale = Vector3.one * smokeScale;
-        smokeInstance.layer = obstacleLayer;
-
-        var renderer = smokeInstance.GetComponent<Renderer>();
-        if (renderer != null)
+        if (smokePrefab != null)
         {
-            renderer.material.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            smokeInstance = Instantiate(smokePrefab, transform.position, Quaternion.identity);
+            smokeInstance.transform.localScale *= smokeScale;
         }
+        else
+        {
+            smokeInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            smokeInstance.transform.position = transform.position;
+            smokeInstance.transform.localScale = Vector3.one * smokeScale;
+
+            var renderer = smokeInstance.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.material.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            }
+        }
+
+        smokeInstance.layer = obstacleLayer;
 
         var collider = smokeInstance.GetComponent<Collider>();
         if (collider != null)
