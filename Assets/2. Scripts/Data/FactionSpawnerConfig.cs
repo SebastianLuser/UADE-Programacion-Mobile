@@ -1,5 +1,6 @@
 using UnityEngine;
 using Game.AI.Flocking;
+using Scripts.FSM.Models;
 
 namespace Game.Spawning
 {
@@ -50,6 +51,8 @@ namespace Game.Spawning
 
         [Tooltip("Prefab for leader unit")]
         [field: SerializeField] public GameObject leaderPrefab { get; private set; }
+        [Tooltip("Ally Leader data (SO)")]
+        [field: SerializeField] public AllyLeaderDataSO allyLeaderData { get; private set; }
 
         [Header("Spawn Pattern")]
         [Tooltip("Pattern for unit placement")]

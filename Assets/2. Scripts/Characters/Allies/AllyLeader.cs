@@ -29,6 +29,10 @@ public class AllyLeader : Ally
         get => leaderStateTimer;
         set => leaderStateTimer = value;
     }
+    public void SetLeaderData(AllyLeaderDataSO data)
+    {
+        leaderData = data;
+    }
 
     protected override void Awake()
     {
