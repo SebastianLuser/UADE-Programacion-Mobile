@@ -9,8 +9,6 @@ using System.Collections;
 [RequireComponent(typeof(CinemachineSplineDolly))]
 public class TutorialSplineSequence : MonoBehaviour
 {
-    private const string TutorialSeenKey = "TutorialSeen";
-    
     [Header("Targets y Splines")]
     public Transform lookAtTarget;
     public SplineContainer firstSpline;
@@ -82,11 +80,6 @@ public class TutorialSplineSequence : MonoBehaviour
         {
             if (tutorialUIRoot) tutorialUIRoot.SetActive(false);
         }
-        
-        if (HasSeenTutorial())
-        {
-            this.gameObject.SetActive(false);
-        }
     }
 
     void SetGameplayCanvasActive(bool active)
@@ -97,7 +90,6 @@ public class TutorialSplineSequence : MonoBehaviour
     
     public void OnSkipButton()
     {
-        SetTutorialSeen();
         if (!skipping) StartCoroutine(SkipRoutine());
     }
 
@@ -171,7 +163,6 @@ public class TutorialSplineSequence : MonoBehaviour
             SetGameplayCanvasActive(true);
             if (tutorialUIRoot) tutorialUIRoot.SetActive(false);
         }
-        SetTutorialSeen();
     }
     
     IEnumerator MoveKnotRange(float fromKnot, float toKnot, float seconds)
@@ -259,16 +250,5 @@ public class TutorialSplineSequence : MonoBehaviour
         int c = sc.Spline.Count;
         if (c < 5) { MyLogger.LogError($"[TSS] {label} spline necesita >= 5 knots (tiene {c})"); return false; }
         return true;
-    }
-    
-    public static void SetTutorialSeen()
-    {
-        PlayerPrefs.SetInt(TutorialSeenKey, 1);
-        PlayerPrefs.Save();
-    }
-    
-    public static bool HasSeenTutorial()
-    {
-        return PlayerPrefs.GetInt(TutorialSeenKey, 0) == 1;
     }
 }

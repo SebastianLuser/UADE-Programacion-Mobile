@@ -53,12 +53,6 @@ public class BulletObject : MonoBehaviour, IUpdateListener
         
         m_owner = owner;
         m_ownerName = ownerName ?? string.Empty;
-        
-        if (m_direction.sqrMagnitude > 0.0001f)
-        {
-            var lookRot = Quaternion.LookRotation(m_direction, Vector3.up);
-            transform.rotation = lookRot * Quaternion.Euler(90f, 0f, 0f);
-        }
 
         m_rb.useGravity = m_bulletData.UseGravity;
         m_rb.linearVelocity = m_direction * m_bulletData.Speed;
