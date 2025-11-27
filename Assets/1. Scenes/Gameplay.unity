@@ -26550,6 +26550,24 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 883e08aa76ea4b94f81d3fe0f68f7ba8, type: 3}
+--- !u!1 &1083346687 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7839550398957255697, guid: a08bd3548706da54baded2959a6375fb,
+    type: 3}
+  m_PrefabInstance: {fileID: 1575514742}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1083346689
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1083346687}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f60ad87e865d904385a363dbd167ab2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckShowTutorial
 --- !u!4 &1084958562 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 482214, guid: d4d0207648b365d4d8a28b0b9656e980,
@@ -40856,7 +40874,7 @@ PrefabInstance:
     - target: {fileID: 7839550398957255697, guid: a08bd3548706da54baded2959a6375fb,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8771356288573630511, guid: a08bd3548706da54baded2959a6375fb,
         type: 3}
@@ -40896,7 +40914,11 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7839550398957255697, guid: a08bd3548706da54baded2959a6375fb,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1083346689}
   m_SourcePrefab: {fileID: 100100000, guid: a08bd3548706da54baded2959a6375fb, type: 3}
 --- !u!1001 &1575747040
 PrefabInstance:
