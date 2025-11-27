@@ -10,6 +10,8 @@ using ETouch = UnityEngine.InputSystem.EnhancedTouch;
 
 public class PlayerTouchMovement : MonoBehaviour
 {
+    private const string TutorialSeenKey = "TutorialSeen";
+    
     [SerializeField]
     private Vector2 JoystickSize = new Vector2(300, 300);
     [SerializeField]
@@ -67,6 +69,12 @@ public class PlayerTouchMovement : MonoBehaviour
 
     private void Awake()
     {
+        if (HasSeenTutorial())
+        {
+            dragTutorial.SetActive(false);
+            shootTutorial.SetActive(false);
+        }
+        
         dragClosed = shootClosed = objectivesShown = false;
         m_audioService = ServiceLocator.Get<IAudioService>();
         m_audioConfig = (m_audioService as AudioService)?.Config;
@@ -461,5 +469,10 @@ public class PlayerTouchMovement : MonoBehaviour
             isContinuousShooting = true;
             continuousShootingCoroutine = StartCoroutine(ShootContinuously());
         }
+    }
+    
+    public static bool HasSeenTutorial()
+    {
+        return PlayerPrefs.GetInt(TutorialSeenKey, 0) == 1;
     }
 }
