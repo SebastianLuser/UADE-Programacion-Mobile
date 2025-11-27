@@ -58,7 +58,6 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private Guard currentTarget;
     private Vector3 playerVelocity;
     private ObstacleAvoidance obstacleAvoidance;
-    private IBlackboardService blackboard;
     [Header("AI Components (assign via Inspector if possible)")]
     [SerializeField] private AIContext aiContext;
     [SerializeField] private PlayerDetector playerDetectorComponent;
@@ -86,9 +85,6 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         // Initialize steering
         velocity = Vector3.zero;
         obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, personalArea, obstaclesMask);
-
-        // Get blackboard service
-        blackboard = ServiceLocator.Get<IBlackboardService>();
 
         // Shared AI context + detector (only from Inspector/explicit references)
         playerDetector = aiContext?.GetPlayerDetector() ?? playerDetectorComponent;
@@ -168,7 +164,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
 
     #region IUpdateListener Implementation
 
-    public void MyUpdate()
+    public virtual void MyUpdate()
     {
         if (!isAlive) return;
 
