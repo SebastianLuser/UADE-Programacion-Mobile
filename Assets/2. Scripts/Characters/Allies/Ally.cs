@@ -52,12 +52,16 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private float avoidRadius;
     private float avoidAngle;
     private float personalArea;
+    private bool useFlocking;
+    private float baseForceWeight;
+    private float flockForceWeight;
 
     // Runtime state
     private Vector3 velocity;
     private Guard currentTarget;
     private Vector3 playerVelocity;
     private ObstacleAvoidance obstacleAvoidance;
+    private FlockingSystem.FlockingEntity flockingEntity;
     [Header("AI Components (assign via Inspector if possible)")]
     [SerializeField] private AIContext aiContext;
     [SerializeField] private PlayerDetector playerDetectorComponent;
@@ -85,6 +89,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         // Initialize steering
         velocity = Vector3.zero;
         obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, personalArea, obstaclesMask);
+        flockingEntity = GetComponent<FlockingSystem.FlockingEntity>();
 
         // Shared AI context + detector (only from Inspector/explicit references)
         playerDetector = aiContext?.GetPlayerDetector() ?? playerDetectorComponent;
@@ -113,6 +118,9 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
             // Player following
             followDistance = allyData.followDistance;
             followSpeed = allyData.followSpeed;
+            useFlocking = allyData.useFlocking;
+            baseForceWeight = allyData.followPlayerWeight;
+            flockForceWeight = allyData.flockingWeight;
 
             // Combat
             attackRange = allyData.attackRange;
@@ -372,6 +380,21 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         ApplySteering(steeringForce);
     }
 
+    public bool ShouldFlock()
+    {
+        if (!useFlocking || flockingEntity == null || !isAlive)
+            return false;
+
+        if (LeaderOverrideActive)
+            return false;
+
+        // Avoid flocking when stationary attacking at close range to prevent jitter
+        if (currentTarget != null && IsGuardInAttackRange())
+            return false;
+
+        return true;
+    }
+
     /// <summary>
     /// Retarget the detector so it looks for Guards instead of the default Player tag/layer.
     /// </summary>
@@ -437,8 +460,16 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     {
         if (!isAlive) return;
 
+        Vector3 finalSteering = steeringForce;
+
+        if (useFlocking && flockingEntity != null && ShouldFlock())
+        {
+            Vector3 flockForce = flockingEntity.GetFlockingForce();
+            finalSteering = (steeringForce * baseForceWeight) + (flockForce * flockForceWeight);
+        }
+
         // 1. Integrate steering force into velocity
-        Vector3 desiredVelocity = Integrate(steeringForce, Time.deltaTime);
+        Vector3 desiredVelocity = Integrate(finalSteering, Time.deltaTime);
         desiredVelocity.y = 0f; // Keep on ground
 
         float desiredSpeed = desiredVelocity.magnitude;
