@@ -16,6 +16,7 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
 {
     [Header("Detection Configuration")]
     [SerializeField] private DetectionConfig config = DetectionConfig.GetDefault(AIPersonalityType.Conservative);
+
     
     [Header("Personality Integration")]
     [SerializeField] private AIPersonalityType personalityType = AIPersonalityType.Conservative;

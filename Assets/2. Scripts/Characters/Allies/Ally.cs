@@ -1,17 +1,20 @@
 using UnityEngine;
 using Game.AI.Steering;
+using Scripts.FSM.Base.StateMachine;
+using Scripts.FSM.Models;
 using Services;
 using Services.MicroServices.BlackboardService;
 using Services.MicroServices.UpdateService;
 using ScriptableObjects.Bullets;
 using Services.MicroServices.PoolObjectsService;
+using System.Collections.Generic;
 
 /// <summary>
 /// Ally character that follows the player and attacks Guards.
 /// Inherits only from BaseCharacter for independence from Guard implementation.
 /// Uses IUpdateListener for consistent update system integration.
 /// </summary>
-public class Ally : BaseCharacter, IUpdateListener
+public class Ally : BaseCharacter, IUseFsm, IUpdateListener
 {
     [Header("Ally Configuration")]
     [SerializeField] private AllyDataSO allyData;
@@ -25,6 +28,10 @@ public class Ally : BaseCharacter, IUpdateListener
 
     [Tooltip("Layer mask for Guard detection")]
     [SerializeField] private LayerMask guardLayerMask = 1 << 7; // Layer 7 = Enemies
+
+    [Header("State Machine Configuration")]
+    [SerializeField] private List<StateData> stateDataList = new List<StateData>();
+    [SerializeField] private bool useFSM = true;
 
     // Configuration from AllyDataSO
     private float followDistance;
@@ -52,7 +59,14 @@ public class Ally : BaseCharacter, IUpdateListener
     private Vector3 playerVelocity;
     private ObstacleAvoidance obstacleAvoidance;
     private IBlackboardService blackboard;
+    [Header("AI Components (assign via Inspector if possible)")]
+    [SerializeField] private AIContext aiContext;
+    [SerializeField] private PlayerDetector playerDetectorComponent;
+
+    private IPlayerDetector playerDetector;
     private float rotationSpeed = 3f;
+    private StateMachine stateMachine;
+    private float stateTimer;
 
     // Leader override system
     private bool leaderOverrideActive;
@@ -75,6 +89,20 @@ public class Ally : BaseCharacter, IUpdateListener
 
         // Get blackboard service
         blackboard = ServiceLocator.Get<IBlackboardService>();
+
+        // Shared AI context + detector (only from Inspector/explicit references)
+        playerDetector = aiContext?.GetPlayerDetector() ?? playerDetectorComponent;
+        if (playerDetector != null)
+        {
+            ConfigureDetectorForGuards();
+            detectionRange = playerDetector.GetDetectionConfig().detectionRange;
+        }
+        else
+        {
+            Debug.LogWarning($"[Ally] {name} - PlayerDetector not assigned; detection will be disabled.");
+        }
+
+        InitializeFSM();
 
         // Subscribe to UpdateService
         SubscribeUpdateService();
@@ -114,25 +142,7 @@ public class Ally : BaseCharacter, IUpdateListener
         }
         else
         {
-            // Fallback defaults
-            Debug.LogWarning($"[Ally] {name} - No AllyDataSO assigned! Using default values.");
-            followDistance = 3f;
-            followSpeed = 4f;
-            attackRange = 8f;
-            chaseSpeed = 5f;
-            detectionRange = 8f;
-
-            mass = 1f;
-            maxForce = 20f;
-            maxSpeed = 6f;
-            slowingDistance = 2f;
-
-            // Obstacle avoidance: Layer 8 (Obstacles) only
-            // NEVER use -1 (all layers) or it will avoid player/guards/allies!
-            obstaclesMask = 1 << 8;  // Layer 8 = Obstacles
-            avoidRadius = 2f;
-            avoidAngle = 90f;
-            personalArea = 0.5f;
+            MyLogger.LogError("Config the guard SO");
         }
     }
 
@@ -163,7 +173,21 @@ public class Ally : BaseCharacter, IUpdateListener
         if (!isAlive) return;
 
         UpdatePlayerVelocity();
+
+        if (HandleLeaderOverride())
+        {
+            currentTarget = null;
+            return;
+        }
+
+        if (useFSM && stateMachine != null)
+        {
+            stateMachine.RunStateMachine();
+            return;
+        }
+
         UpdateBehavior();
+        stateTimer += Time.deltaTime;
     }
 
     public void SubscribeUpdateService()
@@ -211,11 +235,16 @@ public class Ally : BaseCharacter, IUpdateListener
         }
 
         // Priority 1: Attack Guards if detected
-        Guard nearestGuard = FindNearestVisibleGuard();
-        if (nearestGuard != null)
+        Guard detectedGuard = AcquireGuardTarget();
+        if (detectedGuard != null)
         {
-            currentTarget = nearestGuard;
-            AttackGuard(nearestGuard);
+            if (currentTarget != detectedGuard)
+            {
+                Debug.Log($"[Ally] {name} encontro al guard {detectedGuard.name}");
+            }
+
+            currentTarget = detectedGuard;
+            AttackGuard(detectedGuard);
             return;
         }
 
@@ -228,7 +257,7 @@ public class Ally : BaseCharacter, IUpdateListener
 
     #region Combat
 
-    private void AttackGuard(Guard target)
+    public void AttackGuard(Guard target)
     {
         if (target == null || !target.IsAlive) return;
 
@@ -272,8 +301,11 @@ public class Ally : BaseCharacter, IUpdateListener
         }
     }
 
-    private Guard FindNearestVisibleGuard()
+    public Guard AcquireGuardTarget()
     {
+        if (playerDetector == null)
+            return null;
+
         Collider[] hits = Physics.OverlapSphere(transform.position, detectionRange, guardLayerMask);
 
         Guard nearest = null;
@@ -282,39 +314,86 @@ public class Ally : BaseCharacter, IUpdateListener
         foreach (Collider hit in hits)
         {
             Guard guard = hit.GetComponent<Guard>();
-
-            // Filter out invalid targets
             if (guard == null || !guard.IsAlive) continue;
-            if (guard is Ally) continue; // Don't target other Allies
+            if (guard is Ally) continue;
 
-            Vector3 direction = guard.transform.position - transform.position;
-            float distance = direction.magnitude;
+            float distance = Vector3.Distance(transform.position, guard.transform.position);
+            if (distance > minDistance) continue;
 
-            // Line of sight check
-            bool blocked = Physics.Raycast(
-                transform.position + Vector3.up * 0.5f,
-                direction.normalized,
-                distance,
-                obstaclesMask
-            );
-            if (blocked) continue;
+            if (!playerDetector.CanSeePlayer(guard.transform)) continue;
 
-            // Track nearest
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                nearest = guard;
-            }
+            minDistance = distance;
+            nearest = guard;
         }
 
+        currentTarget = nearest;
         return nearest;
+    }
+
+    public bool TryAcquireGuardTarget()
+    {
+        return AcquireGuardTarget() != null;
+    }
+
+    public bool CanSeeGuard(Guard guard)
+    {
+        if (guard == null) return false;
+
+        if (playerDetector != null)
+        {
+            return playerDetector.CanSeePlayer(guard.transform);
+        }
+
+        float distance = Vector3.Distance(transform.position, guard.transform.position);
+        return distance <= detectionRange;
+    }
+
+    public bool IsGuardInAttackRange()
+    {
+        if (currentTarget == null) return false;
+        return Vector3.Distance(transform.position, currentTarget.transform.position) <= attackRange;
+    }
+
+    public bool IsGuardOutOfAttackRange(float tolerance = 0.2f)
+    {
+        if (currentTarget == null) return false;
+        float threshold = attackRange * (1f + tolerance);
+        return Vector3.Distance(transform.position, currentTarget.transform.position) > threshold;
+    }
+
+    public void ChaseCurrentGuard()
+    {
+        if (currentTarget == null || !currentTarget.IsAlive) return;
+
+        Vector3 targetVelocity = currentTarget.CurrentVelocity;
+        Vector3 steeringForce = Steering.Pursuit(
+            transform.position,
+            velocity,
+            currentTarget.transform.position,
+            targetVelocity,
+            chaseSpeed
+        );
+        ApplySteering(steeringForce);
+    }
+
+    /// <summary>
+    /// Retarget the detector so it looks for Guards instead of the default Player tag/layer.
+    /// </summary>
+    private void ConfigureDetectorForGuards()
+    {
+        var detectorType = playerDetector.GetType();
+        var tagField = detectorType.GetField("playerTag", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var layerField = detectorType.GetField("playerLayerMask", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        
+        tagField?.SetValue(playerDetector, guardTag);
+        layerField?.SetValue(playerDetector, guardLayerMask);
     }
 
     #endregion
 
     #region Player Following
 
-    private void FollowPlayer()
+    public void FollowPlayer()
     {
         if (playerToFollow == null)
         {
@@ -586,12 +665,55 @@ public class Ally : BaseCharacter, IUpdateListener
 
     #endregion
 
+    #region FSM Bootstrapping
+
+    private void InitializeFSM()
+    {
+        if (useFSM && stateDataList != null && stateDataList.Count > 0)
+        {
+            stateMachine = new StateMachine(stateDataList, this);
+            MyLogger.LogInfo($"[Ally] {name}: FSM inicializada con {stateDataList.Count} estados");
+        }
+        else
+        {
+            MyLogger.LogWarning($"[Ally] {name}: FSM no inicializada - useFSM: {useFSM}, states: {stateDataList?.Count ?? 0}");
+        }
+    }
+
+    public void UpdateFsm()
+    {
+        stateMachine?.RunStateMachine();
+    }
+
+    #endregion
+
     #region Public Accessors
 
+    public Transform GetModelTransform() => transform;
+    public Transform GetTargetTransform() => currentTarget != null ? currentTarget.transform : null;
+    public void SetTargetTransform(Transform target)
+    {
+        currentTarget = target != null ? target.GetComponent<Guard>() : null;
+    }
     public Guard GetCurrentTarget() => currentTarget;
     public Transform GetPlayerToFollow() => playerToFollow;
     public void SetPlayerToFollow(Transform player) => playerToFollow = player;
     public Vector3 CurrentVelocity => velocity;
+    public float AttackRange => attackRange;
+    public float FollowDistance => followDistance;
+    public float FollowSpeed => followSpeed;
+    public float ChaseSpeed => chaseSpeed;
+    public float DetectionRange => detectionRange;
+    public float MaxSpeed => maxSpeed;
+    public float MaxForce => maxForce;
+    public float Mass => mass;
+    public float SlowingDistance => slowingDistance;
+    public float StateTimer
+    {
+        get => stateTimer;
+        set => stateTimer = value;
+    }
+    public string CurrentStateName => stateMachine?.GetCurrentState()?.State?.StateName ?? "None";
     public bool LeaderOverrideActive => leaderOverrideActive;
 
     #endregion
