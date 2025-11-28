@@ -10,11 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 01f542c06373b254891eed3f2dc2e2ec, type: 3}
-  m_Name: AllyLeaderProtectPlayerState 1
+  m_Name: IdleState
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.StateData
-  <State>k__BackingField: {fileID: 11400000, guid: e636b66418fd32745a526176193897ed,
-    type: 2}
-  <StateConditions>k__BackingField:
-  - {fileID: 0}
-  <ExitStates>k__BackingField:
-  - {fileID: 0}
+  <State>k__BackingField: {fileID: 0}
+  <StateConditions>k__BackingField: []
+  <ExitStates>k__BackingField: []
