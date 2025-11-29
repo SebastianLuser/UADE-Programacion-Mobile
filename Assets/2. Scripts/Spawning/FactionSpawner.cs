@@ -361,15 +361,7 @@ public class FactionSpawner : MonoBehaviour
             AllyLeader l_allyLeader = spawnedLeader.GetComponent<AllyLeader>();
             if (l_allyLeader != null)
             {
-                if (config.allyLeaderData == null)
-                {
-                    Debug.LogError("[FactionSpawner] AllyLeaderData SO is missing for AllyLeader spawn");
-                }
-                else
-                {
-                    l_allyLeader.SetLeaderData(config.allyLeaderData);
-                }
-
+                // Usar la data que ya trae el prefab; no obligamos a pasar SO por config
                 AssignAlliesToLeader(l_allyLeader);
             }
         }
