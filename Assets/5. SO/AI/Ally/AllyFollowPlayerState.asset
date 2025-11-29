@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b29883dfb221f548aa7f092cee07f26, type: 3}
   m_Name: AllyFollowPlayerState
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.AllyFollowPlayerState
-  <StateName>k__BackingField: 
+  <StateName>k__BackingField: AllyFollowPlayerState

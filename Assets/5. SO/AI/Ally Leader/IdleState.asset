@@ -12,6 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01f542c06373b254891eed3f2dc2e2ec, type: 3}
   m_Name: IdleState
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.StateData
-  <State>k__BackingField: {fileID: 0}
-  <StateConditions>k__BackingField: []
-  <ExitStates>k__BackingField: []
+  <State>k__BackingField: {fileID: 11400000, guid: 7198d80dd15c881418b239845ceb42ea,
+    type: 2}
+  <StateConditions>k__BackingField:
+  - {fileID: 11400000, guid: 4af5271cb95aff349b5f03665ec0421d, type: 2}
+  <ExitStates>k__BackingField:
+  - {fileID: 11400000, guid: bc47ab329be3532449a43ccd0e2c1e51, type: 2}

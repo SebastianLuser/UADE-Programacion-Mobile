@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec5fc644a5358954a94bad44a3c931a2, type: 3}
   m_Name: AllyLeaderIdleState
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.AllyLeaderIdleState
-  <StateName>k__BackingField: 
+  <StateName>k__BackingField: AllyLeaderIdleState

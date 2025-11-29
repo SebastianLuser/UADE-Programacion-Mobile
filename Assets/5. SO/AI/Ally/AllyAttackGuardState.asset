@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 955e5997a29b576469d5f328b585c10d, type: 3}
   m_Name: AllyAttackGuardState
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.AllyAttackGuardState
-  <StateName>k__BackingField: 
+  <StateName>k__BackingField: AlyAttackGuardState
