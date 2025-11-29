@@ -1,25 +1,21 @@
 using UnityEngine;
 
-[DefaultExecutionOrder(1000)]
+[DefaultExecutionOrder(-1000)]
 public class CheckShowTutorial : MonoBehaviour
 {
-    private const string TutorialSeenKey = "TutorialSeen";
-    
-    public static bool HasSeenTutorial()
-    {
-        return PlayerPrefs.GetInt(TutorialSeenKey, 0) == 1;
-    }
-
-    public static void ResetTutorial()
-    {
-        PlayerPrefs.DeleteKey(TutorialSeenKey);
-    }
-    
     void Awake()
     {
-        if (HasSeenTutorial())
+        if (TutorialSeenService.HasSeen())
         {
             this.gameObject.SetActive(false);
         }
     }
+
+#if UNITY_EDITOR
+    [ContextMenu("Reset Tutorial Seen")]
+    private void ResetTutorialSeen()
+    {
+        TutorialSeenService.Reset();
+    }
+#endif
 }

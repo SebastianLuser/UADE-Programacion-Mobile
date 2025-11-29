@@ -38742,7 +38742,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f0f7d46ba6e3744184a206d049d6121, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RewardedAd
-  _playerCollector: {fileID: 0}
+  _playerCollector: {fileID: 1689811724}
   _resultsView: {fileID: 1315594188}
   m_AdUnitId: 2sv49kubzjpb3rfq
   analyticsPlacementId: duplicate_reward
@@ -40874,7 +40874,7 @@ PrefabInstance:
     - target: {fileID: 7839550398957255697, guid: a08bd3548706da54baded2959a6375fb,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8771356288573630511, guid: a08bd3548706da54baded2959a6375fb,
         type: 3}
@@ -43978,6 +43978,18 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 5628550748963707598}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1689811724 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1525883889308178945, guid: 8437307c228d058458f4d680bddd4f14,
+    type: 3}
+  m_PrefabInstance: {fileID: 5628550748963707598}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b16cb6cdfa6010489ca565c6d08091e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCollector
 --- !u!4 &1689986741 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 443674, guid: db95b51e45d46e649804e51b38ecb83f,

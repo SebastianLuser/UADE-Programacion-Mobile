@@ -10,8 +10,6 @@ using ETouch = UnityEngine.InputSystem.EnhancedTouch;
 
 public class PlayerTouchMovement : MonoBehaviour
 {
-    private const string TutorialSeenKey = "TutorialSeen";
-    
     [SerializeField]
     private Vector2 JoystickSize = new Vector2(300, 300);
     [SerializeField]
@@ -37,6 +35,7 @@ public class PlayerTouchMovement : MonoBehaviour
     private Finger TapFinger;
     
     bool dragClosed, shootClosed, objectivesShown;
+    bool shouldAutoShowObjectives;
     
     private Finger ShootingFinger;
     private Vector2 ShootingStartPosition;
@@ -69,16 +68,21 @@ public class PlayerTouchMovement : MonoBehaviour
 
     private void Awake()
     {
-        if (HasSeenTutorial())
+        if (TutorialSeenService.HasSeen())
         {
             dragTutorial.SetActive(false);
             shootTutorial.SetActive(false);
+            shouldAutoShowObjectives = true;
         }
         
         dragClosed = shootClosed = objectivesShown = false;
         m_audioService = ServiceLocator.Get<IAudioService>();
         m_audioConfig = (m_audioService as AudioService)?.Config;
         _speedHash = Animator.StringToHash(speedParam);
+
+        // Si ya se vio el tutorial, aseguramos mostrar los objetivos (luego de que UI se inicialice).
+        if (shouldAutoShowObjectives)
+            StartCoroutine(ShowObjectivesNextFrame());
     }
 
     private void OnEnable()
@@ -413,6 +417,13 @@ public class PlayerTouchMovement : MonoBehaviour
                 panelsController.ShowUI(objectivesPanelName);
         }
     }
+
+    private IEnumerator ShowObjectivesNextFrame()
+    {
+        // Esperamos un frame para que PanelsController inicialice su estado/UI.
+        yield return null;
+        TryShowObjectives();
+    }
     
     private Vector2 ClampShootingPosition(Vector2 screenPosition)
     {
@@ -469,10 +480,5 @@ public class PlayerTouchMovement : MonoBehaviour
             isContinuousShooting = true;
             continuousShootingCoroutine = StartCoroutine(ShootContinuously());
         }
-    }
-    
-    public static bool HasSeenTutorial()
-    {
-        return PlayerPrefs.GetInt(TutorialSeenKey, 0) == 1;
     }
 }

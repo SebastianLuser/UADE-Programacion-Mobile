@@ -9,7 +9,6 @@ using System.Collections;
 [RequireComponent(typeof(CinemachineSplineDolly))]
 public class TutorialSplineSequence : MonoBehaviour
 {
-    private const string TutorialSeenKey = "TutorialSeen";
     
     [Header("Targets y Splines")]
     public Transform lookAtTarget;
@@ -54,7 +53,8 @@ public class TutorialSplineSequence : MonoBehaviour
 
     void Awake()
     {
-        if (HasSeenTutorial())
+        alreadySeenTutorial = TutorialSeenService.HasSeen();
+        if (alreadySeenTutorial)
         {
             this.gameObject.SetActive(false);
         }
@@ -97,7 +97,7 @@ public class TutorialSplineSequence : MonoBehaviour
     
     public void OnSkipButton()
     {
-        SetTutorialSeen();
+        TutorialSeenService.SetSeen();
         if (!skipping) StartCoroutine(SkipRoutine());
     }
 
@@ -171,7 +171,7 @@ public class TutorialSplineSequence : MonoBehaviour
             SetGameplayCanvasActive(true);
             if (tutorialUIRoot) tutorialUIRoot.SetActive(false);
         }
-        SetTutorialSeen();
+        TutorialSeenService.SetSeen();
     }
     
     IEnumerator MoveKnotRange(float fromKnot, float toKnot, float seconds)
@@ -261,14 +261,8 @@ public class TutorialSplineSequence : MonoBehaviour
         return true;
     }
     
-    public static void SetTutorialSeen()
+    public static void ResetTutorialSeen()
     {
-        PlayerPrefs.SetInt(TutorialSeenKey, 1);
-        PlayerPrefs.Save();
-    }
-    
-    public static bool HasSeenTutorial()
-    {
-        return PlayerPrefs.GetInt(TutorialSeenKey, 0) == 1;
+        TutorialSeenService.Reset();
     }
 }
