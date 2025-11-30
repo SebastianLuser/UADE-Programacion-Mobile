@@ -3,10 +3,6 @@ using System.Collections.Generic;
 using Game.Spawning;
 using Game.AI.Flocking;
 
-/// <summary>
-/// Spawns factions of NPCs (Guards or Allies) with configurable patterns.
-/// Handles waypoint generation for Guards and flocking setup for Allies.
-/// </summary>
 public class FactionSpawner : MonoBehaviour
 {
     [Header("Configuration")]
@@ -73,8 +69,9 @@ public class FactionSpawner : MonoBehaviour
 
     private System.Collections.IEnumerator SpawnSequence()
     {
-        // 1. Spawn Leader first
-        if (config.spawnLeader && config.leaderPrefab != null)
+        // 1. Spawn Leader first (skip for Civilians)
+        bool l_shouldSpawnLeader = ShouldSpawnLeader();
+        if (l_shouldSpawnLeader && config.leaderPrefab != null)
         {
             Vector3 l_leaderPos = GetSpawnPosition(0);
             spawnedLeader = SpawnUnit(config.leaderPrefab, l_leaderPos, true);
@@ -90,7 +87,7 @@ public class FactionSpawner : MonoBehaviour
         // 3. Spawn units
         for (int i = 0; i < config.unitsToSpawn; i++)
         {
-            Vector3 l_spawnPos = GetSpawnPosition(i + (config.spawnLeader ? 1 : 0));
+            Vector3 l_spawnPos = GetSpawnPosition(i + (l_shouldSpawnLeader ? 1 : 0));
             GameObject l_unit = SpawnUnit(config.unitPrefab, l_spawnPos, false);
             spawnedUnits.Add(l_unit);
 
@@ -99,9 +96,10 @@ public class FactionSpawner : MonoBehaviour
         }
 
         // 4. Configure Leader with spawned units
-        ConfigureLeader();
+        if (l_shouldSpawnLeader)
+            ConfigureLeader();
 
-        Debug.Log($"[FactionSpawner] Spawned {config.factionType}: {config.unitsToSpawn} units + {(config.spawnLeader ? "1 leader" : "no leader")}");
+        Debug.Log($"[FactionSpawner] Spawned {config.factionType}: {config.unitsToSpawn} units + {(l_shouldSpawnLeader ? "1 leader" : "no leader")}");
     }
 
     private GameObject SpawnUnit(GameObject p_prefab, Vector3 p_position, bool p_isLeader)
@@ -130,6 +128,10 @@ public class FactionSpawner : MonoBehaviour
         else if (config.factionType == FactionType.Allies)
         {
             ConfigureAlly(l_unit, p_isLeader);
+        }
+        else if (config.factionType == FactionType.Civilians)
+        {
+            ConfigureCivilian(l_unit);
         }
 
         // Activate after configuration
@@ -241,7 +243,7 @@ public class FactionSpawner : MonoBehaviour
         // Generate separate waypoints for each Guard
         for (int l_guardIndex = 0; l_guardIndex < config.unitsToSpawn; l_guardIndex++)
         {
-            Vector3 l_guardSpawnPos = GetSpawnPosition(l_guardIndex + (config.spawnLeader ? 1 : 0));
+            Vector3 l_guardSpawnPos = GetSpawnPosition(l_guardIndex + (ShouldSpawnLeader() ? 1 : 0));
 
             for (int l_wpIndex = 0; l_wpIndex < config.waypointsPerGuard; l_wpIndex++)
             {
@@ -361,7 +363,6 @@ public class FactionSpawner : MonoBehaviour
             AllyLeader l_allyLeader = spawnedLeader.GetComponent<AllyLeader>();
             if (l_allyLeader != null)
             {
-                // Usar la data que ya trae el prefab; no obligamos a pasar SO por config
                 AssignAlliesToLeader(l_allyLeader);
             }
         }
@@ -377,7 +378,6 @@ public class FactionSpawner : MonoBehaviour
                 l_guards.Add(l_guard);
         }
 
-        // Use public method instead of reflection
         p_leader.SetManagedGuards(l_guards);
     }
 
@@ -391,8 +391,24 @@ public class FactionSpawner : MonoBehaviour
                 l_allies.Add(l_ally);
         }
 
-        // Use public method instead of reflection
         p_allyLeader.SetManagedAllies(l_allies);
+    }
+
+    #endregion
+
+    #region Civilian Configuration
+
+    private void ConfigureCivilian(GameObject p_civilianObj)
+    {
+        Civilian l_civilian = p_civilianObj.GetComponent<Civilian>();
+        if (l_civilian == null)
+        {
+            Debug.LogWarning($"[FactionSpawner] {p_civilianObj.name} no tiene componente Civilian");
+            return;
+        }
+
+        // No requiere líder ni waypoints automáticos
+        Debug.Log($"[FactionSpawner] Civilian configurado: {l_civilian.name}");
     }
 
     #endregion
@@ -401,6 +417,8 @@ public class FactionSpawner : MonoBehaviour
 
     private Vector3 GetSpawnPosition(int p_index)
     {
+        int l_totalWithLeader = config.unitsToSpawn + (ShouldSpawnLeader() ? 1 : 0);
+
         switch (config.spawnPattern)
         {
             case SpawnPattern.Manual:
@@ -409,7 +427,7 @@ public class FactionSpawner : MonoBehaviour
                 break;
 
             case SpawnPattern.Circle:
-                float l_angle = (360f / (config.unitsToSpawn + (config.spawnLeader ? 1 : 0))) * p_index * Mathf.Deg2Rad;
+                float l_angle = (360f / Mathf.Max(l_totalWithLeader, 1)) * p_index * Mathf.Deg2Rad;
                 Vector3 l_offset = new Vector3(
                     Mathf.Cos(l_angle) * config.spawnRadius,
                     0f,
@@ -428,7 +446,7 @@ public class FactionSpawner : MonoBehaviour
                 );
 
             case SpawnPattern.Line:
-                float l_linePos = (p_index - (config.unitsToSpawn + (config.spawnLeader ? 1 : 0)) * 0.5f) * config.spacing;
+                float l_linePos = (p_index - l_totalWithLeader * 0.5f) * config.spacing;
                 return spawnCenter.position + spawnCenter.right * l_linePos;
 
             case SpawnPattern.Random:
@@ -442,6 +460,11 @@ public class FactionSpawner : MonoBehaviour
     #endregion
 
     #region Utilities
+
+    private bool ShouldSpawnLeader()
+    {
+        return config.spawnLeader && config.factionType != FactionType.Civilians;
+    }
 
     [ContextMenu("Clear Spawned Units")]
     public void ClearPreviousSpawns()
@@ -508,13 +531,14 @@ public class FactionSpawner : MonoBehaviour
         Gizmos.color = gizmoColor;
 
         // Draw spawn positions preview
-        int l_previewCount = config.unitsToSpawn + (config.spawnLeader ? 1 : 0);
+        bool l_hasLeader = ShouldSpawnLeader();
+        int l_previewCount = config.unitsToSpawn + (l_hasLeader ? 1 : 0);
         for (int i = 0; i < l_previewCount; i++)
         {
             Vector3 l_pos = GetSpawnPosition(i);
             Gizmos.DrawWireSphere(l_pos, 0.5f);
 
-            if (i == 0 && config.spawnLeader)
+            if (i == 0 && l_hasLeader)
             {
                 Gizmos.DrawWireCube(l_pos + Vector3.up, Vector3.one * 0.3f); // Leader marker
             }

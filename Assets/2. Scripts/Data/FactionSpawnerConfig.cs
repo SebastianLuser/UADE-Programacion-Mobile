@@ -7,7 +7,8 @@ namespace Game.Spawning
     public enum FactionType
     {
         Guards,
-        Allies
+        Allies,
+        Civilians
     }
 
     public enum SpawnPattern
@@ -28,10 +29,6 @@ namespace Game.Spawning
         Individual
     }
 
-    /// <summary>
-    /// Configuration for spawning factions of NPCs (Guards or Allies).
-    /// Create via: Create > Game Data > Faction Spawner Config
-    /// </summary>
     [CreateAssetMenu(fileName = "FactionSpawnerConfig", menuName = "Game Data/Faction Spawner Config")]
     public class FactionSpawnerConfig : ScriptableObject
     {
