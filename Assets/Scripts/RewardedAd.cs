@@ -97,15 +97,6 @@ MyLogger.LogWarning("Unexpected platform for ads");
         m_IsInitialized = true;
         MyLogger.LogDebug("LevelPlay SDK initialized successfully");
 
-#if DEVELOPMENT_BUILD
-    // TODO Remove ValidateIntegration once logs confirm networks are VERIFIED and you have your device's Advertising ID setup as a test device
-    LevelPlay.ValidateIntegration();
-    
-    LaunchTestSuite();
-        MyLogger.LogDebug("Launching test suite");
-
-#endif
-
         CreateRewardedAd();
 
         // Set listeners before loading rewarded ad
@@ -229,6 +220,8 @@ MyLogger.LogWarning("Unexpected platform for ads");
         MyLogger.LogWarning($"Rewarded ad failed to load: {error.ErrorMessage} (Code: {error.ErrorCode})");
         UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, $"load_failed_{error.ErrorCode}");
         Invoke(nameof(LoadRewardedAd), 2f);
+        
+        HandleOnError();
     }
     
     // Display Events
@@ -313,6 +306,23 @@ MyLogger.LogWarning("Unexpected platform for ads");
     private void HandleAdClicked(LevelPlayAdInfo adInfo)
     {
         MyLogger.LogDebug("Rewarded ad clicked");
+    }
+    
+    private void HandleOnError()
+    {
+    #if DEVELOPMENT_BUILD
+        // TODO Remove ValidateIntegration once logs confirm networks are VERIFIED and you have your device's Advertising ID setup as a test device
+        LevelPlay.ValidateIntegration();
+        
+        LaunchTestSuite();
+            MyLogger.LogDebug("Launching test suite");
+    #else
+
+        ProcessAdReward(null, null);
+
+#endif
+
+
     }
 
     private void HandleAdInfoChanged(LevelPlayAdInfo adInfo)
