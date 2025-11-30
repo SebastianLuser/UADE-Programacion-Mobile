@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 01f542c06373b254891eed3f2dc2e2ec, type: 3}
-  m_Name: ProtectPlayerState
+  m_Name: ProtectPlayer
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.StateData
   <State>k__BackingField: {fileID: 11400000, guid: e636b66418fd32745a526176193897ed,
     type: 2}
   <StateConditions>k__BackingField:
-  - {fileID: 11400000, guid: 74ef34cda3056254baa8cba3acc82d33, type: 2}
   - {fileID: 11400000, guid: b5fba5581d67b65429552acf117bb3f4, type: 2}
+  - {fileID: 11400000, guid: 5bf8f74d363fb6a40b163ae175044fca, type: 2}
   <ExitStates>k__BackingField:
-  - {fileID: 11400000, guid: b662d3b0bd3e5c548abee43a00d63263, type: 2}
-  - {fileID: 11400000, guid: b662d3b0bd3e5c548abee43a00d63263, type: 2}
+  - {fileID: 11400000, guid: 0a7f0e9f8827fda47aa0ac71f2c50a72, type: 2}
+  - {fileID: 11400000, guid: aea4c3f2ba7a5a844a0e6ee5d8d45681, type: 2}

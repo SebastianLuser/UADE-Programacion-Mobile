@@ -163,6 +163,130 @@ public class AllyLeader : Ally
         }
     }
 
+    public void IssueEscortPlayerCommand()
+    {
+        Transform l_player = GetPlayerToFollow();
+        if (l_player == null)
+        {
+            Debug.LogWarning("[AllyLeader] Cannot issue escort command - player reference is null");
+            return;
+        }
+
+        if (managedAllies == null || managedAllies.Count == 0)
+        {
+            Debug.LogWarning("[AllyLeader] No allies to command in escort order");
+            return;
+        }
+
+        Vector3 l_playerPos = l_player.position;
+        int l_validAllies = 0;
+
+        for (int i = 0; i < managedAllies.Count; i++)
+        {
+            if (managedAllies[i] == null || !managedAllies[i].IsAlive) continue;
+
+            float l_angle = (360f / managedAllies.Count) * i * Mathf.Deg2Rad;
+            Vector3 l_offset = new Vector3(
+                Mathf.Cos(l_angle) * leaderData.DefensiveRadius,
+                0f,
+                Mathf.Sin(l_angle) * leaderData.DefensiveRadius
+            );
+
+            Vector3 l_escortPos = l_playerPos + l_offset;
+            managedAllies[i].SetLeaderOverride(l_escortPos, leaderData.DefensiveCommandDuration, "ESCORT");
+            l_validAllies++;
+        }
+
+        if (l_validAllies > 0)
+        {
+            isProtectingPlayer = false;
+
+            if (blackboard != null)
+            {
+                blackboard.SetValue("ALLIES_PROTECTING_PLAYER", false);
+                blackboard.SetValue("ALLY_LEADER_POSITION", transform.position);
+            }
+
+            Debug.Log($"[AllyLeader] Issued escort command to {l_validAllies} allies");
+        }
+    }
+
+    public void IssueRegroupOnLeader()
+    {
+        if (managedAllies == null || managedAllies.Count == 0)
+        {
+            Debug.LogWarning("[AllyLeader] No allies available to regroup");
+            return;
+        }
+
+        Vector3 l_center = transform.position;
+        int l_validAllies = 0;
+
+        for (int i = 0; i < managedAllies.Count; i++)
+        {
+            if (managedAllies[i] == null || !managedAllies[i].IsAlive) continue;
+
+            float l_angle = (360f / managedAllies.Count) * i * Mathf.Deg2Rad;
+            Vector3 l_offset = new Vector3(
+                Mathf.Cos(l_angle) * leaderData.DefensiveRadius,
+                0f,
+                Mathf.Sin(l_angle) * leaderData.DefensiveRadius
+            );
+
+            Vector3 l_regroupPos = l_center + l_offset;
+            managedAllies[i].SetLeaderOverride(l_regroupPos, leaderData.DefensiveCommandDuration, "REGROUP");
+            l_validAllies++;
+        }
+
+        if (l_validAllies > 0 && blackboard != null)
+        {
+            blackboard.SetValue("ALLY_LEADER_POSITION", transform.position);
+        }
+
+        Debug.Log($"[AllyLeader] Regroup order issued to {l_validAllies} allies");
+    }
+
+    public void IssueAttackCommandOnTarget(Transform p_target)
+    {
+        if (p_target == null)
+        {
+            Debug.LogWarning("[AllyLeader] Cannot issue attack command - target is null");
+            return;
+        }
+
+        if (managedAllies == null || managedAllies.Count == 0)
+        {
+            Debug.LogWarning("[AllyLeader] No allies to command in attack order");
+            return;
+        }
+
+        Vector3 l_targetPos = p_target.position;
+        int l_validAllies = 0;
+
+        for (int i = 0; i < managedAllies.Count; i++)
+        {
+            if (managedAllies[i] == null || !managedAllies[i].IsAlive) continue;
+
+            float l_angle = (360f / managedAllies.Count) * i * Mathf.Deg2Rad;
+            Vector3 l_offset = new Vector3(
+                Mathf.Cos(l_angle) * (leaderData.DefensiveRadius * 0.5f),
+                0f,
+                Mathf.Sin(l_angle) * (leaderData.DefensiveRadius * 0.5f)
+            );
+
+            Vector3 l_attackPos = l_targetPos + l_offset;
+            managedAllies[i].SetLeaderOverride(l_attackPos, leaderData.DefensiveCommandDuration, "ATTACK");
+            l_validAllies++;
+        }
+
+        if (l_validAllies > 0 && blackboard != null)
+        {
+            blackboard.SetValue("ALLY_TARGET_POSITION", l_targetPos);
+        }
+
+        Debug.Log($"[AllyLeader] Issued attack command to {l_validAllies} allies");
+    }
+
     public void ShareIntel()
     {
         if (blackboard == null) return;
@@ -176,12 +300,7 @@ public class AllyLeader : Ally
         }
 
         // Update ally count
-        int l_aliveAllies = 0;
-        foreach (Ally l_ally in managedAllies)
-        {
-            if (l_ally != null && l_ally.IsAlive)
-                l_aliveAllies++;
-        }
+        int l_aliveAllies = GetAliveAlliesCount();
         if (blackboard != null)
         {
             blackboard.SetValue("ALLIES_ALIVE_COUNT", l_aliveAllies);
@@ -271,6 +390,20 @@ public class AllyLeader : Ally
                 return true;
         }
         return false;
+    }
+
+    public int GetAliveAlliesCount()
+    {
+        if (managedAllies == null) return 0;
+
+        int l_aliveAllies = 0;
+        foreach (Ally l_ally in managedAllies)
+        {
+            if (l_ally != null && l_ally.IsAlive)
+                l_aliveAllies++;
+        }
+
+        return l_aliveAllies;
     }
 
     private void InitializeLeaderFSM()

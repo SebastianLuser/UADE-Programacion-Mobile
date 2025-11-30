@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 01f542c06373b254891eed3f2dc2e2ec, type: 3}
-  m_Name: IdleState
+  m_Name: EscortPlayer
   m_EditorClassIdentifier: Assembly-CSharp::Scripts.FSM.Base.StateMachine.StateData
-  <State>k__BackingField: {fileID: 11400000, guid: 7198d80dd15c881418b239845ceb42ea,
+  <State>k__BackingField: {fileID: 11400000, guid: cc3ca66ca27f04a45873276896582c2b,
     type: 2}
   <StateConditions>k__BackingField:
   - {fileID: 11400000, guid: 4af5271cb95aff349b5f03665ec0421d, type: 2}
