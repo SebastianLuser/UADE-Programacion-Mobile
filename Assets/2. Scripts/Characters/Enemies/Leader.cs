@@ -4,10 +4,6 @@ using Services;
 using Services.MicroServices.BlackboardService;
 using UnityEngine;
 
-/// <summary>
-/// Leader inherits Guard to keep combat/patrol behavior,
-/// and adds a second FSM for coordination/orchestration.
-/// </summary>
 public class Leader : Guard
 {
     [Header("Leader FSM")]
@@ -33,6 +29,9 @@ public class Leader : Guard
     [SerializeField] private float coverFireDuration = 4f;
     [SerializeField] private float coverFireFireRate = 0.25f;
     [SerializeField] private float coverFireDistanceThreshold = 3f;
+    [Header("Debug")]
+    [SerializeField] private bool showLeaderStateLabel = true;
+    protected string LeaderStateName => leaderStateMachine?.GetCurrentState()?.State?.StateName ?? "None";
 
     private StateMachine leaderStateMachine;
     private IBlackboardService blackboard;
@@ -166,7 +165,7 @@ public class Leader : Guard
             Vector3 offset = Random.insideUnitCircle.normalized * 2f;
             Vector3 target = center + new Vector3(offset.x, 0f, offset.y);
 
-            guard.SetLeaderOverride(target, overrideDurationLeader, "reinforce");
+            guard.SetLeaderOverride(target, overrideDurationLeader, "reinforce", this, 1);
             responders++;
 
             Debug.Log($"[Leader] Assign reinforce to {guard.name} -> target {target}, center {center}, lastPlayer {lastPlayerPos}");
@@ -195,7 +194,7 @@ public class Leader : Guard
             Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * holdRadius;
             Vector3 target = center + offset;
 
-            guard.SetLeaderOverride(target, holdDuration, "hold");
+            guard.SetLeaderOverride(target, holdDuration, "hold", this, 2);
 
             Debug.Log($"[Leader] Assign hold to {guard.name} -> target {target}, slot {i % slots}, center {center}");
         }
@@ -207,7 +206,7 @@ public class Leader : Guard
         foreach (var guard in managedGuards)
         {
             if (guard == null) continue;
-            guard.ClearLeaderOverride();
+            guard.ClearLeaderOverride(this);
         }
     }
 
@@ -233,4 +232,18 @@ public class Leader : Guard
             Debug.Log($"[Leader] Player target assigned automatically: {playerGO.name}");
         }
     }
+
+#if UNITY_EDITOR
+    protected override void OnDrawGizmosSelected()
+    {
+        base.OnDrawGizmosSelected();
+
+        if (!showLeaderStateLabel) return;
+
+        string guardState = CurrentStateName;
+        string leaderState = LeaderStateName;
+        FsmGizmoHelper.DrawStateLabel(transform, $"Guard:{guardState} | Leader:{leaderState}", Color.yellow, 3f);
+    }
+#endif
+
 }

@@ -78,6 +78,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float overrideArrivalTolerance = 1.5f;
     [SerializeField] private float overrideDuration = 8f;
     [SerializeField] private float overrideDwellTime = 2f;
+    [Header("Debug")]
+    [SerializeField] protected bool showStateLabel = true;
 
     [Header("Health Regeneration")]
     [SerializeField] private bool enableHealthRegen = true;
@@ -138,6 +140,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private float leaderOverrideExpiresAt;
     private float leaderOverrideReachedAt;
     private string leaderOverrideRole;
+    private UnityEngine.Object leaderOverrideOwner;
+    private int leaderOverridePriority;
     
     // Callbacks
     public System.Action OnMovementComplete { get; set; }
@@ -238,6 +242,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public bool TookDamageRecently(float window) => Time.time - lastDamageTime <= window;
     public bool IsSmokeActive => smokeInstance != null && Time.time < smokeEndTime;
     public bool LeaderOverrideActive => leaderOverrideActive;
+    public UnityEngine.Object LeaderOverrideOwner => leaderOverrideOwner;
     
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
 
@@ -321,25 +326,47 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         Destroy(smokeInstance, smokeLifetime);
     }
 
-    public void SetLeaderOverride(Vector3 target, float duration, string role = "")
+    public void SetLeaderOverride(Vector3 target, float duration, string role = "", UnityEngine.Object owner = null, int priority = 0)
     {
+        // Reject if another owner with higher priority is active
+        if (leaderOverrideActive
+            && leaderOverrideOwner != null
+            && owner != null
+            && owner != leaderOverrideOwner
+            && priority < leaderOverridePriority)
+        {
+            Debug.Log($"[LeaderOverride] {name} override rejected by {owner} (prio {priority}) because active owner {leaderOverrideOwner} has prio {leaderOverridePriority}");
+            return;
+        }
+
         leaderOverrideActive = true;
         leaderOverrideTarget = target;
         leaderOverrideExpiresAt = Time.time + (duration > 0f ? duration : overrideDuration);
         leaderOverrideReachedAt = -1f;
         leaderOverrideRole = role;
+        leaderOverrideOwner = owner;
+        leaderOverridePriority = priority;
 
-        Debug.Log($"[LeaderOverride] {name} override set -> target {target}, duration {duration}, role {role}");
+        Debug.Log($"[LeaderOverride] {name} override set -> target {target}, duration {duration}, role {role}, owner {owner}, prio {priority}");
     }
 
-    public void ClearLeaderOverride()
+    public void ClearLeaderOverride(UnityEngine.Object requester = null, bool force = false)
     {
+        if (leaderOverrideOwner != null && requester != null && requester != leaderOverrideOwner && !force)
+        {
+            Debug.Log($"[LeaderOverride] {name} clear ignored by {requester} (owner {leaderOverrideOwner})");
+            return;
+        }
+
         leaderOverrideActive = false;
         leaderOverrideTarget = Vector3.zero;
         leaderOverrideRole = string.Empty;
         leaderOverrideExpiresAt = 0f;
         leaderOverrideReachedAt = -1f;
-        Debug.Log($"[LeaderOverride] {name} override cleared");
+        leaderOverrideOwner = null;
+        leaderOverridePriority = 0;
+
+        Debug.Log($"[LeaderOverride] {name} override cleared by {requester}");
     }
     
     // MEJORA: Improved player detection using new AI system
@@ -1674,15 +1701,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     }
 
 #if UNITY_EDITOR
-    private void OnDrawGizmosSelected()
+    protected virtual void OnDrawGizmosSelected()
     {
-        // Visual debug of current FSM state above the guard in the Scene view
-        var style = new UnityEngine.GUIStyle(UnityEditor.EditorStyles.boldLabel)
-        {
-            normal = { textColor = Color.cyan }
-        };
+        if (!showStateLabel) return;
 
-        UnityEditor.Handles.Label(transform.position + Vector3.up * 2f, $"State: {CurrentStateName}", style);
+        FsmGizmoHelper.DrawStateLabel(transform, $"State: {CurrentStateName}", Color.cyan, 2f);
 
         // Cover point debug
         if (HasCoverPoint)
@@ -1692,7 +1715,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             Gizmos.DrawLine(transform.position, CoverPoint);
         }
 
-        // Obstacle collider debug for cover
+        // Obstacle collider debug
         if (LastCoverCollider != null)
         {
             var bounds = LastCoverCollider.bounds;

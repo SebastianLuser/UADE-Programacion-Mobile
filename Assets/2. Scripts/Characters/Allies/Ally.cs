@@ -3,7 +3,6 @@ using Game.AI.Steering;
 using Scripts.FSM.Base.StateMachine;
 using Scripts.FSM.Models;
 using Services;
-using Services.MicroServices.BlackboardService;
 using Services.MicroServices.UpdateService;
 using ScriptableObjects.Bullets;
 using Services.MicroServices.PoolObjectsService;
@@ -76,6 +75,9 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private Vector3 leaderOverrideTarget;
     private float leaderOverrideExpiresAt;
     private string leaderOverrideRole;
+    private UnityEngine.Object leaderOverrideOwner;
+    private int leaderOverridePriority;
+    [SerializeField] private bool showStateLabel = true;
 
     // Pool service
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
@@ -615,27 +617,47 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     /// Set a leader override command that takes priority over normal behavior.
     /// Used by AllyLeader to coordinate defensive formations and tactics.
     /// </summary>
-    public void SetLeaderOverride(Vector3 target, float duration, string role = "")
+    public void SetLeaderOverride(Vector3 target, float duration, string role = "", UnityEngine.Object owner = null, int priority = 0)
     {
+        if (leaderOverrideActive
+            && leaderOverrideOwner != null
+            && owner != null
+            && owner != leaderOverrideOwner
+            && priority < leaderOverridePriority)
+        {
+            Debug.Log($"[Ally] {name} override rejected by {owner} (prio {priority}) because active owner {leaderOverrideOwner} has prio {leaderOverridePriority}");
+            return;
+        }
+
         leaderOverrideActive = true;
         leaderOverrideTarget = target;
         leaderOverrideExpiresAt = Time.time + duration;
         leaderOverrideRole = role;
+        leaderOverrideOwner = owner;
+        leaderOverridePriority = priority;
 
-        Debug.Log($"[Ally] {name} received leader override: {role} at {target} for {duration}s");
+        Debug.Log($"[Ally] {name} received leader override: {role} at {target} for {duration}s (owner {owner}, prio {priority})");
     }
 
     /// <summary>
     /// Clear the current leader override, returning to normal behavior.
     /// </summary>
-    public void ClearLeaderOverride()
+    public void ClearLeaderOverride(UnityEngine.Object requester = null, bool force = false)
     {
+        if (leaderOverrideOwner != null && requester != null && requester != leaderOverrideOwner && !force)
+        {
+            Debug.Log($"[Ally] {name} clear ignored by {requester} (owner {leaderOverrideOwner})");
+            return;
+        }
+
         leaderOverrideActive = false;
         leaderOverrideTarget = Vector3.zero;
         leaderOverrideRole = string.Empty;
         leaderOverrideExpiresAt = 0f;
+        leaderOverrideOwner = null;
+        leaderOverridePriority = 0;
 
-        Debug.Log($"[Ally] {name} cleared leader override");
+        Debug.Log($"[Ally] {name} cleared leader override (by {requester})");
     }
 
     /// <summary>
@@ -716,6 +738,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
 
     #region Public Accessors
 
+    protected string GetCurrentStateName() => stateMachine?.GetCurrentState()?.State?.StateName ?? "None";
     public Transform GetModelTransform() => transform;
     public Transform GetTargetTransform() => currentTarget != null ? currentTarget.transform : null;
     public void SetTargetTransform(Transform target)
@@ -747,8 +770,13 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
 
     #region Debug Gizmos
 
-    private void OnDrawGizmosSelected()
+    protected virtual void OnDrawGizmosSelected()
     {
+        if (showStateLabel)
+        {
+            FsmGizmoHelper.DrawStateLabel(transform, $"State: {GetCurrentStateName()}", Color.cyan, 2f);
+        }
+
         // Detection range
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, detectionRange);

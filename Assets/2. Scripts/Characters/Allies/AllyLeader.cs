@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Scripts.FSM.Base.StateMachine;
-using Scripts.FSM.Models;
 using Services;
 using Services.MicroServices.BlackboardService;
 using UnityEngine;
@@ -22,6 +21,7 @@ public class AllyLeader : Ally
     private float nextTacticsUpdateTime;
     private bool isProtectingPlayer;
     private float leaderStateTimer;
+    protected string LeaderStateName => leaderStateMachine?.GetCurrentState()?.State?.StateName ?? "None";
     public float PlayerProtectThreshold => leaderData.PlayerProtectThreshold;
     public bool IsProtectingPlayer => isProtectingPlayer;
     public float LeaderStateTimer
@@ -29,6 +29,7 @@ public class AllyLeader : Ally
         get => leaderStateTimer;
         set => leaderStateTimer = value;
     }
+    [SerializeField] private bool showLeaderStateLabel = true;
     public void SetLeaderData(AllyLeaderDataSO data)
     {
         leaderData = data;
@@ -144,7 +145,7 @@ public class AllyLeader : Ally
             Vector3 l_defensivePos = l_playerPos + l_offset;
 
             // Use Guard's Leader override system
-            managedAllies[i].SetLeaderOverride(l_defensivePos, leaderData.DefensiveCommandDuration, "PROTECT");
+            managedAllies[i].SetLeaderOverride(l_defensivePos, leaderData.DefensiveCommandDuration, "PROTECT", this, 2);
             l_validAllies++;
         }
 
@@ -193,7 +194,7 @@ public class AllyLeader : Ally
             );
 
             Vector3 l_escortPos = l_playerPos + l_offset;
-            managedAllies[i].SetLeaderOverride(l_escortPos, leaderData.DefensiveCommandDuration, "ESCORT");
+            managedAllies[i].SetLeaderOverride(l_escortPos, leaderData.DefensiveCommandDuration, "ESCORT", this, 1);
             l_validAllies++;
         }
 
@@ -234,7 +235,7 @@ public class AllyLeader : Ally
             );
 
             Vector3 l_regroupPos = l_center + l_offset;
-            managedAllies[i].SetLeaderOverride(l_regroupPos, leaderData.DefensiveCommandDuration, "REGROUP");
+            managedAllies[i].SetLeaderOverride(l_regroupPos, leaderData.DefensiveCommandDuration, "REGROUP", this, 1);
             l_validAllies++;
         }
 
@@ -275,7 +276,7 @@ public class AllyLeader : Ally
             );
 
             Vector3 l_attackPos = l_targetPos + l_offset;
-            managedAllies[i].SetLeaderOverride(l_attackPos, leaderData.DefensiveCommandDuration, "ATTACK");
+            managedAllies[i].SetLeaderOverride(l_attackPos, leaderData.DefensiveCommandDuration, "ATTACK", this, 1);
             l_validAllies++;
         }
 
@@ -330,7 +331,7 @@ public class AllyLeader : Ally
         foreach (Ally l_ally in managedAllies)
         {
             if (l_ally == null) continue;
-            l_ally.ClearLeaderOverride();
+            l_ally.ClearLeaderOverride(this);
         }
 
         isProtectingPlayer = false;
@@ -425,4 +426,19 @@ public class AllyLeader : Ally
             Debug.LogWarning("[AllyLeader] Blackboard service still NULL");
         }
     }
+
+#if UNITY_EDITOR
+    protected override void OnDrawGizmosSelected()
+    {
+        base.OnDrawGizmosSelected();
+
+        if (!showLeaderStateLabel) return;
+
+        string allyState = GetCurrentStateName();
+        string leaderState = LeaderStateName;
+
+        FsmGizmoHelper.DrawStateLabel(transform, $"Ally:{allyState} | Leader:{leaderState}", Color.magenta, 3f);
+    }
+#endif
+
 }
