@@ -13,9 +13,14 @@ MonoBehaviour:
   m_Name: AllyLeaderData
   m_EditorClassIdentifier: Assembly-CSharp::AllyLeaderDataSO
   <UseLeaderFSM>k__BackingField: 1
-  <LeaderStateDataList>k__BackingField: []
+  <LeaderStateDataList>k__BackingField:
+  - {fileID: 11400000, guid: 0a7f0e9f8827fda47aa0ac71f2c50a72, type: 2}
+  - {fileID: 11400000, guid: 5425c7367cd837245a8b547f1f04c94d, type: 2}
+  - {fileID: 11400000, guid: d526e9ad09fea514f9bc13d421e40c03, type: 2}
+  - {fileID: 11400000, guid: c5afe50edc5fcc945a562aed873c4ad4, type: 2}
+  - {fileID: 11400000, guid: aea4c3f2ba7a5a844a0e6ee5d8d45681, type: 2}
   <PlayerProtectThreshold>k__BackingField: 0.3
   <DefensiveRadius>k__BackingField: 3
   <DefensiveCommandDuration>k__BackingField: 10
   <TacticsUpdateInterval>k__BackingField: 1
-  <AllyDiscoveryRadius>k__BackingField: 15
+  <AllyDiscoveryRadius>k__BackingField: 20

@@ -22,6 +22,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is AllyLeader leader)
             {
                 leader.LeaderStateTimer += Time.deltaTime;
+                leader.FollowPlayer(); // Mantener al líder cerca del jugador mientras protege
                 leader.ShareIntel();
             }
         }

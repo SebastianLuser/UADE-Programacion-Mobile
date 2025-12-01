@@ -4129,6 +4129,7 @@ MonoBehaviour:
   useFSM: 1
   aiContext: {fileID: 2543485301521033733}
   playerDetectorComponent: {fileID: 1194437483627491595}
+  showStateLabel: 1
 --- !u!114 &-7444828113618841713
 MonoBehaviour:
   m_ObjectHideFlags: 0

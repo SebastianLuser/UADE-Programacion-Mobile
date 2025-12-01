@@ -23,6 +23,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is AllyLeader leader)
             {
                 leader.LeaderStateTimer += Time.deltaTime;
+                leader.FollowPlayer(); // Mantener al líder alineado al jugador mientras reagrupa
                 if (!leader.HasAvailableAllies())
                 {
                     leader.DiscoverNearbyAllies();

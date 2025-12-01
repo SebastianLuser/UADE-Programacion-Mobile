@@ -21,6 +21,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (p_model is AllyLeader leader)
             {
                 leader.LeaderStateTimer += Time.deltaTime;
+                leader.FollowPlayer(); // Acompaña al jugador mientras mantiene escolta
                 if (!leader.HasAvailableAllies())
                 {
                     leader.DiscoverNearbyAllies();

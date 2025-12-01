@@ -129,8 +129,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
             chaseSpeed = allyData.chaseSpeed;
             bulletData = allyData.bulletData;
 
-            // Detection (from NPCDataSO base)
-            detectionRange = 8f; // Default, AllyDataSO doesn't have this exposed
+            // Detection (use SO value)
+            detectionRange = allyData.detectionRange;
 
             // Steering physics
             mass = allyData.mass;
@@ -143,6 +143,9 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
             avoidRadius = allyData.avoidRadius;
             avoidAngle = allyData.avoidAngle;
             personalArea = allyData.personalArea;
+
+            // Rotation speed (use NPCDataSO value)
+            rotationSpeed = allyData.rotationSpeed;
 
             Debug.Log($"[Ally] {name} loaded configuration from AllyDataSO");
         }

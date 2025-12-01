@@ -4361,6 +4361,17 @@ PrefabInstance:
     - {fileID: 3400126593292998231, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
     - {fileID: 3639846202141996983, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
     - {fileID: 534038468637801654, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 5907420520164453544, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 3910913727192727877, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 3535169245653537303, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 7435580694882005852, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 5636500077979942780, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 3719862013359325970, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 8191398637341181263, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 7979929146249579869, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 592566361446790874, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 7473190204984957529, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
+    - {fileID: 2642811677845811058, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c71e3ec06b33e0748beafc6f11f9c326, type: 3}
@@ -13631,6 +13642,12 @@ PrefabInstance:
       propertyPath: m_Name
       value: LeaderAlly
       objectReference: {fileID: 0}
+    - target: {fileID: 4400369469998585747, guid: 3c2322638dee0824c82bf7dfd18b2220,
+        type: 3}
+      propertyPath: leaderData
+      value: 
+      objectReference: {fileID: 11400000, guid: db0060ccebd57494abbab3f0392c33c5,
+        type: 2}
     - target: {fileID: 4400369469998585747, guid: 3c2322638dee0824c82bf7dfd18b2220,
         type: 3}
       propertyPath: 'managedAllies.Array.data[0]'

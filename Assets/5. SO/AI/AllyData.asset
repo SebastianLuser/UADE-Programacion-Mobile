@@ -13,17 +13,17 @@ MonoBehaviour:
   m_Name: AllyData
   m_EditorClassIdentifier: Assembly-CSharp::AllyDataSO
   maxHealth: 100
-  moveSpeed: 5
+  moveSpeed: 6
   shootCooldown: 0.25
   rotationSpeed: 10
   characterName: Character
   characterColor: {r: 1, g: 1, b: 1, a: 1}
   <gender>k__BackingField: 0
-  <detectionRange>k__BackingField: 8
+  <detectionRange>k__BackingField: 12
   <fieldOfView>k__BackingField: 90
   <personalityType>k__BackingField: 1
   <idleTime>k__BackingField: 3
-  <searchTime>k__BackingField: 5
+  <searchTime>k__BackingField: 3
   <patrolSpeed>k__BackingField: 2
   <rotationSpeed>k__BackingField: 5
   <patrolPoints>k__BackingField: []
@@ -31,13 +31,11 @@ MonoBehaviour:
   <chaseSpeed>k__BackingField: 5
   <bulletData>k__BackingField: {fileID: 11400000, guid: 29336a3ef3dee654d95f3bea6a27249c,
     type: 2}
-  <followDistance>k__BackingField: 3
-  <followSpeed>k__BackingField: 4
+  <followDistance>k__BackingField: 1
+  <followSpeed>k__BackingField: 6
   <useFlocking>k__BackingField: 1
   <followPlayerWeight>k__BackingField: 0.6
   <flockingWeight>k__BackingField: 0.4
-  <stateDataList>k__BackingField: []
-  <useFSM>k__BackingField: 0
   <mass>k__BackingField: 1
   <maxForce>k__BackingField: 20
   <maxSpeed>k__BackingField: 6

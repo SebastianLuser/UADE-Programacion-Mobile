@@ -145,12 +145,14 @@ MonoBehaviour:
   investigationMoveSpeedFactor: 0.7
   investigationArrivalTolerance: 3.25
   damageRecentWindow: 3
+  smokePrefab: {fileID: 0}
   smokeLifetime: 5
   smokeScale: 3
   obstacleLayerName: ObstacleAI
   overrideArrivalTolerance: 1.5
   overrideDuration: 8
   overrideDwellTime: 2
+  showStateLabel: 1
   enableHealthRegen: 1
   regenDelay: 3
   regenRate: 4
