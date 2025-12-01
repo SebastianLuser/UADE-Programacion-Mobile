@@ -336,7 +336,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         Destroy(smokeInstance, smokeLifetime);
     }
 
-    public void SetLeaderOverride(Vector3 target, float duration, string role = "")
+    public void SetLeaderOverride(Vector3 target, float duration, string role = "", UnityEngine.Object owner = null, int priority = 0)
     {
         // Reject if another owner with higher priority is active
         if (leaderOverrideActive
