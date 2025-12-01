@@ -53,3 +53,5 @@ Thumbs.db
 
 # --- Ignore local editor layouts ---
 [Ll]ayouts/
+**/LightingData.asset 
+**/LightingData.asset.meta 

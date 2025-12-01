@@ -9,6 +9,7 @@ using System.Collections;
 [RequireComponent(typeof(CinemachineSplineDolly))]
 public class TutorialSplineSequence : MonoBehaviour
 {
+    
     [Header("Targets y Splines")]
     public Transform lookAtTarget;
     public SplineContainer firstSpline;
@@ -52,6 +53,12 @@ public class TutorialSplineSequence : MonoBehaviour
 
     void Awake()
     {
+        alreadySeenTutorial = TutorialSeenService.HasSeen();
+        if (alreadySeenTutorial)
+        {
+            this.gameObject.SetActive(false);
+        }
+        
         cam   = GetComponent<CinemachineCamera>();
         dolly = GetComponent<CinemachineSplineDolly>();
         rot   = GetComponent<CinemachineRotationComposer>();
@@ -90,6 +97,7 @@ public class TutorialSplineSequence : MonoBehaviour
     
     public void OnSkipButton()
     {
+        TutorialSeenService.SetSeen();
         if (!skipping) StartCoroutine(SkipRoutine());
     }
 
@@ -163,6 +171,7 @@ public class TutorialSplineSequence : MonoBehaviour
             SetGameplayCanvasActive(true);
             if (tutorialUIRoot) tutorialUIRoot.SetActive(false);
         }
+        TutorialSeenService.SetSeen();
     }
     
     IEnumerator MoveKnotRange(float fromKnot, float toKnot, float seconds)
@@ -188,7 +197,7 @@ public class TutorialSplineSequence : MonoBehaviour
             targetPosKnot = Mathf.Lerp(fromKnot, toKnot, w);
 
             if (debugLog)
-                Debug.Log($"[TSS] target={targetPosKnot:0.###} actual={dolly.CameraPosition:0.###}");
+                MyLogger.LogInfo($"[TSS] target={targetPosKnot:0.###} actual={dolly.CameraPosition:0.###}");
 
             yield return null;
         }
@@ -246,9 +255,14 @@ public class TutorialSplineSequence : MonoBehaviour
 
     bool ValidateSpline(SplineContainer sc, string label)
     {
-        if (!sc) { Debug.LogError($"[TSS] {label} spline = NULL"); return false; }
+        if (!sc) { MyLogger.LogError($"[TSS] {label} spline = NULL"); return false; }
         int c = sc.Spline.Count;
-        if (c < 5) { Debug.LogError($"[TSS] {label} spline necesita >= 5 knots (tiene {c})"); return false; }
+        if (c < 5) { MyLogger.LogError($"[TSS] {label} spline necesita >= 5 knots (tiene {c})"); return false; }
         return true;
+    }
+    
+    public static void ResetTutorialSeen()
+    {
+        TutorialSeenService.Reset();
     }
 }

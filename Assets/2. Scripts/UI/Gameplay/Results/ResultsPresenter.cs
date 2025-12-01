@@ -1,3 +1,4 @@
+using System;
 using Services;
 using Services.MicroServices.EventsServices;
 using Services.MicroServices.EventsServices.CustomEvents;
@@ -12,6 +13,7 @@ namespace _2._Scripts.UI.Gameplay.Results
     {
         [SerializeField] private string mainMenuSceneName = "MainMenuScene";
         [SerializeField] private bool pauseGameWhileVisible = true;
+        [SerializeField] private RewardedAd rewardedAdManager;
 
         private ResultsModel m_model;
         private ResultsView m_view;
@@ -60,6 +62,11 @@ namespace _2._Scripts.UI.Gameplay.Results
         {
             m_model.SetResult(resultEvent);
 
+            if (UGS_Analytics.Instance != null)
+            {
+                UGS_Analytics.Instance.LogSessionCompleted(resultEvent.IsVictory, resultEvent.Score, Time.timeSinceLevelLoad);
+            }
+
             if (resultEvent.IsVictory)
             {
                 m_view.DisplayVictory(resultEvent.Score, resultEvent.EarnedCoins, resultEvent.EarnedDiamonds);
@@ -103,6 +110,7 @@ namespace _2._Scripts.UI.Gameplay.Results
 
             m_view.OnRetry += OnRetryPressed;
             m_view.OnMainMenu += OnMainMenuPressed;
+            m_view.OnRewardedAd += OnRewardedAdPressed;
 
             base.Show();
         }
@@ -124,12 +132,21 @@ namespace _2._Scripts.UI.Gameplay.Results
 
             m_view.OnRetry -= OnRetryPressed;
             m_view.OnMainMenu -= OnMainMenuPressed;
+            m_view.OnRewardedAd -= OnRewardedAdPressed;
 
             base.Hide();
         }
 
         private void OnRetryPressed()
         {
+            if (UGS_Analytics.Instance != null)
+            {
+                var lastResult = m_model?.LastResult;
+                int lastScore = lastResult?.Score ?? 0;
+                bool lastWasVictory = lastResult?.IsVictory ?? false;
+                UGS_Analytics.Instance.LogRetryPressed(lastScore, lastWasVictory);
+            }
+
             Time.timeScale = 1f;
             var activeScene = SceneManager.GetActiveScene();
             SceneManager.LoadScene(activeScene.name);
@@ -141,6 +158,11 @@ namespace _2._Scripts.UI.Gameplay.Results
             Time.timeScale = 1f;
             m_gameStateService?.ChangeState(GameState.Menu);
             SceneManager.LoadScene(mainMenuSceneName);
+        }
+
+        private void OnRewardedAdPressed()
+        {
+            rewardedAdManager.ClickShowAdReward();
         }
 
     }

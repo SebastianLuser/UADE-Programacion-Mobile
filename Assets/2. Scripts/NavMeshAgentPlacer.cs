@@ -28,7 +28,7 @@ public class NavMeshAgentPlacer : MonoBehaviour
         if (NavMesh.SamplePosition(a.transform.position, out var hit, maxDist, a.areaMask))
             return a.Warp(hit.position);
 
-        Debug.LogError($"[{a.name}] No pude colocarlo en el NavMesh (buscado {maxDist}m).");
+        MyLogger.LogError($"[{a.name}] No pude colocarlo en el NavMesh (buscado {maxDist}m).");
         return false;
     }
 }

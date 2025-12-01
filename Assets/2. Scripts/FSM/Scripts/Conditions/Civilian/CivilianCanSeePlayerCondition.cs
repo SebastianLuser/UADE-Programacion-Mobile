@@ -7,16 +7,16 @@ public class CivilianCanSeePlayerCondition : StateCondition
 {
     public override bool CompleteCondition(IUseFsm p_model)
     {
-        Debug.Log($"CanSeePlayerCondition: Evaluating for {p_model?.GetType()?.Name}");
+        MyLogger.LogInfo($"CanSeePlayerCondition: Evaluating for {p_model?.GetType()?.Name}");
     
         if (p_model is Civilian civilian)
         {
             bool canSee = civilian.HasLoS();
-            Debug.Log($"CanSeePlayerCondition: HasLoS() = {canSee}");
+            MyLogger.LogInfo($"CanSeePlayerCondition: HasLoS() = {canSee}");
             return canSee;
         }
     
-        Debug.Log("CanSeePlayerCondition: Model is not Civilian!");
+        MyLogger.LogInfo("CanSeePlayerCondition: Model is not Civilian!");
         return false;
     }
 }

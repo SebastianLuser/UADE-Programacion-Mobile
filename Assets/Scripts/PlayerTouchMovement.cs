@@ -35,6 +35,7 @@ public class PlayerTouchMovement : MonoBehaviour
     private Finger TapFinger;
     
     bool dragClosed, shootClosed, objectivesShown;
+    bool shouldAutoShowObjectives;
     
     private Finger ShootingFinger;
     private Vector2 ShootingStartPosition;
@@ -67,10 +68,21 @@ public class PlayerTouchMovement : MonoBehaviour
 
     private void Awake()
     {
+        if (TutorialSeenService.HasSeen())
+        {
+            dragTutorial.SetActive(false);
+            shootTutorial.SetActive(false);
+            shouldAutoShowObjectives = true;
+        }
+        
         dragClosed = shootClosed = objectivesShown = false;
         m_audioService = ServiceLocator.Get<IAudioService>();
         m_audioConfig = (m_audioService as AudioService)?.Config;
         _speedHash = Animator.StringToHash(speedParam);
+
+        // Si ya se vio el tutorial, aseguramos mostrar los objetivos (luego de que UI se inicialice).
+        if (shouldAutoShowObjectives)
+            StartCoroutine(ShowObjectivesNextFrame());
     }
 
     private void OnEnable()
@@ -404,6 +416,13 @@ public class PlayerTouchMovement : MonoBehaviour
             if (panelsController)
                 panelsController.ShowUI(objectivesPanelName);
         }
+    }
+
+    private IEnumerator ShowObjectivesNextFrame()
+    {
+        // Esperamos un frame para que PanelsController inicialice su estado/UI.
+        yield return null;
+        TryShowObjectives();
     }
     
     private Vector2 ClampShootingPosition(Vector2 screenPosition)

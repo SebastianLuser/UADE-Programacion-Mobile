@@ -15,7 +15,7 @@ public class GraphBuildProcessor : IPreprocessBuildWithReport
         var nodes = Object.FindObjectsOfType<GraphNode>();
         if (nodes == null || nodes.Length == 0)
         {
-            Debug.Log("GraphBuildProcessor: No GraphNode found; assuming you already have a GraphAsset assigned.");
+            MyLogger.LogInfo("GraphBuildProcessor: No GraphNode found; assuming you already have a GraphAsset assigned.");
             return;
         }
 
@@ -52,7 +52,7 @@ public class GraphBuildProcessor : IPreprocessBuildWithReport
         EditorUtility.SetDirty(asset);
         AssetDatabase.SaveAssets();
 
-        Debug.Log($"GraphBuildProcessor: Baked GraphAsset at {path} (nodes={asset.NodeCount}). " +
+        MyLogger.LogInfo($"GraphBuildProcessor: Baked GraphAsset at {path} (nodes={asset.NodeCount}). " +
                     "Tip: poner el contenedor de nodos con tag 'EditorOnly' para excluirlos del build.");
     }
 }

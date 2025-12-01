@@ -427,7 +427,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             }
 
             // Si llegamos aquí, estamos MUY lejos del path → permitir recompute
-            Debug.LogWarning($"[{name}] Far from all waypoints, recomputing path");
+            MyLogger.LogWarning($"[{name}] Far from all waypoints, recomputing path");
         }
 
         // 2) Computar nuevo path
@@ -443,12 +443,12 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         if (_pathLen > 0 && _pathIdx != null && _pathIdx[0] == startIdx)
         {
             if (enableDebugLogs)
-                Debug.Log($"[{name}] START node unchanged ({startIdx}), keeping current path");
+                MyLogger.LogInfo($"[{name}] START node unchanged ({startIdx}), keeping current path");
             return;
         }
 
         if (enableDebugLogs)
-            Debug.Log($"[{name}] Computing path from node {startIdx} to {fleeTargetNodeIndex}");
+            MyLogger.LogInfo($"[{name}] Computing path from node {startIdx} to {fleeTargetNodeIndex}");
 
         // Guardar progreso anterior
         Vector3 prevTarget = Vector3.zero;
@@ -479,7 +479,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                 for (int i = 0; i < Mathf.Min(5, _pathLen); i++)
                     pathStr += $"{_pathIdx[i]} ";
                 if (_pathLen > 5) pathStr += "...";
-                Debug.Log($"[{name}] ✓ New path: {_pathLen} waypoints [{pathStr}]");
+                MyLogger.LogInfo($"[{name}] ✓ New path: {_pathLen} waypoints [{pathStr}]");
             }
 
             // 4) Preservar progreso: encontrar waypoint más cercano al anterior
@@ -503,7 +503,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                 {
                     _pathFollower.ReseedCursor(bestIdx);
                     if (enableDebugLogs)
-                        Debug.Log($"[{name}] Preserved progress: cursor at WP {bestIdx}");
+                        MyLogger.LogInfo($"[{name}] Preserved progress: cursor at WP {bestIdx}");
                 }
             }
         }
@@ -511,7 +511,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         {
             _pathLen = 0;
             if (enableDebugLogs)
-                Debug.LogError($"[{name}] A* failed from {startIdx} to {fleeTargetNodeIndex}");
+                MyLogger.LogError($"[{name}] A* failed from {startIdx} to {fleeTargetNodeIndex}");
         }
     }
 
@@ -640,6 +640,11 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         }
 
         base.OnDeath();
+
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogCivilianKilled(gameObject.name, transform.position);
+        }
     }
 
     /// <summary>
@@ -1462,46 +1467,46 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     [ContextMenu("Debug Civilian Status")]
     private void DebugCivilianStatus()
     {
-        Debug.Log("=== CIVILIAN STATUS ===");
-        Debug.Log($"Using ScriptableObject FSM: {useFSM}");
-        Debug.Log($"Using Decision Tree: {useDecisionTree}");
+        MyLogger.LogInfo("=== CIVILIAN STATUS ===");
+        MyLogger.LogInfo($"Using ScriptableObject FSM: {useFSM}");
+        MyLogger.LogInfo($"Using Decision Tree: {useDecisionTree}");
         
         if (useFSM && stateMachine != null)
         {
             var currentState = stateMachine.GetCurrentState();
-            Debug.Log($"Current State: {(currentState?.State?.StateName ?? "None")}");
-            Debug.Log($"ScriptableObject FSM Active: True");
-            Debug.Log($"Available FSM States: {GetAvailableStateNames()}");
+            MyLogger.LogInfo($"Current State: {(currentState?.State?.StateName ?? "None")}");
+            MyLogger.LogInfo($"ScriptableObject FSM Active: True");
+            MyLogger.LogInfo($"Available FSM States: {GetAvailableStateNames()}");
         }
         else
         {
-            Debug.Log($"Legacy State: {currentState}");
-            Debug.Log($"ScriptableObject FSM Active: False");
+            MyLogger.LogInfo($"Legacy State: {currentState}");
+            MyLogger.LogInfo($"ScriptableObject FSM Active: False");
         }
         
-        Debug.Log($"State Timer: {stateTimer:F2}s");
-        Debug.Log($"Safe Timer: {safeTimer:F2}s");
-        Debug.Log($"Can See Player: {HasLoS()}");
-        Debug.Log($"Distance to Player: {GetDistanceToPlayer():F2}");
-        Debug.Log($"Current Velocity: {_vel.magnitude:F2}");
-        Debug.Log($"Current Max Speed: {currentMaxSpeed:F2}");
-        Debug.Log($"Has Ever Seen Player: {hasEverSeenPlayer}");
-        Debug.Log($"Last Known Player Pos: {lastKnownPlayerPosition}");
-        Debug.Log($"Can Attack: {canAttack}");
+        MyLogger.LogInfo($"State Timer: {stateTimer:F2}s");
+        MyLogger.LogInfo($"Safe Timer: {safeTimer:F2}s");
+        MyLogger.LogInfo($"Can See Player: {HasLoS()}");
+        MyLogger.LogInfo($"Distance to Player: {GetDistanceToPlayer():F2}");
+        MyLogger.LogInfo($"Current Velocity: {_vel.magnitude:F2}");
+        MyLogger.LogInfo($"Current Max Speed: {currentMaxSpeed:F2}");
+        MyLogger.LogInfo($"Has Ever Seen Player: {hasEverSeenPlayer}");
+        MyLogger.LogInfo($"Last Known Player Pos: {lastKnownPlayerPosition}");
+        MyLogger.LogInfo($"Can Attack: {canAttack}");
         
         // Decision Tree status
         if (useDecisionTree && decisionTreeRunner != null)
         {
-            Debug.Log($"Decision Tree Active: {decisionTreeRunner.enabled}");
-            Debug.Log($"DT Status: {decisionTreeRunner.GetStatus()}");
-            Debug.Log($"DT Last Suggestion: {decisionTreeRunner.LastSuggestion}");
+            MyLogger.LogInfo($"Decision Tree Active: {decisionTreeRunner.enabled}");
+            MyLogger.LogInfo($"DT Status: {decisionTreeRunner.GetStatus()}");
+            MyLogger.LogInfo($"DT Last Suggestion: {decisionTreeRunner.LastSuggestion}");
         }
         else
         {
-            Debug.Log($"Decision Tree Active: False");
+            MyLogger.LogInfo($"Decision Tree Active: False");
         }
         
-        Debug.Log("=======================");
+        MyLogger.LogInfo("=======================");
     }
 
     // Getter for pathfinding
@@ -1779,30 +1784,30 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     {
         if (fleeGraph == null)
         {
-            Debug.LogError($"[{name}] fleeGraph is NULL!");
+            MyLogger.LogError($"[{name}] fleeGraph is NULL!");
             return;
         }
 
-        Debug.Log($"=== GRAPH INFO [{name}] ===");
-        Debug.Log($"Node count: {fleeGraph.NodeCount}");
-        Debug.Log($"Target index: {fleeTargetNodeIndex}");
-        Debug.Log($"Target valid: {fleeTargetNodeIndex >= 0 && fleeTargetNodeIndex < fleeGraph.NodeCount}");
+        MyLogger.LogInfo($"=== GRAPH INFO [{name}] ===");
+        MyLogger.LogInfo($"Node count: {fleeGraph.NodeCount}");
+        MyLogger.LogInfo($"Target index: {fleeTargetNodeIndex}");
+        MyLogger.LogInfo($"Target valid: {fleeTargetNodeIndex >= 0 && fleeTargetNodeIndex < fleeGraph.NodeCount}");
 
         // Mostrar primeros 5 nodos
         for (int i = 0; i < Mathf.Min(5, fleeGraph.NodeCount); i++)
         {
             var neighbors = fleeGraph.neighbors[i].data;
-            Debug.Log($"  Node {i}: pos={fleeGraph.nodePositions[i]}, neighbors={neighbors.Length} [{string.Join(",", neighbors)}]");
+            MyLogger.LogInfo($"  Node {i}: pos={fleeGraph.nodePositions[i]}, neighbors={neighbors.Length} [{string.Join(",", neighbors)}]");
         }
 
         // Verificar conectividad del target
         if (fleeTargetNodeIndex >= 0 && fleeTargetNodeIndex < fleeGraph.NodeCount)
         {
             var targetNeighbors = fleeGraph.neighbors[fleeTargetNodeIndex].data;
-            Debug.Log($"  Target node {fleeTargetNodeIndex}: neighbors={targetNeighbors.Length}");
+            MyLogger.LogInfo($"  Target node {fleeTargetNodeIndex}: neighbors={targetNeighbors.Length}");
         }
 
-        Debug.Log("=======================");
+        MyLogger.LogInfo("=======================");
     }
 
     #endregion

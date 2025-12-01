@@ -21,7 +21,7 @@ namespace Scripts.FSM.Base.StateMachine
 
                 ShareInfo(guard);
                 guard.DeploySmoke();
-                Debug.Log($"[ReinforceDebug] Guard {guard.name} requesting reinforcements at {guard.transform.position}, lastPlayer {guard.LastKnownPlayerPosition}");
+                MyLogger.LogInfo($"[ReinforceDebug] Guard {guard.name} requesting reinforcements at {guard.transform.position}, lastPlayer {guard.LastKnownPlayerPosition}");
             }
         }
 
@@ -40,7 +40,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Debug.Log($"[ReinforceDebug] Guard {guard.name} finished call");
+                MyLogger.LogInfo($"[ReinforceDebug] Guard {guard.name} finished call");
             }
         }
 

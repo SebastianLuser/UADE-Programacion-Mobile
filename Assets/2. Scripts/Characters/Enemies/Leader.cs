@@ -69,11 +69,11 @@ public class Leader : Guard
 
         if (blackboard == null)
         {
-            Debug.LogWarning("[Leader] Blackboard service is NULL in Awake");
+            MyLogger.LogWarning("[Leader] Blackboard service is NULL in Awake");
         }
         else
         {
-            Debug.Log("[Leader] Blackboard service acquired in Awake");
+            MyLogger.LogInfo("[Leader] Blackboard service acquired in Awake");
         }
     }
 
@@ -84,11 +84,11 @@ public class Leader : Guard
             blackboard = ServiceLocator.Get<IBlackboardService>();
             if (blackboard == null)
             {
-                Debug.LogWarning("[Leader] Blackboard service not found at Start");
+                MyLogger.LogWarning("[Leader] Blackboard service not found at Start");
             }
             else
             {
-                Debug.Log("[Leader] Blackboard service acquired in Start");
+                MyLogger.LogInfo("[Leader] Blackboard service acquired in Start");
             }
         }
     }
@@ -100,11 +100,11 @@ public class Leader : Guard
             blackboard = ServiceLocator.Get<IBlackboardService>();
             if (blackboard == null)
             {
-                Debug.LogWarning("[Leader] Blackboard service still NULL in Update");
+                MyLogger.LogWarning("[Leader] Blackboard service still NULL in Update");
             }
             else
             {
-                Debug.Log("[Leader] Blackboard service acquired in Update");
+                MyLogger.LogInfo("[Leader] Blackboard service acquired in Update");
             }
         }
 
@@ -136,7 +136,7 @@ public class Leader : Guard
         pendingPlayerPos = blackboard.GetValue<Vector3>("Reinforce_LastKnownPlayerPos");
         hasPendingRequest = true;
 
-        Debug.Log($"[Leader] Pending request detected time {reqTime}, center {pendingRequestPos}, lastPlayer {pendingPlayerPos}");
+        MyLogger.LogInfo($"[Leader] Pending request detected time {reqTime}, center {pendingRequestPos}, lastPlayer {pendingPlayerPos}");
     }
 
     public void ConsumeRequest()
@@ -146,7 +146,7 @@ public class Leader : Guard
             ? blackboard.GetValue<float>("Reinforce_RequestTime")
             : Time.time;
         hasPendingRequest = false;
-        Debug.Log($"[Leader] Consumed request time {lastRequestTimeHandled}");
+        MyLogger.LogInfo($"[Leader] Consumed request time {lastRequestTimeHandled}");
     }
 
     public void AssignReinforcements(Vector3 center, Vector3 lastPlayerPos)
@@ -165,15 +165,15 @@ public class Leader : Guard
             Vector3 offset = Random.insideUnitCircle.normalized * 2f;
             Vector3 target = center + new Vector3(offset.x, 0f, offset.y);
 
-            guard.SetLeaderOverride(target, overrideDurationLeader, "reinforce", this, 1);
+            guard.SetLeaderOverride(target, overrideDurationLeader, "reinforce");
             responders++;
 
-            Debug.Log($"[Leader] Assign reinforce to {guard.name} -> target {target}, center {center}, lastPlayer {lastPlayerPos}");
+            MyLogger.LogInfo($"[Leader] Assign reinforce to {guard.name} -> target {target}, center {center}, lastPlayer {lastPlayerPos}");
         }
 
         if (responders == 0)
         {
-            Debug.Log($"[Leader] No available guards to reinforce center {center}");
+            MyLogger.LogInfo($"[Leader] No available guards to reinforce center {center}");
         }
     }
 
@@ -194,9 +194,9 @@ public class Leader : Guard
             Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * holdRadius;
             Vector3 target = center + offset;
 
-            guard.SetLeaderOverride(target, holdDuration, "hold", this, 2);
+            guard.SetLeaderOverride(target, holdDuration, "hold");
 
-            Debug.Log($"[Leader] Assign hold to {guard.name} -> target {target}, slot {i % slots}, center {center}");
+            MyLogger.LogInfo($"[Leader] Assign hold to {guard.name} -> target {target}, slot {i % slots}, center {center}");
         }
     }
 
@@ -206,13 +206,10 @@ public class Leader : Guard
         foreach (var guard in managedGuards)
         {
             if (guard == null) continue;
-            guard.ClearLeaderOverride(this);
+            guard.ClearLeaderOverride();
         }
     }
-
-    /// <summary>
-    /// Set the list of guards managed by this leader. Used by spawners.
-    /// </summary>
+    
     public void SetManagedGuards(List<Guard> guards)
     {
         managedGuards = guards ?? new List<Guard>();
@@ -229,7 +226,7 @@ public class Leader : Guard
         if (playerGO != null)
         {
             SetTargetTransform(playerGO.transform);
-            Debug.Log($"[Leader] Player target assigned automatically: {playerGO.name}");
+            MyLogger.LogInfo($"[Leader] Player target assigned automatically: {playerGO.name}");
         }
     }
 

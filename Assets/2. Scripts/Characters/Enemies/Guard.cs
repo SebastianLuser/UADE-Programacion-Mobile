@@ -70,6 +70,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 
     [Header("Reinforcement/Smoke")]
     [SerializeField] private float damageRecentWindow = 3f;
+    [SerializeField] private GameObject smokePrefab;
     [SerializeField] private float smokeLifetime = 5f;
     [SerializeField] private float smokeScale = 3f;
     [SerializeField] private string obstacleLayerName = "ObstacleAI";
@@ -243,7 +244,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public bool IsSmokeActive => smokeInstance != null && Time.time < smokeEndTime;
     public bool LeaderOverrideActive => leaderOverrideActive;
     public UnityEngine.Object LeaderOverrideOwner => leaderOverrideOwner;
-    
+
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
 
     public void SetCoverPoint(Vector3 coverPoint)
@@ -295,16 +296,25 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             Destroy(smokeInstance);
         }
 
-        smokeInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        smokeInstance.transform.position = transform.position;
-        smokeInstance.transform.localScale = Vector3.one * smokeScale;
-        smokeInstance.layer = obstacleLayer;
-
-        var renderer = smokeInstance.GetComponent<Renderer>();
-        if (renderer != null)
+        if (smokePrefab != null)
         {
-            renderer.material.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            smokeInstance = Instantiate(smokePrefab, transform.position, Quaternion.identity);
+            smokeInstance.transform.localScale *= smokeScale;
         }
+        else
+        {
+            smokeInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            smokeInstance.transform.position = transform.position;
+            smokeInstance.transform.localScale = Vector3.one * smokeScale;
+
+            var renderer = smokeInstance.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.material.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            }
+        }
+
+        smokeInstance.layer = obstacleLayer;
 
         var collider = smokeInstance.GetComponent<Collider>();
         if (collider != null)
@@ -326,7 +336,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         Destroy(smokeInstance, smokeLifetime);
     }
 
-    public void SetLeaderOverride(Vector3 target, float duration, string role = "", UnityEngine.Object owner = null, int priority = 0)
+    public void SetLeaderOverride(Vector3 target, float duration, string role = "")
     {
         // Reject if another owner with higher priority is active
         if (leaderOverrideActive
@@ -338,7 +348,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             Debug.Log($"[LeaderOverride] {name} override rejected by {owner} (prio {priority}) because active owner {leaderOverrideOwner} has prio {leaderOverridePriority}");
             return;
         }
-
+        
         leaderOverrideActive = true;
         leaderOverrideTarget = target;
         leaderOverrideExpiresAt = Time.time + (duration > 0f ? duration : overrideDuration);
@@ -346,8 +356,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         leaderOverrideRole = role;
         leaderOverrideOwner = owner;
         leaderOverridePriority = priority;
-
-        Debug.Log($"[LeaderOverride] {name} override set -> target {target}, duration {duration}, role {role}, owner {owner}, prio {priority}");
+        
+        MyLogger.LogInfo($"[LeaderOverride] {name} override set -> target {target}, duration {duration}, role {role}");
     }
 
     public void ClearLeaderOverride(UnityEngine.Object requester = null, bool force = false)
@@ -357,7 +367,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             Debug.Log($"[LeaderOverride] {name} clear ignored by {requester} (owner {leaderOverrideOwner})");
             return;
         }
-
+        
         leaderOverrideActive = false;
         leaderOverrideTarget = Vector3.zero;
         leaderOverrideRole = string.Empty;
@@ -365,8 +375,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         leaderOverrideReachedAt = -1f;
         leaderOverrideOwner = null;
         leaderOverridePriority = 0;
-
-        Debug.Log($"[LeaderOverride] {name} override cleared by {requester}");
+        
+        MyLogger.LogInfo($"[LeaderOverride] {name} override cleared");
     }
     
     // MEJORA: Improved player detection using new AI system
@@ -942,7 +952,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         var l_spawnPosition = transform.position + Vector3.up * 0.5f + p_direction * 0.8f;
         var l_bullet = PoolObjectsService.GetOrCreateObject(bulletData.Prefab);
         l_bullet.OnDeactivate += OnDeactivateBulletHandler;
-        l_bullet.InitializeBullet(bulletData, l_spawnPosition, p_direction);
+        l_bullet.InitializeBullet(bulletData, l_spawnPosition, p_direction, BulletOwner.Guard, gameObject.name);
     }
 
     private void OnDeactivateBulletHandler(BulletObject p_bullet)
@@ -1358,28 +1368,28 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [ContextMenu("Print AI Status")]
     public void PrintAIStatus()
     {
-        Debug.Log("=== GUARD AI STATUS ===");
-        Debug.Log($"AI System Enabled: {enableNewAISystem}");
-        Debug.Log($"Personality: {personalityType}");
-        Debug.Log($"Can See Player: {CanSeePlayer()}");
+        MyLogger.LogInfo("=== GUARD AI STATUS ===");
+        MyLogger.LogInfo($"AI System Enabled: {enableNewAISystem}");
+        MyLogger.LogInfo($"Personality: {personalityType}");
+        MyLogger.LogInfo($"Can See Player: {CanSeePlayer()}");
 
         var detectionResult = GetDetectionResult();
-        Debug.Log($"Detection Level: {detectionResult.level}");
-        Debug.Log($"Threat Level: {GetThreatLevel():F2}");
-        Debug.Log($"Information Confidence: {GetInformationConfidence():F2}");
-        Debug.Log($"Should Investigate: {ShouldInvestigate()}");
-        Debug.Log($"Should Attack: {ShouldAttack()}");
-        Debug.Log($"Contextual Speed: {GetContextualSpeed():F1}");
+        MyLogger.LogInfo($"Detection Level: {detectionResult.level}");
+        MyLogger.LogInfo($"Threat Level: {GetThreatLevel():F2}");
+        MyLogger.LogInfo($"Information Confidence: {GetInformationConfidence():F2}");
+        MyLogger.LogInfo($"Should Investigate: {ShouldInvestigate()}");
+        MyLogger.LogInfo($"Should Attack: {ShouldAttack()}");
+        MyLogger.LogInfo($"Contextual Speed: {GetContextualSpeed():F1}");
 
         // Steering physics status
-        Debug.Log($"Current Velocity: {_vel} (magnitude: {_vel.magnitude:F2})");
-        Debug.Log($"Max Speed: {maxSpeed}, Max Force: {maxForce}, Mass: {mass}");
+        MyLogger.LogInfo($"Current Velocity: {_vel} (magnitude: {_vel.magnitude:F2})");
+        MyLogger.LogInfo($"Max Speed: {maxSpeed}, Max Force: {maxForce}, Mass: {mass}");
 
         if (player != null)
         {
-            Debug.Log($"Distance to Player: {Vector3.Distance(transform.position, player.position):F2}");
+            MyLogger.LogInfo($"Distance to Player: {Vector3.Distance(transform.position, player.position):F2}");
         }
-        Debug.Log("======================");
+        MyLogger.LogInfo("======================");
     }
 
     [ContextMenu("Test Pursue Player")]
@@ -1388,11 +1398,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         if (player != null)
         {
             PursuePlayer();
-            Debug.Log("Started pursuing player using steering behaviors");
+            MyLogger.LogInfo("Started pursuing player using steering behaviors");
         }
         else
         {
-            Debug.Log("No player found to pursue");
+            MyLogger.LogInfo("No player found to pursue");
         }
     }
 
@@ -1402,11 +1412,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         if (player != null)
         {
             EvadePlayer();
-            Debug.Log("Started evading player using steering behaviors");
+            MyLogger.LogInfo("Started evading player using steering behaviors");
         }
         else
         {
-            Debug.Log("No player found to evade from");
+            MyLogger.LogInfo("No player found to evade from");
         }
     }
 
@@ -1415,14 +1425,14 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         Vector3 testDirection = transform.forward;
         Move(testDirection);
-        Debug.Log($"Applied direct movement - Direction: {testDirection}, Current Vel: {_vel.magnitude:F2}");
+        MyLogger.LogInfo($"Applied direct movement - Direction: {testDirection}, Current Vel: {_vel.magnitude:F2}");
     }
 
     [ContextMenu("Reset Velocity")]
     private void ResetVelocity()
     {
         _vel = Vector3.zero;
-        Debug.Log("Velocity reset to zero");
+        MyLogger.LogInfo("Velocity reset to zero");
     }
 
     [ContextMenu("Force High Speed")]
@@ -1432,7 +1442,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         maxForce = 100f;
         maxSpeed = 20f;
         slowingDistance = 0.5f;
-        Debug.Log($"Forced high speed settings: Mass={mass}, MaxForce={maxForce}, MaxSpeed={maxSpeed}");
+        MyLogger.LogInfo($"Forced high speed settings: Mass={mass}, MaxForce={maxForce}, MaxSpeed={maxSpeed}");
     }
 
     [ContextMenu("Test Seek Behavior")]
@@ -1441,22 +1451,22 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         if (patrolPoints != null && patrolPoints.Length > 0)
         {
             Vector3 target = patrolPoints[0].position;
-            Debug.Log($"=== SEEK TEST ===");
-            Debug.Log($"Position: {transform.position}");
-            Debug.Log($"Target: {target}");
-            Debug.Log($"Current Vel: {_vel}");
-            Debug.Log($"Max Speed: {maxSpeed}");
+            MyLogger.LogInfo($"=== SEEK TEST ===");
+            MyLogger.LogInfo($"Position: {transform.position}");
+            MyLogger.LogInfo($"Target: {target}");
+            MyLogger.LogInfo($"Current Vel: {_vel}");
+            MyLogger.LogInfo($"Max Speed: {maxSpeed}");
 
             Vector3 steering = Steering.Seek(transform.position, target, _vel, maxSpeed);
-            Debug.Log($"Calculated steering: {steering}, magnitude: {steering.magnitude:F2}");
+            MyLogger.LogInfo($"Calculated steering: {steering}, magnitude: {steering.magnitude:F2}");
 
             // Calculate expected values manually
             Vector3 desired = target - transform.position;
             desired.y = 0f;
             desired = desired.normalized * maxSpeed;
             Vector3 expectedSteering = desired - _vel;
-            Debug.Log($"Expected desired: {desired}");
-            Debug.Log($"Expected steering: {expectedSteering}");
+            MyLogger.LogInfo($"Expected desired: {desired}");
+            MyLogger.LogInfo($"Expected steering: {expectedSteering}");
 
             ApplySteering(steering);
         }
@@ -1468,38 +1478,38 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         Vector3 forceVel = transform.forward * 5f;
         _vel = forceVel;
         transform.position += _vel * Time.deltaTime;
-        Debug.Log($"Forced velocity: {_vel}, moved to: {transform.position}");
+        MyLogger.LogInfo($"Forced velocity: {_vel}, moved to: {transform.position}");
     }
 
     [ContextMenu("Debug Complete Steering Pipeline")]
     private void DebugSteeringPipeline()
     {
-        Debug.Log("=== COMPLETE STEERING DEBUG ===");
-        Debug.Log($"Current Status: isAlive={isAlive}, currentMovementStatus={currentMovementStatus}");
-        Debug.Log($"Current destination: {currentDestination}");
-        Debug.Log($"Physics: mass={mass}, maxForce={maxForce}, maxSpeed={maxSpeed}");
-        Debug.Log($"Current velocity: {_vel}");
-        Debug.Log($"Time.deltaTime: {Time.deltaTime:F6}, FPS: {1f/Time.deltaTime:F1}");
+        MyLogger.LogInfo("=== COMPLETE STEERING DEBUG ===");
+        MyLogger.LogInfo($"Current Status: isAlive={isAlive}, currentMovementStatus={currentMovementStatus}");
+        MyLogger.LogInfo($"Current destination: {currentDestination}");
+        MyLogger.LogInfo($"Physics: mass={mass}, maxForce={maxForce}, maxSpeed={maxSpeed}");
+        MyLogger.LogInfo($"Current velocity: {_vel}");
+        MyLogger.LogInfo($"Time.deltaTime: {Time.deltaTime:F6}, FPS: {1f/Time.deltaTime:F1}");
 
         if (currentDestination != Vector3.zero)
         {
             // Test direct steering calculation
             Vector3 steering = Steering.Seek(transform.position, currentDestination, _vel, maxSpeed);
-            Debug.Log($"Direct Seek result: {steering}");
+            MyLogger.LogInfo($"Direct Seek result: {steering}");
 
             // Test integration
             Vector3 integratedVel = Integrate(steering, Time.deltaTime);
-            Debug.Log($"After integration: {integratedVel}");
+            MyLogger.LogInfo($"After integration: {integratedVel}");
 
             // Test obstacle avoidance
             Vector3 avoidedVel = obstacleAvoidance.GetDirImproved(integratedVel, false);
-            Debug.Log($"After obstacle avoidance: {avoidedVel}");
+            MyLogger.LogInfo($"After obstacle avoidance: {avoidedVel}");
 
             // Calculate final movement
             float effectiveDeltaTime = Mathf.Max(Time.deltaTime, 0.016f);
             Vector3 finalMovement = avoidedVel * effectiveDeltaTime;
-            Debug.Log($"Final movement per frame: {finalMovement.magnitude:F6} units");
-            Debug.Log($"Movement per second: {finalMovement.magnitude * (1f/effectiveDeltaTime):F2} units/sec");
+            MyLogger.LogInfo($"Final movement per frame: {finalMovement.magnitude:F6} units");
+            MyLogger.LogInfo($"Movement per second: {finalMovement.magnitude * (1f/effectiveDeltaTime):F2} units/sec");
 
             // Apply directly
             ApplySteering(steering);
@@ -1513,32 +1523,42 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         Vector3 direction = (currentDestination - transform.position).normalized;
         Vector3 highSpeedMovement = direction * 2f; // 2 units per frame = 120 units/sec at 60fps
         transform.position += highSpeedMovement;
-        Debug.Log($"Direct high speed movement: {highSpeedMovement.magnitude} units per frame");
+        MyLogger.LogInfo($"Direct high speed movement: {highSpeedMovement.magnitude} units per frame");
     }
 
     [ContextMenu("Debug FSM Status")]
     private void DebugFSMStatus()
     {
-        Debug.Log("=== FSM STATUS ===");
-        Debug.Log($"Use FSM: {useFSM}");
-        Debug.Log($"State Data Count: {stateDataList?.Count ?? 0}");
-        Debug.Log($"StateMachine Initialized: {stateMachine != null}");
+        MyLogger.LogInfo("=== FSM STATUS ===");
+        MyLogger.LogInfo($"Use FSM: {useFSM}");
+        MyLogger.LogInfo($"State Data Count: {stateDataList?.Count ?? 0}");
+        MyLogger.LogInfo($"StateMachine Initialized: {stateMachine != null}");
 
         if (stateMachine != null)
         {
             var currentState = stateMachine.GetCurrentState();
-            Debug.Log($"Current State: {currentState?.State?.StateName ?? "None"}");
+            MyLogger.LogInfo($"Current State: {currentState?.State?.StateName ?? "None"}");
         }
 
-        Debug.Log($"Current Patrol Loops: {CurrentPatrolLoops}/{LoopsToIdle}");
-        Debug.Log($"Patrol Direction: {(PatrolDirection ? "Forward" : "Backward")}");
-        Debug.Log($"Current Patrol Index: {CurrentPatrolIndex}");
-        Debug.Log($"Has Reached Current Point: {HasReachedCurrentPatrolPoint}");
-        Debug.Log($"State Timer: {StateTimer:F2}");
-        Debug.Log("==================");
+        MyLogger.LogInfo($"Current Patrol Loops: {CurrentPatrolLoops}/{LoopsToIdle}");
+        MyLogger.LogInfo($"Patrol Direction: {(PatrolDirection ? "Forward" : "Backward")}");
+        MyLogger.LogInfo($"Current Patrol Index: {CurrentPatrolIndex}");
+        MyLogger.LogInfo($"Has Reached Current Point: {HasReachedCurrentPatrolPoint}");
+        MyLogger.LogInfo($"State Timer: {StateTimer:F2}");
+        MyLogger.LogInfo("==================");
     }
 
     #endregion
+
+    protected override void OnDeath()
+    {
+        base.OnDeath();
+
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogGuardKilled(gameObject.name, transform.position);
+        }
+    }
 
     #region IUseFsm Implementation
 

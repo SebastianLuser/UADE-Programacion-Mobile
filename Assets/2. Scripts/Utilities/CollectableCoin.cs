@@ -1,5 +1,4 @@
 using Services;
-using Services.MicroServices.UserDataService.Wallet;
 using UnityEngine;
 
 /// <summary>
@@ -28,11 +27,9 @@ public class CollectableCoin : MonoBehaviour, ICollectable
     /// <param name="collector">The collector that collected this item</param>
     public void Collect(ICollector collector)
     {
-        Debug.Log($"Collected {ItemName} worth {Points} points!");
+        MyLogger.LogInfo($"Collected {ItemName} worth {Points} points!");
 
         collector.AddPoints(Points);
-
-        ServiceLocator.Get<IWalletService>()?.AddCoins(walletReward);
 
         if (collector is PlayerCollector playerCollector)
         {

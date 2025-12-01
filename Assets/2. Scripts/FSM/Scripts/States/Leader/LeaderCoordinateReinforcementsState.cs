@@ -17,7 +17,7 @@ namespace Scripts.FSM.Base.StateMachine
                 leader.ConsumeRequest();
 
                 leader.LeaderStateTimer = 0f;
-                Debug.Log($"[Leader] CoordinateReinforcements -> center {center}, lastPlayer {lastPlayer}");
+                MyLogger.LogInfo($"[Leader] CoordinateReinforcements -> center {center}, lastPlayer {lastPlayer}");
             }
         }
 

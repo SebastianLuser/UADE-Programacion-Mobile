@@ -1,4 +1,4 @@
-﻿using Services.MicroServices.BlackboardService;
+using Services.MicroServices.BlackboardService;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -16,7 +16,7 @@ public static class MyGame
         if (p_localVariable == null)
             p_localVariable = (T)Resources.Load(p_filePath, typeof(T));
         if (p_localVariable == null)
-            Debug.LogError($"Asset '{p_filePath}' not found.");
+            MyLogger.LogError($"Asset '{p_filePath}' not found.");
         if (p_localVariable is IInitializable l_initializable)
         {
             l_initializable.Initialize();

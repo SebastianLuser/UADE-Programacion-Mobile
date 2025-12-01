@@ -4,6 +4,7 @@ using Services.MicroServices.AudioService;
 using Services.MicroServices.EventsServices;
 using Services.MicroServices.EventsServices.CustomEvents;
 using Services.MicroServices.GameStateService;
+using Services.MicroServices.UserDataService.Wallet;
 
 /// <summary>
 /// Escape zone that activates when player can escape and handles scene restart
@@ -82,12 +83,21 @@ public class EscapeZone : MonoBehaviour
             playerMovement.enabled = false;
         }
 
+        if (UGS_Analytics.Instance != null)
+        {
+            UGS_Analytics.Instance.LogEscapeZoneReached(playerCollector.TotalPoints, Time.timeSinceLevelLoad);
+        }
+
         playerCollector.gameObject.SetActive(false);
 
         if (m_audioService != null && m_audioConfig != null)
         {
             m_audioService.PlaySFX(m_audioConfig.escapeSFX);
         }
+
+        // Credit the run only on victory.
+        ServiceLocator.Get<IWalletService>()?.AddCoins(playerCollector.SessionCoins);
+        ServiceLocator.Get<IWalletService>()?.AddDiamonds(playerCollector.SessionDiamonds);
 
         ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(true, playerCollector.TotalPoints, playerCollector.SessionCoins, playerCollector.SessionDiamonds));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.Victory);

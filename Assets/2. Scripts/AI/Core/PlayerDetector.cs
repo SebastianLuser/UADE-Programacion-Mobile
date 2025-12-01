@@ -60,7 +60,18 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
     {
         if (autoConfigureFromPersonality)
         {
+            // Preserve designer overrides (layer masks, tag) when reapplying defaults
+            var preservedObstacleMask = config.obstacleLayerMask;
+            var preservedPlayerMask = config.playerLayerMask;
+            var preservedPlayerTag = config.playerTag;
+
             config = DetectionConfig.GetDefault(personalityType);
+            config.obstacleLayerMask = preservedObstacleMask;
+            config.playerLayerMask = preservedPlayerMask;
+            if (!string.IsNullOrEmpty(preservedPlayerTag))
+            {
+                config.playerTag = preservedPlayerTag;
+            }
         }
     }
     
@@ -699,19 +710,19 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
         if (m_cachedPlayerTransform != null)
         {
             var l_result = PerformDetection(m_cachedPlayerTransform);
-            Debug.Log($"=== DETECTION TEST RESULTS ===");
-            Debug.Log($"Detection Level: {l_result.level}");
-            Debug.Log($"Can See Player: {l_result.canSeePlayer}");
-            Debug.Log($"In Field of View: {l_result.inFieldOfView}");
-            Debug.Log($"Has Line of Sight: {l_result.hasLineOfSight}");
-            Debug.Log($"Distance: {l_result.distance:F2}");
-            Debug.Log($"Angle: {l_result.angle:F1}°");
-            Debug.Log($"Blocked By: {l_result.blockedBy}");
-            Debug.Log($"Time Since Last Seen: {l_result.timeSinceLastSeen:F1}s");
+            MyLogger.LogInfo($"=== DETECTION TEST RESULTS ===");
+            MyLogger.LogInfo($"Detection Level: {l_result.level}");
+            MyLogger.LogInfo($"Can See Player: {l_result.canSeePlayer}");
+            MyLogger.LogInfo($"In Field of View: {l_result.inFieldOfView}");
+            MyLogger.LogInfo($"Has Line of Sight: {l_result.hasLineOfSight}");
+            MyLogger.LogInfo($"Distance: {l_result.distance:F2}");
+            MyLogger.LogInfo($"Angle: {l_result.angle:F1}°");
+            MyLogger.LogInfo($"Blocked By: {l_result.blockedBy}");
+            MyLogger.LogInfo($"Time Since Last Seen: {l_result.timeSinceLastSeen:F1}s");
         }
         else
         {
-            Debug.Log("Player not found for testing!");
+            MyLogger.LogInfo("Player not found for testing!");
         }
     }
     
@@ -723,7 +734,7 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
             m_lastKnownPlayerPosition = m_cachedPlayerTransform.position;
             m_lastSeenTime = Time.time;
             OnDetectionLevelChanged(PlayerDetectionLevel.None, PlayerDetectionLevel.Clear);
-            Debug.Log("Forced player detection!");
+            MyLogger.LogInfo("Forced player detection!");
         }
     }
     
@@ -735,7 +746,7 @@ public class PlayerDetector : MonoBehaviour, IPlayerDetector
         m_lastSeenTime = -1f;
         m_previousDetectionLevel = PlayerDetectionLevel.None;
         InvalidateCache();
-        Debug.Log("Detection state reset!");
+        MyLogger.LogInfo("Detection state reset!");
     }
     
     #endregion
