@@ -12,6 +12,7 @@ public class AllyLeader : Ally
 {
     [Header("Ally Leader Data")]
     [SerializeField] private AllyLeaderDataSO leaderData;
+    [field: SerializeField] public List<StateData> LeaderStateDataList { get; private set; } = new();
 
     [Header("Ally Leadership")] [Tooltip("Allies managed by this leader")] [SerializeField]
     private List<Ally> managedAllies = new List<Ally>();
@@ -74,7 +75,7 @@ public class AllyLeader : Ally
 
         EnsureBlackboard();
 
-        if (leaderData.UseLeaderFSM && leaderStateMachine != null)
+        if (leaderStateMachine != null)
         {
             leaderStateMachine.RunStateMachine();
         }
@@ -409,8 +410,8 @@ public class AllyLeader : Ally
 
     private void InitializeLeaderFSM()
     {
-        var leaderStates = leaderData.LeaderStateDataList;
-        if (!leaderData.UseLeaderFSM || leaderStates == null || leaderStates.Count == 0)
+        var leaderStates = LeaderStateDataList;
+        if (leaderStates == null || leaderStates.Count == 0)
             return;
 
         leaderStateMachine = new StateMachine(leaderStates, this);

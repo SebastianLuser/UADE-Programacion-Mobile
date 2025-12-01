@@ -13,14 +13,13 @@ MonoBehaviour:
   m_Name: FactionSpawnerConfigAllay
   m_EditorClassIdentifier: Assembly-CSharp::Game.Spawning.FactionSpawnerConfig
   <factionType>k__BackingField: 1
-  <unitsToSpawn>k__BackingField: 5
+  <unitsToSpawn>k__BackingField: 3
   <spawnLeader>k__BackingField: 0
   <unitPrefab>k__BackingField: {fileID: 7720983636413093424, guid: 195d7de90d490c64888ca67d1bfc0d9d,
     type: 3}
   <leaderPrefab>k__BackingField: {fileID: 2447479155139023508, guid: 3c2322638dee0824c82bf7dfd18b2220,
     type: 3}
-  <allyLeaderData>k__BackingField: {fileID: 11400000, guid: db0060ccebd57494abbab3f0392c33c5,
-    type: 2}
+  <allyLeaderData>k__BackingField: {fileID: 0}
   <spawnPattern>k__BackingField: 1
   <spawnRadius>k__BackingField: 5
   <gridSize>k__BackingField: {x: 3, y: 3}

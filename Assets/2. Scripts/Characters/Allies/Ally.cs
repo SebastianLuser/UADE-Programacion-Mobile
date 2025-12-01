@@ -421,7 +421,15 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     {
         if (playerToFollow == null)
         {
-            if (Time.frameCount % 60 == 0)
+            // Fallback: intenta reasignar el Player si no está seteado
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+            {
+                playerToFollow = player.transform;
+                Debug.Log($"[Ally] {name} re-found Player: {playerToFollow.name}");
+            }
+
+            if (playerToFollow == null && Time.frameCount % 60 == 0)
                 Debug.LogWarning($"[Ally] {name} has no Player to follow!");
             return;
         }
@@ -681,7 +689,9 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         // Move toward override target
         float distance = Vector3.Distance(transform.position, leaderOverrideTarget);
 
-        if (distance > 1.5f) // Arrival tolerance
+        float arrivalTolerance = Mathf.Max(0.5f, followDistance * 0.5f); // evita ping-pong cercano
+
+        if (distance > arrivalTolerance)
         {
             // Use Seek behavior to move to target
             Vector3 steeringForce = Steering.Seek(
@@ -694,9 +704,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         }
         else
         {
-            // Reached target, brake gently
-            Vector3 brakeForce = -velocity * 0.5f;
-            ApplySteering(brakeForce);
+            // Reached target, hard brake to evitar oscilaciones
+            velocity = Vector3.zero;
         }
 
         // Face the override target

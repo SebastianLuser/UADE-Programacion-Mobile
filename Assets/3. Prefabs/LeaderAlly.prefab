@@ -3925,7 +3925,7 @@ Transform:
   m_GameObject: {fileID: 2447479155139023508}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 7.01, y: -0.87, z: 9.389999}
+  m_LocalPosition: {x: 3.0100002, y: 0.13, z: 7.3899994}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -4135,16 +4135,22 @@ MonoBehaviour:
   guardTag: Guard
   guardLayerMask:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 256
   stateDataList:
+  - {fileID: 11400000, guid: 5425c7367cd837245a8b547f1f04c94d, type: 2}
+  - {fileID: 11400000, guid: e4024ef49519dd745b5954882a8367a8, type: 2}
+  - {fileID: 11400000, guid: 7029e79b0fbd84b44967a68c06cc85c3, type: 2}
+  useFSM: 1
+  aiContext: {fileID: 7610246097799949985}
+  playerDetectorComponent: {fileID: 6503829491326563759}
+  showStateLabel: 1
+  leaderData: {fileID: 11400000, guid: db0060ccebd57494abbab3f0392c33c5, type: 2}
+  <LeaderStateDataList>k__BackingField:
   - {fileID: 11400000, guid: 0a7f0e9f8827fda47aa0ac71f2c50a72, type: 2}
   - {fileID: 11400000, guid: c5afe50edc5fcc945a562aed873c4ad4, type: 2}
   - {fileID: 11400000, guid: dc91f20d7f81fc645b5ca1d177f19bc7, type: 2}
   - {fileID: 11400000, guid: d526e9ad09fea514f9bc13d421e40c03, type: 2}
   - {fileID: 11400000, guid: aea4c3f2ba7a5a844a0e6ee5d8d45681, type: 2}
-  useFSM: 1
-  aiContext: {fileID: 7610246097799949985}
-  playerDetectorComponent: {fileID: 6503829491326563759}
-  leaderData: {fileID: 11400000, guid: db0060ccebd57494abbab3f0392c33c5, type: 2}
   managedAllies:
   - {fileID: 0}
+  showLeaderStateLabel: 1

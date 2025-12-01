@@ -27,6 +27,10 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private Transform[] patrolPoints;
     [SerializeField] private BulletData bulletData;
 
+    [Header("Targeting")]
+    [SerializeField] protected string[] targetTags = new[] { "Player" };
+    [SerializeField] protected LayerMask targetLayerMask = ~0;
+
     [Header("FSM Patrol Settings")]
     [SerializeField] private int loopsToIdle = 3;
     [SerializeField] private float idleSeconds = 5f;
@@ -515,13 +519,33 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             m_blackboardService = ServiceLocator.Get<IBlackboardService>();
         }
         
-        // Find player if not set
+        // Find player/target if not set
         if (player == null)
         {
-            var playerGO = GameObject.FindGameObjectWithTag("Player");
-            if (playerGO != null)
+            GameObject closest = null;
+            float minDist = float.MaxValue;
+
+            foreach (var tag in targetTags)
             {
-                SetTargetTransform(playerGO.transform);
+                if (string.IsNullOrEmpty(tag)) continue;
+                GameObject[] candidates = GameObject.FindGameObjectsWithTag(tag);
+                if (candidates == null) continue;
+
+                for (int i = 0; i < candidates.Length; i++)
+                {
+                    float d = Vector3.Distance(transform.position, candidates[i].transform.position);
+                    if (d < minDist)
+                    {
+                        minDist = d;
+                        closest = candidates[i];
+                    }
+                }
+            }
+
+            if (closest != null)
+            {
+                SetTargetTransform(closest.transform);
+                MyLogger.LogInfo($"[Guard] Target assigned automatically by tags [{string.Join(",", targetTags)}]: {closest.name}");
             }
         }
     }

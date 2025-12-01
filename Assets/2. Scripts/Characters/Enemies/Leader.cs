@@ -222,11 +222,29 @@ public class Leader : Guard
         if (Time.time < nextTargetScanTime) return;
         nextTargetScanTime = Time.time + targetRescanInterval;
 
-        var playerGO = GameObject.FindGameObjectWithTag("Player");
-        if (playerGO != null)
+        GameObject closest = null;
+        float minDist = float.MaxValue;
+
+        foreach (var tag in targetTags)
         {
-            SetTargetTransform(playerGO.transform);
-            MyLogger.LogInfo($"[Leader] Player target assigned automatically: {playerGO.name}");
+            if (string.IsNullOrEmpty(tag)) continue;
+            GameObject[] candidates = GameObject.FindGameObjectsWithTag(tag);
+            if (candidates == null) continue;
+
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                float d = Vector3.Distance(transform.position, candidates[i].transform.position);
+                if (d < minDist)
+                {
+                    minDist = d;
+                    closest = candidates[i];
+                }
+            }
+        }
+
+        if (closest != null)
+        {
+            SetTargetTransform(closest.transform);
         }
     }
 

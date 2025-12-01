@@ -5,10 +5,6 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AllyLeaderData", menuName = "Game Data/Ally Leader Data")]
 public class AllyLeaderDataSO : ScriptableObject
 {
-    [Header("Leadership FSM")]
-    [field: SerializeField] public bool UseLeaderFSM { get; private set; } = true;
-    [field: SerializeField] public List<StateData> LeaderStateDataList { get; private set; } = new();
-
     [Header("Defensive Tactics")]
     [Tooltip("Player health % para activar proteccion")]
     [Range(0f, 1f)]
