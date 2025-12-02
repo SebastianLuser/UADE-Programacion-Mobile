@@ -22,7 +22,6 @@ public class AllyLeader : Ally
     private float nextTacticsUpdateTime;
     private bool isProtectingPlayer;
     private float leaderStateTimer;
-    protected string LeaderStateName => leaderStateMachine?.GetCurrentState()?.State?.StateName ?? "None";
     public float PlayerProtectThreshold => leaderData.PlayerProtectThreshold;
     public bool IsProtectingPlayer => isProtectingPlayer;
     public float LeaderStateTimer
@@ -31,6 +30,7 @@ public class AllyLeader : Ally
         set => leaderStateTimer = value;
     }
     [SerializeField] private bool showLeaderStateLabel = true;
+    protected string LeaderStateName => leaderStateMachine?.GetCurrentState()?.State?.StateName ?? "None";
     public void SetLeaderData(AllyLeaderDataSO data)
     {
         leaderData = data;
@@ -426,6 +426,15 @@ public class AllyLeader : Ally
         {
             Debug.LogWarning("[AllyLeader] Blackboard service still NULL");
         }
+    }
+
+    public virtual void ResetLeaderFromPool()
+    {
+        ClearAllOverrides();
+        leaderStateTimer = 0f;
+        nextTacticsUpdateTime = 0f;
+        isProtectingPlayer = false;
+        leaderStateMachine?.ResetStateMachine();
     }
 
 #if UNITY_EDITOR

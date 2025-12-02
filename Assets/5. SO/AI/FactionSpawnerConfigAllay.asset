@@ -15,6 +15,8 @@ MonoBehaviour:
   <factionType>k__BackingField: 1
   <unitsToSpawn>k__BackingField: 3
   <spawnLeader>k__BackingField: 0
+  <wavesCount>k__BackingField: 3
+  <delayBetweenWaves>k__BackingField: 3
   <unitPrefab>k__BackingField: {fileID: 7720983636413093424, guid: 195d7de90d490c64888ca67d1bfc0d9d,
     type: 3}
   <leaderPrefab>k__BackingField: {fileID: 2447479155139023508, guid: 3c2322638dee0824c82bf7dfd18b2220,

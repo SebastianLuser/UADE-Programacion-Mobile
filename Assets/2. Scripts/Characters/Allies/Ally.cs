@@ -175,6 +175,12 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         UnsubscribeUpdateService();
     }
 
+    private void OnEnable()
+    {
+        // When reused from pool, re-subscribe to updates so movement/combat run again.
+        SubscribeUpdateService();
+    }
+
     #region IUpdateListener Implementation
 
     public virtual void MyUpdate()
@@ -222,6 +228,17 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     }
 
     #endregion
+
+    public void ResetFromPool()
+    {
+        ClearLeaderOverride(null, true);
+        currentTarget = null;
+        velocity = Vector3.zero;
+        stateTimer = 0f;
+        isAlive = true;
+        lastShootTime = 0f;
+        stateMachine?.ResetStateMachine();
+    }
 
     #region Core Behavior
 
@@ -611,7 +628,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         Vector3 spawnPosition = transform.position + Vector3.up * 0.5f + direction * 0.8f;
         var bullet = PoolObjectsService.GetOrCreateObject(bulletData.Prefab);
         bullet.OnDeactivate += OnBulletDeactivate;
-        bullet.InitializeBullet(bulletData, spawnPosition, direction);
+        bullet.InitializeBullet(bulletData, spawnPosition, direction, BulletOwner.Ally, gameObject.name);
     }
 
     private void OnBulletDeactivate(BulletObject bullet)
@@ -678,6 +695,18 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     {
         if (!leaderOverrideActive)
             return false;
+
+        // If regroup/escort override is active but a guard is detected, drop override to engage
+        if (!string.IsNullOrEmpty(leaderOverrideRole)
+            && leaderOverrideRole.ToUpperInvariant() == "REGROUP")
+        {
+            Guard threat = AcquireGuardTarget();
+            if (threat != null && threat.IsAlive)
+            {
+                ClearLeaderOverride();
+                return false; // allow normal combat logic
+            }
+        }
 
         // Check if override expired
         if (Time.time >= leaderOverrideExpiresAt)

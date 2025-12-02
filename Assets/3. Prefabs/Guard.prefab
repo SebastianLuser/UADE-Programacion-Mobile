@@ -4007,6 +4007,11 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   bulletData: {fileID: 11400000, guid: 6756e0916d9dd8a439d2c586d44476db, type: 2}
+  targetTags:
+  - Player
+  targetLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   loopsToIdle: 3
   idleSeconds: 5
   stateDataList:

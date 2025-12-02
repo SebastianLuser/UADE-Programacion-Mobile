@@ -2,6 +2,8 @@ using UnityEngine;
 using System.Collections.Generic;
 using Game.Spawning;
 using Game.AI.Flocking;
+using Services;
+using Services.MicroServices.PoolObjectsService;
 
 public class FactionSpawner : MonoBehaviour
 {
@@ -38,6 +40,8 @@ public class FactionSpawner : MonoBehaviour
     private GameObject spawnedLeader;
     private List<Transform> generatedWaypoints = new List<Transform>();
     private Transform waypointContainer;
+    private IPoolObjectsService poolService;
+    private readonly List<Transform> waypointPool = new List<Transform>();
 
     private void Start()
     {
@@ -64,42 +68,61 @@ public class FactionSpawner : MonoBehaviour
         if (spawnCenter == null)
             spawnCenter = transform;
 
+        if (poolService == null)
+            poolService = ServiceLocator.Get<IPoolObjectsService>();
+
+        if (poolService == null)
+        {
+            Debug.LogError("[FactionSpawner] PoolObjectsService is required to spawn factions.");
+            return;
+        }
+
+        PreloadPool();
         StartCoroutine(SpawnSequence());
     }
 
     private System.Collections.IEnumerator SpawnSequence()
     {
-        // 1. Spawn Leader first (skip for Civilians)
+        int waves = Mathf.Max(1, config.wavesCount);
         bool l_shouldSpawnLeader = ShouldSpawnLeader();
-        if (l_shouldSpawnLeader && config.leaderPrefab != null)
-        {
-            Vector3 l_leaderPos = GetSpawnPosition(0);
-            spawnedLeader = SpawnUnit(config.leaderPrefab, l_leaderPos, true);
-            yield return new WaitForSeconds(config.delayBetweenSpawns);
-        }
 
-        // 2. Generate waypoints if needed (for Guards)
+        // Generate waypoints once if needed (for Guards)
         if (config.factionType == FactionType.Guards)
         {
             GenerateWaypoints();
         }
 
-        // 3. Spawn units
-        for (int i = 0; i < config.unitsToSpawn; i++)
+        for (int wave = 0; wave < waves; wave++)
         {
-            Vector3 l_spawnPos = GetSpawnPosition(i + (l_shouldSpawnLeader ? 1 : 0));
-            GameObject l_unit = SpawnUnit(config.unitPrefab, l_spawnPos, false);
-            spawnedUnits.Add(l_unit);
+            bool spawnLeaderThisWave = l_shouldSpawnLeader && wave == 0;
 
-            if (config.delayBetweenSpawns > 0)
-                yield return new WaitForSeconds(config.delayBetweenSpawns);
+            // Spawn Leader (only first wave)
+            if (spawnLeaderThisWave && config.leaderPrefab != null)
+            {
+                Vector3 l_leaderPos = GetSpawnPosition(0);
+                spawnedLeader = SpawnUnit(config.leaderPrefab, l_leaderPos, true);
+                if (config.delayBetweenSpawns > 0)
+                    yield return new WaitForSeconds(config.delayBetweenSpawns);
+            }
+
+            // Spawn units for this wave
+            for (int i = 0; i < config.unitsToSpawn; i++)
+            {
+                Vector3 l_spawnPos = GetSpawnPosition(i + (spawnLeaderThisWave ? 1 : 0));
+                GameObject l_unit = SpawnUnit(config.unitPrefab, l_spawnPos, false);
+                spawnedUnits.Add(l_unit);
+
+                if (config.delayBetweenSpawns > 0)
+                    yield return new WaitForSeconds(config.delayBetweenSpawns);
+            }
+
+            // Configure Leader once
+            if (spawnLeaderThisWave)
+                ConfigureLeader();
+            
+            if (wave < waves - 1 && config.delayBetweenWaves > 0)
+                yield return new WaitForSeconds(config.delayBetweenWaves);
         }
-
-        // 4. Configure Leader with spawned units
-        if (l_shouldSpawnLeader)
-            ConfigureLeader();
-
-        Debug.Log($"[FactionSpawner] Spawned {config.factionType}: {config.unitsToSpawn} units + {(l_shouldSpawnLeader ? "1 leader" : "no leader")}");
     }
 
     private GameObject SpawnUnit(GameObject p_prefab, Vector3 p_position, bool p_isLeader)
@@ -110,15 +133,22 @@ public class FactionSpawner : MonoBehaviour
             return null;
         }
 
-        // Instantiate inactive to configure before Awake() runs
-        bool l_prefabWasActive = p_prefab.activeSelf;
-        p_prefab.SetActive(false);
+        GameObject l_unit = GetFromPoolOrInstantiate(p_prefab);
+        if (l_unit == null)
+        {
+            Debug.LogError("[FactionSpawner] Could not spawn unit");
+            return null;
+        }
 
-        GameObject l_unit = Instantiate(p_prefab, p_position, Quaternion.identity, transform);
+        // Place under spawner
+        l_unit.transform.SetParent(transform);
+        l_unit.transform.position = p_position;
+        l_unit.transform.rotation = Quaternion.identity;
+
+        // Reset basic state before configure/activation
+        ResetPooledUnit(l_unit);
+
         l_unit.name = $"{config.factionType}_{(p_isLeader ? "Leader" : spawnedUnits.Count.ToString("00"))}";
-
-        // Restore prefab state
-        p_prefab.SetActive(l_prefabWasActive);
 
         // Configure before activation
         if (config.factionType == FactionType.Guards)
@@ -138,6 +168,65 @@ public class FactionSpawner : MonoBehaviour
         l_unit.SetActive(true);
 
         return l_unit;
+    }
+
+    private GameObject GetFromPoolOrInstantiate(GameObject prefab)
+    {
+        GameObject instance = null;
+
+        if (poolService != null)
+        {
+            instance = poolService.GetOrCreateObject(prefab);
+        }
+
+        if (instance == null)
+        {
+            Debug.LogError("[FactionSpawner] Pool service returned null instance.");
+            return null;
+        }
+
+        // Ensure inactive for configuration
+        if (instance.activeSelf)
+            instance.SetActive(false);
+
+        return instance;
+    }
+
+    private void ResetPooledUnit(GameObject unit)
+    {
+        if (unit == null) return;
+
+        // Reset base character health/state if present
+        BaseCharacter character = unit.GetComponent<BaseCharacter>();
+        if (character != null)
+        {
+            character.Initialize();
+        }
+
+        // Type-specific resets
+        Guard guard = unit.GetComponent<Guard>();
+        if (guard != null)
+        {
+            guard.ResetFromPool();
+        }
+
+        Ally ally = unit.GetComponent<Ally>();
+        if (ally != null && guard == null) // avoid double reset if Guard inherits Ally someday
+        {
+            ally.ResetFromPool();
+        }
+
+        Leader leader = unit.GetComponent<Leader>();
+        if (leader != null)
+        {
+            leader.ResetLeaderFromPool();
+        }
+
+        AllyLeader allyLeader = unit.GetComponent<AllyLeader>();
+        if (allyLeader != null)
+        {
+            allyLeader.ResetLeaderFromPool();
+        }
     }
 
     #region Guard Configuration
@@ -213,10 +302,8 @@ public class FactionSpawner : MonoBehaviour
                 Mathf.Sin(l_angle) * config.waypointRadius
             );
 
-            GameObject l_wp = new GameObject($"Waypoint_{i}");
-            l_wp.transform.parent = waypointContainer;
-            l_wp.transform.position = spawnCenter.position + l_offset;
-            generatedWaypoints.Add(l_wp.transform);
+            Transform l_wp = GetWaypointFromPool($"Waypoint_{i}", spawnCenter.position + l_offset);
+            generatedWaypoints.Add(l_wp);
         }
     }
 
@@ -231,10 +318,8 @@ public class FactionSpawner : MonoBehaviour
             float l_t = i / (float)(config.waypointsPerGuard - 1);
             Vector3 l_pos = Vector3.Lerp(l_start, l_end, l_t);
 
-            GameObject l_wp = new GameObject($"Waypoint_{i}");
-            l_wp.transform.parent = waypointContainer;
-            l_wp.transform.position = l_pos;
-            generatedWaypoints.Add(l_wp.transform);
+            Transform l_wp = GetWaypointFromPool($"Waypoint_{i}", l_pos);
+            generatedWaypoints.Add(l_wp);
         }
     }
 
@@ -254,10 +339,8 @@ public class FactionSpawner : MonoBehaviour
                     Mathf.Sin(l_angle) * (config.waypointRadius * 0.5f)
                 );
 
-                GameObject l_wp = new GameObject($"Guard{l_guardIndex}_Waypoint_{l_wpIndex}");
-                l_wp.transform.parent = waypointContainer;
-                l_wp.transform.position = l_guardSpawnPos + l_offset;
-                generatedWaypoints.Add(l_wp.transform);
+                Transform l_wp = GetWaypointFromPool($"Guard{l_guardIndex}_Waypoint_{l_wpIndex}", l_guardSpawnPos + l_offset);
+                generatedWaypoints.Add(l_wp);
             }
         }
     }
@@ -466,6 +549,95 @@ public class FactionSpawner : MonoBehaviour
         return config.spawnLeader && config.factionType != FactionType.Civilians;
     }
 
+    private void PreloadPool()
+    {
+        if (poolService == null || config == null)
+            return;
+
+        int l_waves = Mathf.Max(1, config.wavesCount);
+        int l_totalUnits = config.unitsToSpawn * l_waves;
+
+        // Leaders only need one slot because they spawn on the first wave
+        if (ShouldSpawnLeader())
+            l_totalUnits += 1;
+
+        // Preload regular units
+        for (int i = 0; i < l_totalUnits; i++)
+        {
+            GameObject l_instance = poolService.GetOrCreateObject(config.unitPrefab);
+            if (l_instance != null)
+            {
+                l_instance.SetActive(false);
+                poolService.ReturnObject(l_instance);
+            }
+        }
+
+        // Preload leader
+        if (ShouldSpawnLeader() && config.leaderPrefab != null)
+        {
+            GameObject l_leaderInstance = poolService.GetOrCreateObject(config.leaderPrefab);
+            if (l_leaderInstance != null)
+            {
+                l_leaderInstance.SetActive(false);
+                poolService.ReturnObject(l_leaderInstance);
+            }
+        }
+    }
+
+    private Transform GetWaypointFromPool(string p_name, Vector3 p_position)
+    {
+        CreateWaypointContainer();
+
+        Transform l_wp = null;
+        if (waypointPool.Count > 0)
+        {
+            int l_lastIndex = waypointPool.Count - 1;
+            l_wp = waypointPool[l_lastIndex];
+            waypointPool.RemoveAt(l_lastIndex);
+        }
+        else
+        {
+            GameObject l_go = new GameObject(p_name);
+            l_wp = l_go.transform;
+        }
+
+        l_wp.name = p_name;
+        l_wp.SetParent(waypointContainer);
+        l_wp.position = p_position;
+        l_wp.rotation = Quaternion.identity;
+        l_wp.gameObject.SetActive(true);
+
+        return l_wp;
+    }
+
+    private void PoolWaypoint(Transform p_waypoint)
+    {
+        if (p_waypoint == null)
+            return;
+
+        p_waypoint.gameObject.SetActive(false);
+        p_waypoint.SetParent(waypointContainer);
+        waypointPool.Add(p_waypoint);
+    }
+
+    private void ReturnToPoolOrDestroy(GameObject obj)
+    {
+        if (obj == null) return;
+
+        if (poolService != null)
+        {
+            poolService.ReturnObject(obj);
+            return;
+        }
+
+        #if UNITY_EDITOR
+        if (!Application.isPlaying)
+            DestroyImmediate(obj);
+        else
+        #endif
+            Destroy(obj);
+    }
+
     [ContextMenu("Clear Spawned Units")]
     public void ClearPreviousSpawns()
     {
@@ -473,37 +645,17 @@ public class FactionSpawner : MonoBehaviour
         {
             if (l_unit != null)
             {
-                #if UNITY_EDITOR
-                if (!Application.isPlaying)
-                    DestroyImmediate(l_unit);
-                else
-                #endif
-                    Destroy(l_unit);
+                ReturnToPoolOrDestroy(l_unit);
             }
         }
         spawnedUnits.Clear();
 
         if (spawnedLeader != null)
         {
-            #if UNITY_EDITOR
-            if (!Application.isPlaying)
-                DestroyImmediate(spawnedLeader);
-            else
-            #endif
-                Destroy(spawnedLeader);
+            ReturnToPoolOrDestroy(spawnedLeader);
         }
 
         ClearGeneratedWaypoints();
-
-        if (waypointContainer != null)
-        {
-            #if UNITY_EDITOR
-            if (!Application.isPlaying)
-                DestroyImmediate(waypointContainer.gameObject);
-            else
-            #endif
-                Destroy(waypointContainer.gameObject);
-        }
     }
 
     private void ClearGeneratedWaypoints()
@@ -512,12 +664,7 @@ public class FactionSpawner : MonoBehaviour
         {
             if (l_wp != null)
             {
-                #if UNITY_EDITOR
-                if (!Application.isPlaying)
-                    DestroyImmediate(l_wp.gameObject);
-                else
-                #endif
-                    Destroy(l_wp.gameObject);
+                PoolWaypoint(l_wp);
             }
         }
         generatedWaypoints.Clear();

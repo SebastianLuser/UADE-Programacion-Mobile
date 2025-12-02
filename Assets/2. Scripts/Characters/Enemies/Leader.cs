@@ -209,6 +209,19 @@ public class Leader : Guard
             guard.ClearLeaderOverride();
         }
     }
+
+    public virtual void ResetLeaderFromPool()
+    {
+        ClearAllOverrides();
+        hasPendingRequest = false;
+        pendingRequestPos = Vector3.zero;
+        pendingPlayerPos = Vector3.zero;
+        lastHoldCenter = Vector3.zero;
+        holdEndTime = 0f;
+        leaderStateTimer = 0f;
+        nextTargetScanTime = 0f;
+        leaderStateMachine?.ResetStateMachine();
+    }
     
     public void SetManagedGuards(List<Guard> guards)
     {

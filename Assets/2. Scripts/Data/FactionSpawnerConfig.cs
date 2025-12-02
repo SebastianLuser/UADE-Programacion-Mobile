@@ -42,6 +42,13 @@ namespace Game.Spawning
         [Tooltip("Spawn a leader for this faction")]
         [field: SerializeField] public bool spawnLeader { get; private set; } = true;
 
+        [Header("Waves")]
+        [Tooltip("Number of waves to spawn (1 = single wave)")]
+        [field: SerializeField] public int wavesCount { get; private set; } = 1;
+
+        [Tooltip("Delay between waves (seconds)")]
+        [field: SerializeField] public float delayBetweenWaves { get; private set; } = 1f;
+
         [Header("Prefab References")]
         [Tooltip("Prefab for regular unit (Guard or Ally)")]
         [field: SerializeField] public GameObject unitPrefab { get; private set; }

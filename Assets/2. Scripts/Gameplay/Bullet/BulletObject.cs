@@ -10,7 +10,7 @@ public enum BulletOwner
     Unknown,
     Player,
     Guard,
-    Enemy
+    Ally
 }
 
 [RequireComponent(typeof(Rigidbody))]
@@ -71,32 +71,12 @@ public class BulletObject : MonoBehaviour, IUpdateListener
 
     private void OnTriggerEnter(Collider p_other)
     {
-        //m_isActive = true;
-        if (!m_isActive)
-            return;
+        HandleHit(p_other);
+    }
 
-        if (!p_other.TryGetComponent<IDamageable>(out var l_character))
-        {
-            Deactivate();
-            return;
-        }
-
-        if (l_character.GameObject == gameObject)
-            return;
-
-        l_character.TakeDamage(m_bulletData.Damage);
-
-        if (m_owner == BulletOwner.Guard && l_character is MainCharacter mainCharacter)
-        {
-            var analytics = UGS_Analytics.Instance;
-            if (analytics != null)
-            {
-                string guardName = string.IsNullOrEmpty(m_ownerName) ? "Guard" : m_ownerName;
-                analytics.LogPlayerHitByGuard(guardName, m_bulletData.Damage, mainCharacter.CurrentHealth);
-            }
-        }
-
-        Deactivate();
+    private void OnCollisionEnter(Collision collision)
+    {
+        HandleHit(collision.collider);
     }
 
     private void Deactivate()
@@ -136,5 +116,39 @@ public class BulletObject : MonoBehaviour, IUpdateListener
     public void UnsubscribeUpdateService()
     {
         UpdateService.RemoveUpdateListener(this);
+    }
+
+    private void HandleHit(Collider p_other)
+    {
+        if (!m_isActive)
+            return;
+
+        if (!p_other.TryGetComponent<IDamageable>(out var l_character))
+        {
+            l_character = p_other.GetComponentInParent<IDamageable>();
+        }
+
+        if (l_character == null)
+        {
+            Deactivate();
+            return;
+        }
+
+        if (l_character.GameObject == gameObject)
+            return;
+
+        l_character.TakeDamage(m_bulletData.Damage);
+
+        if (m_owner == BulletOwner.Guard && l_character is MainCharacter mainCharacter)
+        {
+            var analytics = UGS_Analytics.Instance;
+            if (analytics != null)
+            {
+                string guardName = string.IsNullOrEmpty(m_ownerName) ? "Guard" : m_ownerName;
+                analytics.LogPlayerHitByGuard(guardName, m_bulletData.Damage, mainCharacter.CurrentHealth);
+            }
+        }
+
+        Deactivate();
     }
 }

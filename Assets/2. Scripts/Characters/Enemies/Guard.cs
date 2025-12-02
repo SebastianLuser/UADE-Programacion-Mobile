@@ -691,6 +691,12 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         UnsubscribeUpdateService();
     }
 
+    private void OnEnable()
+    {
+        // When coming back from pool the listener may be unsubscribed; re-add it.
+        SubscribeUpdateService();
+    }
+
     private void SetupPatrolPoints()
     {
         MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: SetupPatrolPoints called");
@@ -1742,6 +1748,15 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public void UnsubscribeUpdateService()
     {
         ServiceLocator.Get<IUpdateService>().RemoveUpdateListener(this);
+    }
+
+    public virtual void ResetFromPool()
+    {
+        ClearLeaderOverride(null, true);
+        ClearCoverPoint();
+        steeringTarget = null;
+        currentMovementStatus = MovementStatus.Idle;
+        isMovementPaused = false;
     }
 
 #if UNITY_EDITOR
