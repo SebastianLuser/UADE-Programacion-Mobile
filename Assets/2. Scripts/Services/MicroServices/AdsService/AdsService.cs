@@ -20,10 +20,10 @@ namespace Services.MicroServices.AdsService
         private const string GAME_ID = "5990865";
 #elif UNITY_IOS
         private const string AD_UNIT_ID = "Rewarded_IOS";
-        private const string _gameId = "5990864";
+        private const string GAME_ID = "5990864";
 #else
         private const string AD_UNIT_ID = "";
-        private const string _gameId = "";
+        private const string GAME_ID = "";
 #endif
 
         public void Initialize()
