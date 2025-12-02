@@ -122,7 +122,7 @@ namespace _2._Scripts.UI.Gameplay.Results
                 rewardedAdButton.onClick.AddListener(OnRewardedAdClicked);
             }
         
-        if (!showRewardedAd)
+            if (!showRewardedAd)
             {
                 rewardedAdButton.gameObject.SetActive(false);
                 rewardedAdButton.onClick.RemoveListener(OnRewardedAdClicked);

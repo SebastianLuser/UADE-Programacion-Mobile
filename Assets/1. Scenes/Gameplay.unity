@@ -33266,7 +33266,7 @@ MonoBehaviour:
   uiView: {fileID: 1315594188}
   mainMenuSceneName: MainMenuScene
   pauseGameWhileVisible: 0
-  rewardedAdManager: {fileID: 1495703571}
+  playerCollector: {fileID: 1689811724}
 --- !u!114 &1315594188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -37449,7 +37449,6 @@ RectTransform:
   - {fileID: 1315594189}
   - {fileID: 316877031}
   - {fileID: 1639738935}
-  - {fileID: 1495703570}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -38576,59 +38575,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8fd8f3f29fdf6cf4c9c7e1dd047bc74c, type: 3}
---- !u!1 &1495703569
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1495703570}
-  - component: {fileID: 1495703571}
-  m_Layer: 5
-  m_Name: RewardedAdManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1495703570
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1495703569}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1451821861}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1495703571
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1495703569}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4f0f7d46ba6e3744184a206d049d6121, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RewardedAd
-  _playerCollector: {fileID: 1689811724}
-  _resultsView: {fileID: 1315594188}
-  m_AdUnitId: 2sv49kubzjpb3rfq
-  analyticsPlacementId: duplicate_reward
-  analyticsSourcePanel: Results
 --- !u!1001 &1496485774
 PrefabInstance:
   m_ObjectHideFlags: 0

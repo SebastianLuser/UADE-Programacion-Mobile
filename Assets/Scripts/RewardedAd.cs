@@ -1,354 +1,118 @@
-using System;
 using _2._Scripts.UI.Gameplay.Results;
 using Services;
 using Services.MicroServices.GameStateService;
 using Services.MicroServices.UserDataService.Wallet;
-using Unity.Services.LevelPlay;
 using UnityEngine;
+using UnityEngine.Advertisements;
 
-
-/*
-Org Core Id: 4673777054199
-Apple Id: 5990864
-Android Id: 5990865
-Monetization Stats API Key: 9efc50a100668aaeedaf2fd8a6b38cee05e6a1f38ac908d308771b47875e72c7
-*/
-
-
-public class RewardedAd : MonoBehaviour
+public class RewardedAd : MonoBehaviour, IUnityAdsLoadListener, IUnityAdsShowListener
 {
-    // App Configuration - LevelPlay Dashboard
-    private const string k_AndroidAppKey = "5990865";
-    private const string k_AppleApplKey = "5990864";
-
-    // Dependencies
-    [SerializeField] private PlayerCollector _playerCollector;
-    [SerializeField] private ResultsView _resultsView;
-
-    // Ad Unit/Placement
-    [SerializeField]
-    private string m_AdUnitId = "2sv49kubzjpb3rfq";
+    private PlayerCollector m_playerCollector;
+    private ResultsView m_resultsPresenter;
+    
     [Header("Analytics")]
     [SerializeField] private string analyticsPlacementId = "duplicate_reward";
     [SerializeField] private string analyticsSourcePanel = "Results";
-
-    // Runtime State
-    private bool m_IsInitialized;
-    private bool m_RewardGranted;
-    private LevelPlayRewardedAd m_RewardedAd;
-
-    // Convenience events for UI updates
-    public event Action<bool> AdSuccessfullyCompleted;
-    public event Action<bool> AdAvailable;
     
+#if UNITY_ANDROID
+    private const string AD_UNIT_ID = "";
+#elif UNITY_IOS
+    private const string AD_UNIT_ID = "";
+#else
+    private const string AD_UNIT_ID = "";
+#endif
+
     private void Start()
     {
-        RegisterSDKEvents();
-
-        InitializeRewardedAds();
+        Load();
     }
 
-    #region SDK Initialization
-
-    private void RegisterSDKEvents()
+    private void Load()
     {
-        LevelPlay.OnInitSuccess += SdkInitializationCompleted;
-        LevelPlay.OnInitFailed += sdkInitializationFailed;
+        Advertisement.Load(AD_UNIT_ID, this);
     }
-    
-    #endregion
-    
-    private void InitializeRewardedAds()
+
+    public void Show(PlayerCollector p_playerCollector, ResultsView p_resultsPresenter)
     {
+        m_playerCollector = p_playerCollector;
+        m_resultsPresenter = p_resultsPresenter;
         
-        string appKey = GetPlatformAppKey();
-
-        LevelPlay.SetMetaData("is_test_suite", "enable");
-
-        LevelPlay.Init(appKey);
-
-        LevelPlay.SetPauseGame(true);
+        Advertisement.Show(AD_UNIT_ID, this);
     }
 
-    /// <summary>
-    /// Gets the appropriate app key based on the current platform.
-    /// </summary>
-    /// <returns>The platform-specific app key</returns>
-    private string GetPlatformAppKey()
+    public void OnUnityAdsAdLoaded(string p_adUnitId)
     {
-#if UNITY_ANDROID
-    return k_AndroidAppKey;
-#elif UNITY_IPHONE
-    return k_AppleAppKey;
-#else
-MyLogger.LogWarning("Unexpected platform for ads");
-        return "unexpected_platform";
-#endif
-    }
-    
-    /// <summary>
-    /// Callback when the LevelPlay SDK is initialized successfully.
-    /// Creates the rewarded ad object, registers to ad events, and loads the first ad.
-    /// </summary>
-    private void SdkInitializationCompleted(LevelPlayConfiguration configuration)
-    {
-        if (m_IsInitialized) return;
-
-        m_IsInitialized = true;
-        MyLogger.LogDebug("LevelPlay SDK initialized successfully");
-
-#if DEVELOPMENT_BUILD
-    // TODO Remove ValidateIntegration once logs confirm networks are VERIFIED and you have your device's Advertising ID setup as a test device
-    LevelPlay.ValidateIntegration();
-    
-    LaunchTestSuite();
-        MyLogger.LogDebug("Launching test suite");
-
-#endif
-
-        CreateRewardedAd();
-
-        // Set listeners before loading rewarded ad
-        RegisterToAdEvents();
-
-        LoadRewardedAd();
     }
 
-    private void sdkInitializationFailed(LevelPlayInitError error)
+    public void OnUnityAdsFailedToLoad(string p_adUnitId, UnityAdsLoadError p_error, string
+        p_message)
     {
-        MyLogger.LogWarning("Error al inizializar el SDK: " + error.ErrorMessage);
+        UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, $"load_failed: {p_error}");
     }
 
-    /// <summary>
-    /// Opens the test suite for debugging ad integration.
-    /// </summary>
-    private void LaunchTestSuite()
+    public void OnUnityAdsShowStart(string p_adUnitId)
     {
-        LevelPlay.LaunchTestSuite();
-    }
-    
-    #region Ad Management
-
-    private void CreateRewardedAd()
-    {
-        m_RewardedAd = new LevelPlayRewardedAd(m_AdUnitId);
+        UGS_Analytics.Instance?.LogRewardAdStarted(analyticsPlacementId, analyticsSourcePanel);
     }
 
-    private void RegisterToAdEvents()
+    public void OnUnityAdsShowClick(string p_adUnitId)
     {
-        // Load events
-        m_RewardedAd.OnAdLoaded += HandleAdLoadedSuccessfully;
-        m_RewardedAd.OnAdLoadFailed += HandleLoadFailed;
-
-        // Display events
-        m_RewardedAd.OnAdDisplayed += HandleAdDisplayed;
-        m_RewardedAd.OnAdDisplayFailed += HandleAdFailedToDisplay;
-
-        // Reward event
-        m_RewardedAd.OnAdRewarded += ProcessAdReward;
-
-        // Completion events
-        m_RewardedAd.OnAdClosed += HandleAdClosed;
-
-        // Optional
-        m_RewardedAd.OnAdClicked += HandleAdClicked;
-        m_RewardedAd.OnAdInfoChanged += HandleAdInfoChanged;
     }
 
-    private void LoadRewardedAd()
+    public void OnUnityAdsShowComplete(string p_adUnitId, UnityAdsShowCompletionState
+        p_showCompletionState)
     {
-        if (m_RewardedAd != null)
+        if (p_showCompletionState == UnityAdsShowCompletionState.COMPLETED)
         {
-            m_RewardedAd.LoadAd();
-        }
-    }
-
-    private void ShowRewardedAd()
-    {
-        m_RewardedAd.ShowAd();
-    }
-
-    #endregion
-
-    #region Public Interface
-    /// <summary>
-    /// User-facing method to show a rewarded ad when a button is clicked.
-    /// Checks availability before showing the ad.
-    /// </summary>
-    public void ClickShowAdReward()
-    {
-        if (CanShowAd())
-        {
-            UGS_Analytics.Instance?.LogRewardAdStarted(analyticsPlacementId, analyticsSourcePanel);
-            ShowRewardedAd();
+            GrantReward();
+            UGS_Analytics.Instance?.LogRewardAdCompleted(analyticsPlacementId, analyticsSourcePanel);
         }
         else
         {
             UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, "not_ready");
-            MyLogger.LogWarning($"Cannot show ad.");
-        }
-    }
-        
-    public bool CanShowAd()
-    {
-        if (!m_IsInitialized)
-        {
-            MyLogger.LogWarning("SDK not initialized");
-            return false;
         }
 
-        if (m_RewardedAd == null)
-        {
-            MyLogger.LogWarning("Rewarded ad object not created");
-            return false;
-        }
-
-        bool isAdReady = m_RewardedAd.IsAdReady();
-
-        if (!isAdReady)
-        {
-            MyLogger.LogWarning("Ad not ready - still loading or no inventory available");
-        }
-            
-        return isAdReady;
-    }
-    #endregion
-
-    #region Ad event Callbacks
-        
-    // Load Events
-
-    private void HandleAdLoadedSuccessfully(LevelPlayAdInfo adInfo)
-    {
-        AdAvailable?.Invoke(true);
-        MyLogger.LogDebug($"Rewarded ad loaded: {adInfo.AdNetwork}");
-    }
-    
-    private void HandleLoadFailed(LevelPlayAdError error)
-    {
-        MyLogger.LogWarning($"Rewarded ad failed to load: {error.ErrorMessage} (Code: {error.ErrorCode})");
-        UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, $"load_failed_{error.ErrorCode}");
-        Invoke(nameof(LoadRewardedAd), 2f);
-    }
-    
-    // Display Events
-
-    private void HandleAdDisplayed(LevelPlayAdInfo adInfo)
-    {
-        MyLogger.LogDebug("Rewarded ad displayed");
+        Load();
     }
 
-    private void HandleAdFailedToDisplay(LevelPlayAdInfo adInfo, LevelPlayAdError error)
+    public void OnUnityAdsShowFailure(string p_adUnitId, UnityAdsShowError p_error, string
+        p_message)
     {
-        MyLogger.LogWarning($"$Rewarded ad failed to display: {error}");
-        AdSuccessfullyCompleted?.Invoke(false);
-        UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, $"display_failed_{error.ErrorCode}");
+        UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, $"display failed: {p_error}");
+        Load();
     }
 
-    private async void ProcessAdReward(LevelPlayAdInfo adInfo, LevelPlayReward reward)
+    private void GrantReward()
     {
-        if (m_RewardGranted)
-        {
-            MyLogger.LogWarning("Reward already granted for this ad impression, ignoring duplicate callback.");
+        if (m_playerCollector == null || m_resultsPresenter == null)
             return;
-        }
+        
+        var l_gameWined = ServiceLocator.Get<IGameStateService>().GetCurrentState() == GameState.Victory;
 
-        m_RewardGranted = true;
-        AdSuccessfullyCompleted?.Invoke(true);
+        m_resultsPresenter.RewardedAdShowed = true;
 
-        bool gameWinned;
-
-        if (ServiceLocator.Get<IGameStateService>().GetCurrentState() == GameState.Victory)
-        {
-            gameWinned = true;
-        }
-        else
-        {
-            gameWinned = false;
-        }
-
-        _resultsView.RewardedAdShowed = true;
-
-        var walletService = ServiceLocator.Get<IWalletService>();
-        int bonusCoins = _playerCollector.SessionCoins;
-        int bonusDiamonds = _playerCollector.SessionDiamonds;
+        var l_walletService = ServiceLocator.Get<IWalletService>();
+        var l_bonusCoins = m_playerCollector.SessionCoins;
+        var l_bonusDiamonds = m_playerCollector.SessionDiamonds;
 
         // Grant only the bonus once to avoid duplicating the original session rewards.
-        walletService?.AddCoins(bonusCoins);
-        walletService?.AddDiamonds(bonusDiamonds);
+        l_walletService?.AddCoins(l_bonusCoins);
+        l_walletService?.AddDiamonds(l_bonusDiamonds);
 
-        int finalScore = _playerCollector.TotalPoints * 2;
-        int finalCoins = _playerCollector.SessionCoins + bonusCoins;
-        int finalDiamonds = _playerCollector.SessionDiamonds + bonusDiamonds;
+        var l_finalScore = m_playerCollector.TotalPoints * 2;
+        var l_finalCoins = m_playerCollector.SessionCoins + l_bonusCoins;
+        var l_finalDiamonds = m_playerCollector.SessionDiamonds + l_bonusDiamonds;
 
-        if (gameWinned)
+        if (l_gameWined)
         {
-            _resultsView.DisplayVictory(finalScore, finalCoins, finalDiamonds);
+            m_resultsPresenter.DisplayVictory(l_finalScore, l_finalCoins, l_finalDiamonds);
         }
         else
         {
-            _resultsView.DisplayDefeat(finalScore, finalCoins, finalDiamonds);
+            m_resultsPresenter.DisplayDefeat(l_finalScore, l_finalCoins, l_finalDiamonds);
         }
-        
 
-        MyLogger.LogDebug($"Ad reward granted successfully: {reward.Name} x{reward.Amount}");
+        MyLogger.LogDebug($"Ad reward granted successfully");
         UGS_Analytics.Instance?.LogRewardAdCompleted(analyticsPlacementId, analyticsSourcePanel);
     }
-    
-    // Completion events
-    private void HandleAdClosed(LevelPlayAdInfo adInfo)
-    {
-        MyLogger.LogDebug("Rewarded ad closed");
-
-        if (!m_RewardGranted)
-        {
-            UGS_Analytics.Instance?.LogRewardAdAborted(analyticsPlacementId, analyticsSourcePanel, "closed_no_reward");
-        }
-
-        m_RewardGranted = false;
-        // Load another ad for next time
-        LoadRewardedAd();
-    }
-
-    private void HandleAdClicked(LevelPlayAdInfo adInfo)
-    {
-        MyLogger.LogDebug("Rewarded ad clicked");
-    }
-
-    private void HandleAdInfoChanged(LevelPlayAdInfo adInfo)
-    {
-        MyLogger.LogDebug($"Rewarded ad info changed: {adInfo.AdNetwork}");
-
-        if (adInfo != null)
-        {
-            MyLogger.LogDebug($"Updated ad info - Network: {adInfo.AdNetwork}, Instance: {adInfo.InstanceId}");
-        }
-    }
-    
-    // Cleanup
-    private void OnDestroy()
-    {
-        RemoveEventHandlers();
-    }
-
-    private void RemoveEventHandlers()
-    {
-        // Remove SDK level events
-        LevelPlay.OnInitSuccess -= SdkInitializationCompleted;
-
-        // Remove ad-specific events
-        if (m_RewardedAd != null)
-        {
-            m_RewardedAd.OnAdLoaded -= HandleAdLoadedSuccessfully;
-            m_RewardedAd.OnAdLoadFailed -= HandleLoadFailed;
-            m_RewardedAd.OnAdDisplayed -= HandleAdDisplayed;
-            m_RewardedAd.OnAdDisplayFailed -= HandleAdFailedToDisplay;
-            m_RewardedAd.OnAdRewarded -= ProcessAdReward;
-            m_RewardedAd.OnAdClosed -= HandleAdClosed;
-            m_RewardedAd.OnAdClicked -= HandleAdClicked;
-            m_RewardedAd.OnAdInfoChanged -= HandleAdInfoChanged;
-        }
-    }
-
-    #endregion
 }
