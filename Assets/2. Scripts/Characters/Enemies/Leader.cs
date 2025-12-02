@@ -62,9 +62,9 @@ public class Leader : Guard
     public float CoverFireFireRate => coverFireFireRate;
     public float CoverFireDistanceThreshold => coverFireDistanceThreshold;
 
-    protected override void Awake()
+    public override void Initialize()
     {
-        base.Awake();
+        base.Initialize();
         blackboard = ServiceLocator.Get<IBlackboardService>();
         InitializeLeaderFSM();
 

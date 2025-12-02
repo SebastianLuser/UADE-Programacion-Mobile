@@ -31,7 +31,7 @@ namespace _2._Scripts.UI.Gameplay.Results
         public event Action OnMainMenu;
         public event Action OnRewardedAd;
 
-        private IAudioService m_audioService;
+        private static AudioService AudioService => AudioService.Instance;
         private AudioConfig m_audioConfig;
 
         private bool showRewardedAd; // bool to know if rewardedAdButton has to be show by score
@@ -48,15 +48,14 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         private void Awake()
         {
-            m_audioService = ServiceLocator.Get<IAudioService>();
-            m_audioConfig = (m_audioService as AudioService)?.Config;
+            m_audioConfig = AudioService.GetConfig();
         }
 
         public void DisplayVictory(int score, int coins, int diamonds)
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.winSFX);
+                AudioService.PlaySFX(m_audioConfig.winSFX);
             }
 
             SetTexts(victoryTitle, victoryDetails, score, coins, diamonds);
@@ -64,9 +63,9 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         public void DisplayDefeat(int score, int coins, int diamonds)
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.lostSFX);
+                AudioService.PlaySFX(m_audioConfig.lostSFX);
             }
 
             SetTexts(defeatTitle, defeatDetails, score, coins, diamonds);
@@ -169,9 +168,9 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         private void OnRetryClicked()
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+                AudioService.PlaySFX(m_audioConfig.clickButtonSFX);
             }
 
             OnRetry?.Invoke();
@@ -179,9 +178,9 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         private void OnMainMenuClicked()
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+                AudioService.PlaySFX(m_audioConfig.clickButtonSFX);
             }
 
             OnMainMenu?.Invoke();
@@ -189,9 +188,9 @@ namespace _2._Scripts.UI.Gameplay.Results
         
         private void OnRewardedAdClicked()
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+                AudioService.PlaySFX(m_audioConfig.clickButtonSFX);
             }
             
             OnRewardedAd?.Invoke();

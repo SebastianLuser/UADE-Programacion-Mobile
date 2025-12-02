@@ -22,17 +22,16 @@ namespace _2._Scripts.UI.MainMenu
         public event Action OnShopClicked;
         public event Action OnSettingsClicked;
 
-        private IAudioService m_audioService;
+        private static AudioService AudioService => AudioService.Instance;
         private AudioConfig m_audioConfig;
 
         private void Awake()
         {
-            m_audioService = ServiceLocator.Get<IAudioService>();
-            m_audioConfig = (m_audioService as AudioService)?.Config;
+            m_audioConfig = AudioService.GetConfig();
             
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlayMusic(m_audioConfig.titleBackground);
+                AudioService.PlayMusic(m_audioConfig.titleBackground);
             }
         }
 
@@ -74,9 +73,9 @@ namespace _2._Scripts.UI.MainMenu
 
         private void OnPlayButtonHandler()
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+                AudioService.PlaySFX(m_audioConfig.clickButtonSFX);
             }
 
             OnPlayClicked?.Invoke();
@@ -84,9 +83,9 @@ namespace _2._Scripts.UI.MainMenu
 
         private void OnLoadoutButtonHandler()
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+                AudioService.PlaySFX(m_audioConfig.clickButtonSFX);
             }
 
             OnLoadoutClicked?.Invoke();
@@ -94,9 +93,9 @@ namespace _2._Scripts.UI.MainMenu
 
         private void OnShopButtonHandler()
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+                AudioService.PlaySFX(m_audioConfig.clickButtonSFX);
             }
 
             OnShopClicked?.Invoke();
@@ -104,9 +103,9 @@ namespace _2._Scripts.UI.MainMenu
 
         private void OnSettingsButtonHandler()
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+                AudioService.PlaySFX(m_audioConfig.clickButtonSFX);
             }
 
             OnSettingsClicked?.Invoke();

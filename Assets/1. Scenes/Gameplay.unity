@@ -16370,8 +16370,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58999fca6c0fd8d4bb05069b4cbd1ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EscapeZone
-  escapePlane: {fileID: 636056099}
+  escapePlaneRender: {fileID: 636056101}
   greenMaterial: {fileID: 2100000, guid: b5aa1987dfd7e9f44bbb4e86b14e53ca, type: 2}
+  playerCollector: {fileID: 1689811724}
+--- !u!23 &636056101 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 2393150, guid: c413258f59cccc14d83ab0a327fcbc1e,
+    type: 3}
+  m_PrefabInstance: {fileID: 636056097}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &637276330 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 426502, guid: a1ddc8374f6cad64c8db8d25d63afafa,
@@ -36976,8 +36983,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58999fca6c0fd8d4bb05069b4cbd1ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EscapeZone
-  escapePlane: {fileID: 802456782}
+  escapePlaneRender: {fileID: 636056101}
   greenMaterial: {fileID: 2100000, guid: b5aa1987dfd7e9f44bbb4e86b14e53ca, type: 2}
+  playerCollector: {fileID: 1689811724}
 --- !u!4 &1445555556 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 476350, guid: c413258f59cccc14d83ab0a327fcbc1e,

@@ -389,10 +389,10 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         
         return !Physics.Raycast(transform.position + Vector3.up, directionToPlayer, distanceToPlayer, LayerMask.GetMask("Obstacles"));
     }
-    
-    protected override void Awake()
+
+    public override void Initialize()
     {
-        base.Awake();
+        base.Initialize();
         InitializeAISystem();
         SetupPatrolPoints();
         
@@ -401,7 +401,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         // Start patrolling after a frame to ensure everything is initialized
         StartCoroutine(StartPatrolAfterFrame());
     }
-    
+
     private System.Collections.IEnumerator StartPatrolAfterFrame()
     {
         yield return null; // Wait one frame
@@ -874,15 +874,15 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     /// <summary>
     /// Configure obstacle avoidance parameters at runtime
     /// </summary>
-    public void ConfigureObstacleAvoidance(float radius, float angle, float personalArea, LayerMask obstacleMask)
+    public void ConfigureObstacleAvoidance(float radius, float angle, float p_personalArea, LayerMask obstacleMask)
     {
         avoidRadius = radius;
         avoidAngle = angle;
-        personalArea = personalArea;
+        personalArea = p_personalArea;
         obstaclesMask = obstacleMask;
 
         // Recreate obstacle avoidance with new parameters
-        obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, personalArea, obstaclesMask);
+        obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, p_personalArea, obstaclesMask);
     }
 
     #endregion

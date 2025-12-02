@@ -97,7 +97,6 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     private Material originalMaterial;
     private Color originalColor;
     private CivilianDecisionTreeRunner decisionTreeRunner;
-    private IAudioService m_audioService;
     private AudioConfig m_audioConfig;
 
     // Steering components (identical to Guard)
@@ -119,6 +118,8 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     // Movement state
     private Vector3 currentMovementDirection;
     private float currentMovementSpeed;
+    
+    private static AudioService AudioService => AudioService.Instance;
 
     public enum CivilianState
     {
@@ -190,15 +191,6 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     #region Unity Lifecycle
 
-    private void Awake()
-    {
-        base.Awake();
-        RecalculateDyingWeight();
-        InitializeComponents();
-        SubscribeUpdateService();
-        TryInitFleePathfinding();
-    }
-
     private void Start()
     {
         InitializeSteering();
@@ -210,10 +202,19 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     #region Initialization
 
+    public override void Initialize()
+    {
+        base.Initialize();
+        
+        RecalculateDyingWeight();
+        InitializeComponents();
+        SubscribeUpdateService();
+        TryInitFleePathfinding();
+    }
+
     private void InitializeComponents()
     {
-        m_audioService = ServiceLocator.Get<IAudioService>();
-        m_audioConfig = (m_audioService as AudioService)?.Config;
+        m_audioConfig = AudioService.GetConfig();
 
         // Get or add PlayerDetector
         playerDetector = GetComponent<IPlayerDetector>();
@@ -615,10 +616,10 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         float previousNorm = HealthNormalized;
 
         // Play hurt sound based on gender
-        if (m_audioService != null && m_audioConfig != null)
+        if (AudioService != null && m_audioConfig != null)
         {
             AudioClip hurtSFX = gender == NPCGender.Male ? m_audioConfig.maleHurtSFX : m_audioConfig.femaleHurtSFX;
-            m_audioService.PlaySFX(hurtSFX);
+            AudioService.PlaySFX(hurtSFX);
         }
 
         base.TakeDamage(damage);
@@ -633,10 +634,10 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     protected override void OnDeath()
     {
         // Play death sound based on gender
-        if (m_audioService != null && m_audioConfig != null)
+        if (AudioService != null && m_audioConfig != null)
         {
             AudioClip deathSFX = gender == NPCGender.Male ? m_audioConfig.maleDeathSFX : m_audioConfig.femaleDeathSFX;
-            m_audioService.PlaySFX(deathSFX);
+            AudioService.PlaySFX(deathSFX);
         }
 
         base.OnDeath();
@@ -655,9 +656,9 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         if (player == null) return;
 
         // Play punch sound
-        if (m_audioService != null && m_audioConfig != null)
+        if (AudioService != null && m_audioConfig != null)
         {
-            m_audioService.PlaySFX(m_audioConfig.punchSFX);
+            AudioService.PlaySFX(m_audioConfig.punchSFX);
         }
 
         // Try to get player health component
