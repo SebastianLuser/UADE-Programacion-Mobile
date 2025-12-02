@@ -26,19 +26,19 @@ public static class PathSmoother
         int smoothedCount = 0;
 
         // 1. El primer punto siempre es donde estamos o el inicio del path
-        // (En tu caso, PathFollower maneja el movimiento, así que mantenemos el primer nodo del path)
+        // PathFollower maneja el movimiento, asi que mantenemos el primer nodo del path
         smoothedPath[smoothedCount++] = originalPath[0];
 
-        int currentIdx = 0; // Índice del nodo en originalPath desde el que estamos mirando
+        int currentIdx = 0; // Indice del nodo en originalPath desde el que estamos mirando
 
         // Mientras no lleguemos al final
         while (currentIdx < pathLength - 1)
         {
-            // Buscamos el nodo más lejano visible
+            // Buscamos el nodo mas lejano visible
             int farthestVisible = currentIdx + 1;
 
-            // Iteramos desde el final hacia el actual para encontrar el salto más grande posible
-            // Limitamos la búsqueda a 5 nodos adelante para no hacer demasiados raycasts en mobile
+            // Iteramos desde el final hacia el actual para encontrar el salto mas grande posible
+            // Limitamos la busqueda a 5 nodos adelante para no hacer demasiados raycasts en mobile
             int maxLookAhead = Mathf.Min(pathLength - 1, currentIdx + 5);
 
             for (int testIdx = maxLookAhead; testIdx > currentIdx + 1; testIdx--)

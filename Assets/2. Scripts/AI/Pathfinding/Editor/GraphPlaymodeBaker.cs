@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement; // Necesario para obtener el nombre
 using System.Collections.Generic;
 using System.IO;
 
@@ -14,14 +15,23 @@ public static class GraphPlaymodeBaker
 
     static void OnState(PlayModeStateChange state)
     {
+        // Solo ejecutar justo antes de entrar a Play Mode
         if (state != PlayModeStateChange.ExitingEditMode) return;
 
-        var nodes = Object.FindObjectsOfType<GraphNode>();
+        //var nodes = Object.FindObjectsOfType<GraphNode>();
+        var nodes = Object.FindObjectsByType<GraphNode>(FindObjectsSortMode.None);
         if (nodes == null || nodes.Length == 0) return;
 
-        const string path = "Assets/AI/Graphs/BakedGraph.asset";
-        var dir = Path.GetDirectoryName(path);
-        if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+        // === Nombre dinamico basado en la escena ===
+        string sceneName = SceneManager.GetActiveScene().name;
+        if (string.IsNullOrEmpty(sceneName)) sceneName = "Untitled";
+
+        string folder = "Assets/AI/Graphs";
+        string path = $"{folder}/Graph_{sceneName}.asset";
+        // Ejemplo: Assets/AI/Graphs/Graph_Nivel1.asset
+        // =========================================================
+
+        if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
         var asset = AssetDatabase.LoadAssetAtPath<GraphAsset>(path);
         if (asset == null)
@@ -51,7 +61,22 @@ public static class GraphPlaymodeBaker
 
         EditorUtility.SetDirty(asset);
         AssetDatabase.SaveAssets();
-        Debug.Log($"GraphPlaymodeBaker: Baked GraphAsset refreshed before Play (nodes={asset.NodeCount}).");
+
+        // Asignar automaticamente el grafo al SceneGraphManager
+        AssignToSceneManager(asset);
+
+        Debug.Log($"GraphPlaymodeBaker: Baked '{path}' ({asset.NodeCount} nodes).");
+    }
+
+    // Pequeno helper para conectar todo automaticamente
+    static void AssignToSceneManager(GraphAsset asset)
+    {
+        var manager = Object.FindAnyObjectByType<SceneGraphManager>();
+        if (manager != null)
+        {
+            manager.currentLevelGraph = asset;
+            EditorUtility.SetDirty(manager);
+        }
     }
 }
 #endif

@@ -8,7 +8,8 @@ public static class GraphBaker
     [MenuItem("AI/Bake Graph From Scene")]
     public static void Bake()
     {
-        var nodes = Object.FindObjectsOfType<GraphNode>();
+        //var nodes = Object.FindObjectsOfType<GraphNode>();
+        var nodes = Object.FindObjectsByType<GraphNode>(FindObjectsSortMode.None);
         if (nodes == null || nodes.Length == 0)
         {
             Debug.LogWarning("GraphBaker: No GraphNode found in scene.");

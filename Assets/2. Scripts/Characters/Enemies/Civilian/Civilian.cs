@@ -209,11 +209,11 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         RecalculateDyingWeight();
         InitializeComponents();
         SubscribeUpdateService();
-        TryInitFleePathfinding();
     }
 
     private void Start()
     {
+        TryInitFleePathfinding();
         InitializeSteering();
         FindPlayer();
         InitializeScriptableObjectFSM();
@@ -311,8 +311,35 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     //Pathfinding
     private void TryInitFleePathfinding()
     {
-        if (fleeGraph == null || fleeGraph.NodeCount <= 0) return;
-        if (_astarG != null && _graphCachedNodeCount == fleeGraph.NodeCount) return; // ya listo
+        // 1. AUTO-ASIGNACION: Si no tengo grafo, busco al Manager de la escena
+        if (fleeGraph == null)
+        {
+            // Intento A: Usar el Singleton (mas rapido, sin busqueda)
+            if (SceneGraphManager.Instance != null)
+            {
+                fleeGraph = SceneGraphManager.Instance.currentLevelGraph;
+            }
+            // Intento B: Buscar en la escena (version moderna y optimizada)
+            else
+            {
+                // CAMBIO AQUI: Usamos FindAnyObjectByType en lugar de FindObjectOfType
+                var manager = FindAnyObjectByType<SceneGraphManager>();
+                if (manager != null)
+                {
+                    fleeGraph = manager.currentLevelGraph;
+                }
+            }
+        }
+
+        // 2. VALIDACION
+        if (fleeGraph == null || fleeGraph.NodeCount <= 0)
+        {
+            if (enableDebugLogs) Debug.LogWarning($"[{name}] No FleeGraph found directly or via SceneGraphManager.");
+            return;
+        }
+
+        // 3. INICIALIZACION DE BUFFERS
+        if (_astarG != null && _graphCachedNodeCount == fleeGraph.NodeCount) return;
 
         AllocateFleeBuffers(fleeGraph.NodeCount);
     }
@@ -337,7 +364,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         _pathFollower.slowingDistance = 1.0f;
 
         _graphCachedNodeCount = n;
-        _pathLen = 0; // limpiar ruta previa si cambió el grafo
+        _pathLen = 0; // limpiar ruta previa si cambio el grafo
         _smoothedPathLen = 0;
     }
 
@@ -354,7 +381,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         _smoothedPathLen = 0;
     }
 
-    // este es el que invoca el estado: idempotente, rápido
+    // este es el que invoca el estado: idempotente, rapido
     public void EnsureFleePathfindingInitialized()
     {
         if (fleeGraph == null || fleeGraph.NodeCount <= 0)
@@ -389,10 +416,10 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         fleeGraph != null && fleeGraph.NodeCount > 0 && fleeTargetNodeIndex >= 0 && fleeTargetNodeIndex < fleeGraph.NodeCount;
 
     //public bool HasFleePath => _pathLen > 0;
-    // Verifica si tenemos un path SUAVIZADO válido
+    // Verifica si tenemos un path SUAVIZADO valido
     public bool HasFleePath => _smoothedPathLen > 0;
 
-    // 3) Recompute si hace falta (intervalo o path vacío)
+    // 3) Recompute si hace falta (intervalo o path vacio)
     public void RecomputeFleePathIfNeeded(float now)
     {
         if (!HasFleeGraph)
@@ -404,7 +431,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
         // ==== ESTRATEGIA: Solo recomputar si REALMENTE es necesario ====
 
-        // 1) Si tenemos path válido, verificar si debemos mantenerlo
+        // 1) Si tenemos path valido, verificar si debemos mantenerlo
         //if (_pathLen > 0 && _pathFollower != null)
         if (_smoothedPathLen > 0 && _pathFollower != null)
         {
@@ -418,7 +445,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                 return; // Mantener path actual
             }
 
-            // b) Si llegamos al último waypoint, no recomputar
+            // b) Si llegamos al ultimo waypoint, no recomputar
             if (_pathFollower.ReachedEnd)
             {
                 return;
@@ -428,7 +455,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             bool nearAnyWaypoint = false;
             for (int i = 0; i < _smoothedPathLen; i++)
             {
-                // Dentro de 8 metros de algún waypoint
+                // Dentro de 8 metros de algun waypoint
                 if (Vector3.Distance(transform.position, _smoothedPath[i]) < 8.0f)
                 {
                         nearAnyWaypoint = true;
@@ -448,7 +475,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                 return; // Path aún fresco
             }
 
-            // Si llegamos aquí, estamos MUY lejos del path → permitir recompute
+            // Si llegamos aqui, estamos MUY lejos del path -> permitir recompute
             Debug.LogWarning($"[{name}] Far from all waypoints, recomputing path");
         }
 
@@ -595,11 +622,11 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             : Vector3.zero;
     }
 
-    // 5) ¿Llegué al último waypoint?
+    // 5) ¿Llegue al último waypoint?
     public bool FleePathReachedEnd()
     {
         if (_pathFollower == null || _smoothedPathLen <= 0) return false;
-        if (!_pathFollower.ReachedEnd) return false; // ya estamos en el último waypoint
+        if (!_pathFollower.ReachedEnd) return false; // ya estamos en el ultimo waypoint
 
         // Chequeo de distancia final (sin sqrt)
         var goal = _smoothedPath[_smoothedPathLen - 1];
@@ -1010,14 +1037,14 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         Vector3 avoidanceDelta = avoidedVel - desiredVel;
         Vector3 avoidDir = avoidanceDelta.sqrMagnitude > 1e-6f ? avoidanceDelta.normalized : Vector3.zero;
 
-        // 3) Blend adaptativo - permitir retroceder cuando la pared está enfrente
+        // 3) Blend adaptativo - permitir retroceder cuando la pared esta enfrente
         float pathW = 1.0f;
         float avoidW = 0.35f;
 
         if (avoidDir != Vector3.zero)
         {
             float oppositeFactor = Mathf.Clamp01(-Vector3.Dot(avoidDir, desiredDir));
-            // Más oposición => más peso para separarnos de la pared
+            // Mas oposicion => mas peso para separarnos de la pared
             float weightBoost = Mathf.Lerp(0f, 0.75f, oppositeFactor);
             avoidW += weightBoost;
 
@@ -1025,10 +1052,10 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             Debug.DrawRay(transform.position, avoidDir * 2f, debugColor, 0.1f);
         }
 
-        // Blend: path + corrección (ahora puede empujar hacia atrás)
+        // Blend: path + corrección (ahora puede empujar hacia atras)
         Vector3 blended = (desiredVel * pathW) + (avoidDir * (avoidW * currentMaxSpeed));
 
-        // 4) Clamp manteniendo dirección del path
+        // 4) Clamp manteniendo direccion del path
         float maxV = currentMaxSpeed;
         if (blended.sqrMagnitude > maxV * maxV)
         {
@@ -1098,14 +1125,14 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         // Si detectamos algo en nuestra trayectoria futura...
         if (Physics.SphereCast(transform.position + Vector3.up * 0.5f, personalArea, desiredVel.normalized, out RaycastHit hit, lookAheadDist, obstaclesMask))
         {
-            // ...Usamos tu clase ObstacleAvoidance para calcular una ruta de escape
+            // ...Usamos ObstacleAvoidance para calcular una ruta de escape
             // Esto aprovecha tu lógica de GetDirImproved o GetDir
             Vector3 avoidanceDir = obstacleAvoidance.GetDir(desiredVel, false);
 
-            // Calculamos qué tan urgente es girar (0 = lejos, 1 = colisión inminente)
+            // Calculamos que tan urgente es girar (0 = lejos, 1 = colision inminente)
             float danger = 1f - (hit.distance / lookAheadDist);
 
-            // Interpolamos agresivamente según el peligro (entre 30% y 100% de fuerza de evasión)
+            // Interpolamos agresivamente segun el peligro (entre 30% y 100% de fuerza de evasion)
             float blendStrength = Mathf.Lerp(0.3f, 1.0f, danger * danger);
 
             finalVel = Vector3.Lerp(desiredVel, avoidanceDir.normalized * currentMaxSpeed, blendStrength);
@@ -1142,7 +1169,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     {
         if (!isAlive) return;
 
-        // VERSIÓN SIMPLIFICADA PARA DEBUG - SIN OBSTACLE AVOIDANCE
+        // VERSION SIMPLIFICADA PARA DEBUG - SIN OBSTACLE AVOIDANCE
         Vector3 desiredVel = Integrate(steering, Time.deltaTime);
         desiredVel.y = 0f;
 
@@ -1186,7 +1213,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             desiredVel = desiredVel.normalized * maxV;
 
         // 2) Obstacle avoidance MUY SUAVE - solo para evitar colisiones directas
-        // No usar GetDirImproved que es muy agresivo, solo detectar colisión inminente
+        // No usar GetDirImproved que es muy agresivo, solo detectar colision inminente
         Vector3 finalVel = desiredVel;
 
         // Raycast corto hacia adelante para detectar colisión DIRECTA
@@ -1195,7 +1222,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
         if (Physics.Raycast(transform.position, checkDir, out RaycastHit hit, checkDist, obstaclesMask))
         {
-            // Colisión inminente - ajuste lateral MÍNIMO
+            // Colision inminente - ajuste lateral MINIMO
             Vector3 normal = hit.normal;
             normal.y = 0f;
 
@@ -1203,7 +1230,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
             {
                 normal.Normalize();
 
-                // Proyectar velocidad deseada al plano del obstáculo (deslizar)
+                // Proyectar velocidad deseada al plano del obstaculo (deslizar)
                 Vector3 slideVel = Vector3.ProjectOnPlane(desiredVel, normal);
 
                 // Blend muy suave: 90% original, 10% slide
@@ -1651,12 +1678,12 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     {
         using (new UnityEditor.Handles.DrawingScope())
         {
-            // === DIAGNÓSTICO DE GRAFO ===
+            // === DIAGNOSTICO DE GRAFO ===
             if (fleeGraph != null && fleeGraph.NodeCount > 0)
             {
                 bool validTarget = fleeTargetNodeIndex >= 0 && fleeTargetNodeIndex < fleeGraph.NodeCount;
 
-                // === NODO START (más cercano) ===
+                // === NODO START (mas cercano) ===
                 int startIdx = ClosestNodeIndex(transform.position);
                 if (startIdx >= 0)
                 {
@@ -1678,7 +1705,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                         }
                     );
 
-                    // Línea desde NPC a START
+                    // Linea desde NPC a START
                     UnityEditor.Handles.color = new Color(0, 1, 0, 0.5f);
                     UnityEditor.Handles.DrawDottedLine(transform.position, startPos, 3f);
                 }
@@ -1712,7 +1739,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                 {
                     UnityEditor.Handles.color = new Color(0.5f, 0.5f, 0.5f, 0.3f); // Gris transparente
 
-                    // Copiamos solo los nodos válidos
+                    // Copiamos solo los nodos validos
                     Vector3[] rawPts = new Vector3[_pathLen];
                     System.Array.Copy(_worldPath, rawPts, _pathLen);
 
@@ -1731,7 +1758,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                     Vector3[] smPts = new Vector3[_smoothedPathLen];
                     System.Array.Copy(_smoothedPath, smPts, _smoothedPathLen);
 
-                    // Línea gruesa
+                    // Linea gruesa
                     UnityEditor.Handles.color = new Color(0f, 0.8f, 1f, 1f);
                     UnityEditor.Handles.DrawAAPolyLine(5.0f, smPts);
 
@@ -1755,7 +1782,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                     }
 
                     // =========================================================
-                    // 3) TEXTO DE INFORMACIÓN (Actualizado para leer Smoothed Path)
+                    // 3) TEXTO DE INFORMACION (Actualizado para leer Smoothed Path)
                     // =========================================================
                     GUIStyle pathInfoStyle = new GUIStyle();
                     pathInfoStyle.normal.textColor = Color.cyan;
@@ -1763,7 +1790,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                     pathInfoStyle.fontStyle = FontStyle.Bold;
                     pathInfoStyle.alignment = TextAnchor.UpperLeft;
 
-                    // Calculamos reducción
+                    // Calculamos reduccion
                     float reduction = _pathLen > 0 ? (1f - (float)_smoothedPathLen / _pathLen) * 100f : 0f;
 
                     string pathInfo = $"PATH DATA:\n" +
@@ -1778,7 +1805,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
                         float distToCurrent = Vector3.Distance(transform.position, currentWP);
                         pathInfo += $"\n• Dist to WP: {distToCurrent:F2}m";
 
-                        // Línea punteada al objetivo actual
+                        // Linea punteada al objetivo actual
                         UnityEditor.Handles.color = new Color(0.2f, 1f, 0.2f, 0.5f);
                         UnityEditor.Handles.DrawDottedLine(transform.position, currentWP, 5f);
                     }

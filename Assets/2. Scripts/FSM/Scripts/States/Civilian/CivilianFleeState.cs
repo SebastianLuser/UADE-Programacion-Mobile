@@ -22,7 +22,7 @@ namespace Scripts.FSM.Base.StateMachine
                 // A*: asegurar init (no hace alloc si ya estaba)
                 civilian.EnsureFleePathfindingInitialized();
 
-                Debug.Log($"------------------------- Civilian scaping using A* -------------------------------");
+                //Debug.Log($"------------------------- Civilian scaping using A* -------------------------------");
 
                 if (civilian.EnableDebugLogs)
                     MyLogger.LogInfo($"Civilian {civilian.name}: Entered Flee State - Fleeing at speed {civilian.FleeSpeed:F1}");
@@ -55,8 +55,8 @@ namespace Scripts.FSM.Base.StateMachine
                 {
                     var steering = civilian.TickFleePathSteering();
 
-                    // USAR EL MÉTODO ESPECIALIZADO
-                    civilian.ApplySteeringFleeOriginal(steering); // <- CAMBIO AQUÍ
+                    // USAR EL METODO ESPECIALIZADO
+                    civilian.ApplySteeringFleeOriginal(steering); // <- CAMBIO AQUI
                     //civilian.ApplySteering(steering);
                     if (civilian.FleePathReachedEnd())
                     {
