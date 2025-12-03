@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Services.MicroServices.AdsService;
 using Services.MicroServices.AudioService;
 using Services.MicroServices.BlackboardService;
 using Services.MicroServices.EventsServices;
@@ -51,6 +52,7 @@ namespace Services
             Register<IBlackboardService, BlackboardService>(true);
             Register<IWalletService, WalletService>(true, true);
             Register<IPlayerUpgradeService, PlayerUpgradeService>(true, true);
+            Register<IAdsService, AdsService>(false, true);
         }
 
         public static void Register<TInterface, TInstance>(bool p_isSceneUnloaded = false, bool p_immediateInit = false)

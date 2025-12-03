@@ -19,7 +19,7 @@ namespace Scripts.FSM.Base.StateMachine
 
                 guard.BeginInvestigation(targetPos);
                 guard.StateTimer = 0f;
-                Debug.Log($"[InvestigateDebug] Guard {guard.name} entered Investigate at {targetPos}");
+                MyLogger.LogInfo($"[InvestigateDebug] Guard {guard.name} entered Investigate at {targetPos}");
             }
         }
 
@@ -43,7 +43,7 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Guard guard)
             {
-                Debug.Log($"[InvestigateDebug] Guard {guard.name} exited Investigate");
+                MyLogger.LogInfo($"[InvestigateDebug] Guard {guard.name} exited Investigate");
             }
         }
 
@@ -68,7 +68,7 @@ namespace Scripts.FSM.Base.StateMachine
             {
                 guard.ApplySteering(Vector3.zero);
                 guard.MarkInvestigationArrived();
-                Debug.Log($"[InvestigateDebug] Guard {guard.name} arrived investigation point");
+                MyLogger.LogInfo($"[InvestigateDebug] Guard {guard.name} arrived investigation point");
             }
         }
 
@@ -84,7 +84,7 @@ namespace Scripts.FSM.Base.StateMachine
             if (guard.InvestigationRotationRemaining <= 0f)
             {
                 guard.CompleteInvestigation();
-                Debug.Log($"[InvestigateDebug] Guard {guard.name} completed 360 scan");
+                MyLogger.LogInfo($"[InvestigateDebug] Guard {guard.name} completed 360 scan");
             }
         }
     }

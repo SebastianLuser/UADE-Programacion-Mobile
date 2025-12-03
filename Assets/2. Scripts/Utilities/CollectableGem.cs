@@ -27,7 +27,7 @@ public class CollectableGem : MonoBehaviour, ICollectable
     /// <param name="collector">The collector that collected this item</param>
     public void Collect(ICollector collector)
     {
-        Debug.Log($"Collected {ItemName} worth {Points} points!");
+        MyLogger.LogInfo($"Collected {ItemName} worth {Points} points!");
 
         collector.AddPoints(Points);
 

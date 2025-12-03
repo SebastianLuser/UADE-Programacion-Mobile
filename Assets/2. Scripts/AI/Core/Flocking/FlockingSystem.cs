@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Game.AI.Flocking;
 using UnityEngine;
 
@@ -92,7 +92,7 @@ namespace FlockingSystem
             }
             else
             {
-                Debug.LogError($"IFlockingService not available for {gameObject.name}", this);
+                MyLogger.LogError($"IFlockingService not available for {gameObject.name}");
             }
         }
 

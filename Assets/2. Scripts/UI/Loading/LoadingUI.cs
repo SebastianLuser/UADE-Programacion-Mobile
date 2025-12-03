@@ -1,10 +1,30 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class LoadingUI : MonoBehaviour
 {
     [SerializeField] Slider progress;
     [SerializeField] CanvasGroup canvasGroup;
+
+    public static LoadingUI Instance;
+    
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            return;
+        }
+        
+        Destroy(gameObject);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) 
+            Instance = null;
+    }
 
     public void ShowImmediate()
     {

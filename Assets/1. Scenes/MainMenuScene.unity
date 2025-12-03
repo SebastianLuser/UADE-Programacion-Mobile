@@ -763,7 +763,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &184138514
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3543,6 +3543,50 @@ MonoBehaviour:
   buyButton: {fileID: 1169901597}
   coinsSprite: {fileID: -1343491659, guid: 4adfa3b7c879787498fc1f4ce4af002f, type: 3}
   diamondsSprite: {fileID: -1941379830, guid: 4adfa3b7c879787498fc1f4ce4af002f, type: 3}
+--- !u!1 &1067889453
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1067889455}
+  - component: {fileID: 1067889454}
+  m_Layer: 0
+  m_Name: UGSAnal
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1067889454
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1067889453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85de52cebb3a4f8428c61c8ed936bf09, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UGS_Analytics
+--- !u!4 &1067889455
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1067889453}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 403.14603, y: 239.1229, z: 154.37764}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1079126675
 GameObject:
   m_ObjectHideFlags: 0
@@ -6149,7 +6193,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1667255002
 RectTransform:
   m_ObjectHideFlags: 0
@@ -8695,6 +8739,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: ProfilePanel
       objectReference: {fileID: 0}
+    - target: {fileID: 7792629849039840216, guid: 7928bd7813a37b449a58b952178d0ed7,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8831,3 +8880,4 @@ SceneRoots:
   - {fileID: 1625614128}
   - {fileID: 1672192050}
   - {fileID: 4359576591049808931}
+  - {fileID: 1067889455}

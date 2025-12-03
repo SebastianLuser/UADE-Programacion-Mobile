@@ -60,7 +60,7 @@ public class PathFollowerAgent
                 toWp = (target - pos);
                 toWp.y = 0f;
                 sqDist = toWp.sqrMagnitude;
-                Debug.Log($"PathFollower: ok Reached WP {_cursor - 1}, moving to {_cursor}");
+                MyLogger.LogInfo($"PathFollower: ok Reached WP {_cursor - 1}, moving to {_cursor}");
             }
             else
             {
@@ -85,7 +85,7 @@ public class PathFollowerAgent
             toWp = (target - pos);
             toWp.y = 0f;
             sqDist = toWp.sqrMagnitude;
-            Debug.Log($"PathFollower: Overshot WP {_cursor - 1}, moving to {_cursor}");
+            MyLogger.LogInfo($"PathFollower: Overshot WP {_cursor - 1}, moving to {_cursor}");
         }
 
         // 3) Anti-stuck MUY tolerante
@@ -105,7 +105,7 @@ public class PathFollowerAgent
                 toWp = (target - pos);
                 toWp.y = 0f;
                 sqDist = toWp.sqrMagnitude;
-                Debug.LogWarning($"PathFollower: STUCK {_stuckFrames} frames, forcing advance to {_cursor}");
+                MyLogger.LogWarning($"PathFollower: STUCK {_stuckFrames} frames, forcing advance to {_cursor}");
             }
         }
         else

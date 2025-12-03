@@ -15,7 +15,6 @@ public class GuardDataSO : NPCDataSO
     [Header("FSM Patrol Settings")]
     [field: SerializeField] public int loopsToIdle { get; private set; } = 3;
     [field: SerializeField] public float idleSeconds { get; private set; } = 5f;
-    [field: SerializeField] public float searchTime { get; private set; } = 5f;
 
     [Header("State Machine Configuration")]
     [field: SerializeField] public List<StateData> stateDataList { get; private set; } = new List<StateData>();

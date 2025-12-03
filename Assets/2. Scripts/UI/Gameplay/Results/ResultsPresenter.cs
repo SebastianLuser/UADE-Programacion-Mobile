@@ -1,5 +1,6 @@
 using System;
 using Services;
+using Services.MicroServices.AdsService;
 using Services.MicroServices.EventsServices;
 using Services.MicroServices.EventsServices.CustomEvents;
 using Services.MicroServices.GameStateService;
@@ -13,7 +14,7 @@ namespace _2._Scripts.UI.Gameplay.Results
     {
         [SerializeField] private string mainMenuSceneName = "MainMenuScene";
         [SerializeField] private bool pauseGameWhileVisible = true;
-        [SerializeField] private RewardedAd rewardedAdManager;
+        [SerializeField] private PlayerCollector playerCollector;
 
         private ResultsModel m_model;
         private ResultsView m_view;
@@ -61,6 +62,11 @@ namespace _2._Scripts.UI.Gameplay.Results
         private void OnGameResultEvent(GameResultEvent resultEvent)
         {
             m_model.SetResult(resultEvent);
+
+            if (UGS_Analytics.Instance != null)
+            {
+                UGS_Analytics.Instance.LogSessionCompleted(resultEvent.IsVictory, resultEvent.Score, Time.timeSinceLevelLoad);
+            }
 
             if (resultEvent.IsVictory)
             {
@@ -134,6 +140,14 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         private void OnRetryPressed()
         {
+            if (UGS_Analytics.Instance != null)
+            {
+                var lastResult = m_model?.LastResult;
+                int lastScore = lastResult?.Score ?? 0;
+                bool lastWasVictory = lastResult?.IsVictory ?? false;
+                UGS_Analytics.Instance.LogRetryPressed(lastScore, lastWasVictory);
+            }
+
             Time.timeScale = 1f;
             var activeScene = SceneManager.GetActiveScene();
             SceneManager.LoadScene(activeScene.name);
@@ -149,7 +163,7 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         private void OnRewardedAdPressed()
         {
-            rewardedAdManager.ClickShowAdReward();
+            ServiceLocator.Get<IAdsService>().Show(playerCollector, m_view);
         }
 
     }

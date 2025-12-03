@@ -24,7 +24,7 @@ namespace Scripts.FSM.Base.StateMachine
                 // Envía refuerzos hacia la última posición conocida del player
                 leader.AssignReinforcements(targetPos, targetPos);
 
-                Debug.Log($"[Leader] CoverFire -> target {targetPos}");
+                MyLogger.LogInfo($"[Leader] CoverFire -> target {targetPos}");
             }
         }
 
@@ -49,7 +49,7 @@ namespace Scripts.FSM.Base.StateMachine
             {
                 // Limpia órdenes si sale de cover fire
                 leader.ClearAllOverrides();
-                Debug.Log("[Leader] CoverFire exit - cleared overrides");
+                MyLogger.LogInfo("[Leader] CoverFire exit - cleared overrides");
             }
         }
 

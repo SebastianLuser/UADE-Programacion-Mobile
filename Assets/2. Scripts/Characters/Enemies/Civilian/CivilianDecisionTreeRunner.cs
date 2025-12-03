@@ -493,13 +493,13 @@ m_root = new QuestionNode(
     }
 
     /// <summary>
-    /// Helper to log DT messages both via MyLogger and Debug.Log when debugDT is enabled.
+    /// Helper to log DT messages both via MyLogger and MyLogger.LogInfo when debugDT is enabled.
     /// </summary>
     private void LogDT(string message)
     {
         if (!debugDT) return;
         MyLogger.LogInfo(message);
-        Debug.Log(message);
+        MyLogger.LogInfo(message);
     }
 
     /// <summary>
@@ -1234,54 +1234,54 @@ private void SuggestEvade()
     [ContextMenu("Debug Decision Tree Status")]
     private void DebugDecisionTreeStatus()
     {
-        Debug.Log("=== CIVILIAN DECISION TREE STATUS ===");
-        Debug.Log($"Evaluation Interval: {evaluationInterval}s");
-        Debug.Log($"Alert Chance (No LoS): {alertChanceWhenNoLoS:P0}");
-        Debug.Log($"Alert Cooldown: {alertCooldown}s");
-        Debug.Log($"Post-Hit Flee Time: {postHitFleeTime}s");
-        Debug.Log($"Time Since Last Alert: {(m_lastAlertTime < 0 ? "Never" : (Time.time - m_lastAlertTime).ToString("F2") + "s")}");
-        Debug.Log($"Resume Suggestion: {resumeSuggestion}");
-        Debug.Log($"Current Suggestion: {m_currentSuggestion}");
-        Debug.Log($"Last Suggestion: {m_lastSuggestion}");
-        Debug.Log($"Current FSM State: {GetCurrentFsmStateName()}");
-        Debug.Log($"Expected FSM State: {MapSuggestionToFsmStateName(m_currentSuggestion)}");
-        Debug.Log($"FSM State Matches: {IsCurrentFsmStateMatchingSuggestion()}");
-        Debug.Log($"Last Evaluation: {Time.time - m_lastEvaluationTime:F2}s ago");
+        MyLogger.LogInfo("=== CIVILIAN DECISION TREE STATUS ===");
+        MyLogger.LogInfo($"Evaluation Interval: {evaluationInterval}s");
+        MyLogger.LogInfo($"Alert Chance (No LoS): {alertChanceWhenNoLoS:P0}");
+        MyLogger.LogInfo($"Alert Cooldown: {alertCooldown}s");
+        MyLogger.LogInfo($"Post-Hit Flee Time: {postHitFleeTime}s");
+        MyLogger.LogInfo($"Time Since Last Alert: {(m_lastAlertTime < 0 ? "Never" : (Time.time - m_lastAlertTime).ToString("F2") + "s")}");
+        MyLogger.LogInfo($"Resume Suggestion: {resumeSuggestion}");
+        MyLogger.LogInfo($"Current Suggestion: {m_currentSuggestion}");
+        MyLogger.LogInfo($"Last Suggestion: {m_lastSuggestion}");
+        MyLogger.LogInfo($"Current FSM State: {GetCurrentFsmStateName()}");
+        MyLogger.LogInfo($"Expected FSM State: {MapSuggestionToFsmStateName(m_currentSuggestion)}");
+        MyLogger.LogInfo($"FSM State Matches: {IsCurrentFsmStateMatchingSuggestion()}");
+        MyLogger.LogInfo($"Last Evaluation: {Time.time - m_lastEvaluationTime:F2}s ago");
         
         // Stance Lock Status
-        Debug.Log($"--- STANCE LOCK ---");
-        Debug.Log($"Has Active Lock: {m_hasActiveStanceLock}");
-        Debug.Log($"Current Stance: {m_currentStance}");
-        Debug.Log($"Lock Expires In: {(m_hasActiveStanceLock ? (m_stanceLockUntil - Time.time).ToString("F2") + "s" : "N/A")}");
+        MyLogger.LogInfo($"--- STANCE LOCK ---");
+        MyLogger.LogInfo($"Has Active Lock: {m_hasActiveStanceLock}");
+        MyLogger.LogInfo($"Current Stance: {m_currentStance}");
+        MyLogger.LogInfo($"Lock Expires In: {(m_hasActiveStanceLock ? (m_stanceLockUntil - Time.time).ToString("F2") + "s" : "N/A")}");
         
         // Attack Cycle Status
-        Debug.Log($"--- ATTACK CYCLE ---");
-        Debug.Log($"Is In Attack Cycle: {m_isInAttackCycle}");
-        Debug.Log($"Attack Start Time: {(m_isInAttackCycle ? (Time.time - m_attackCycleStartTime).ToString("F2") + "s ago" : "N/A")}");
-        Debug.Log($"Post-Hit Flee Active: {m_postHitFleeActive}");
-        Debug.Log($"Post-Hit Flee Time Left: {(m_postHitFleeActive ? (postHitFleeTime - (Time.time - m_postHitFleeStartTime)).ToString("F2") + "s" : "N/A")}");
+        MyLogger.LogInfo($"--- ATTACK CYCLE ---");
+        MyLogger.LogInfo($"Is In Attack Cycle: {m_isInAttackCycle}");
+        MyLogger.LogInfo($"Attack Start Time: {(m_isInAttackCycle ? (Time.time - m_attackCycleStartTime).ToString("F2") + "s ago" : "N/A")}");
+        MyLogger.LogInfo($"Post-Hit Flee Active: {m_postHitFleeActive}");
+        MyLogger.LogInfo($"Post-Hit Flee Time Left: {(m_postHitFleeActive ? (postHitFleeTime - (Time.time - m_postHitFleeStartTime)).ToString("F2") + "s" : "N/A")}");
         
         // Timers Status
-        Debug.Log($"--- TIMERS ---");
-        Debug.Log($"Pursuit LoS Timer (Visible): {m_pursuitLoseSightTimerVisible:F2}s");
-        Debug.Log($"Pursuit LoS Timer (Invisible): {m_pursuitLoseSightTimerInvisible:F2}s");
-        Debug.Log($"Safe Timer: {m_safeTimer:F2}s");
-        Debug.Log($"Pursuit Start Time: {(m_pursuitStartTime > 0 ? (Time.time - m_pursuitStartTime).ToString("F2") + "s ago" : "Never")}");
+        MyLogger.LogInfo($"--- TIMERS ---");
+        MyLogger.LogInfo($"Pursuit LoS Timer (Visible): {m_pursuitLoseSightTimerVisible:F2}s");
+        MyLogger.LogInfo($"Pursuit LoS Timer (Invisible): {m_pursuitLoseSightTimerInvisible:F2}s");
+        MyLogger.LogInfo($"Safe Timer: {m_safeTimer:F2}s");
+        MyLogger.LogInfo($"Pursuit Start Time: {(m_pursuitStartTime > 0 ? (Time.time - m_pursuitStartTime).ToString("F2") + "s ago" : "Never")}");
         
         // General Status
-        Debug.Log($"--- GENERAL ---");
-        Debug.Log($"Debug Enabled: {debugDT}");
-        Debug.Log($"Can See Player: {(m_civilian != null ? m_civilian.HasLoS() : "N/A")}");
-        Debug.Log($"Can Attack: {(m_civilian != null ? m_civilian.CanAttack : "N/A")}");
-        Debug.Log($"In Melee Range: {(m_civilian != null ? m_civilian.IsPlayerInMeleeRange() : "N/A")}");
-        Debug.Log($"Distance to Player: {(m_civilian != null && m_civilian.Player != null ? Vector3.Distance(m_civilian.transform.position, m_civilian.Player.position).ToString("F2") : "N/A")}");
+        MyLogger.LogInfo($"--- GENERAL ---");
+        MyLogger.LogInfo($"Debug Enabled: {debugDT}");
+        MyLogger.LogInfo($"Can See Player: {(m_civilian != null ? m_civilian.HasLoS() : "N/A")}");
+        MyLogger.LogInfo($"Can Attack: {(m_civilian != null ? m_civilian.CanAttack : "N/A")}");
+        MyLogger.LogInfo($"In Melee Range: {(m_civilian != null ? m_civilian.IsPlayerInMeleeRange() : "N/A")}");
+        MyLogger.LogInfo($"Distance to Player: {(m_civilian != null && m_civilian.Player != null ? Vector3.Distance(m_civilian.transform.position, m_civilian.Player.position).ToString("F2") : "N/A")}");
         
         if (BlackboardService != null)
         {
-            Debug.Log($"Global Alert: {BlackboardService.GetValue<bool>(BlackboardKeys.GLOBAL_ALERT)}");
+            MyLogger.LogInfo($"Global Alert: {BlackboardService.GetValue<bool>(BlackboardKeys.GLOBAL_ALERT)}");
         }
         
-        Debug.Log("====================================");
+        MyLogger.LogInfo("====================================");
     }
 
     #endregion

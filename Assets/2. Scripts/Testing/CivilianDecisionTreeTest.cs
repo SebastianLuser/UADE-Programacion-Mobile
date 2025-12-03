@@ -42,44 +42,44 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (civilian == null) return;
 
-        Debug.Log("=== CIVILIAN DECISION TREE TEST ===");
+        MyLogger.LogInfo("=== CIVILIAN DECISION TREE TEST ===");
         
         // Test civilian state
-        Debug.Log($"Civilian Active: {civilian.IsActive}");
-        Debug.Log($"Can See Player: {civilian.HasLoS()}");
-        Debug.Log($"Distance to Player: {civilian.GetDistanceToPlayer():F2}");
-        Debug.Log($"Can Attack: {civilian.CanAttack}");
-        Debug.Log($"Using Decision Tree: {civilian.UseDecisionTree}");
-        Debug.Log($"Decision Tree Active: {civilian.IsDecisionTreeActive()}");
+        MyLogger.LogInfo($"Civilian Active: {civilian.IsActive}");
+        MyLogger.LogInfo($"Can See Player: {civilian.HasLoS()}");
+        MyLogger.LogInfo($"Distance to Player: {civilian.GetDistanceToPlayer():F2}");
+        MyLogger.LogInfo($"Can Attack: {civilian.CanAttack}");
+        MyLogger.LogInfo($"Using Decision Tree: {civilian.UseDecisionTree}");
+        MyLogger.LogInfo($"Decision Tree Active: {civilian.IsDecisionTreeActive()}");
         
         // Test decision tree runner
         if (dtRunner != null)
         {
-            Debug.Log($"DT Debug Enabled: {dtRunner.DebugEnabled}");
-            Debug.Log($"DT Current Suggestion: {dtRunner.CurrentSuggestion}");
-            Debug.Log($"DT Last Suggestion: {dtRunner.LastSuggestion}");
-            Debug.Log($"DT Status: {dtRunner.GetStatus()}");
+            MyLogger.LogInfo($"DT Debug Enabled: {dtRunner.DebugEnabled}");
+            MyLogger.LogInfo($"DT Current Suggestion: {dtRunner.CurrentSuggestion}");
+            MyLogger.LogInfo($"DT Last Suggestion: {dtRunner.LastSuggestion}");
+            MyLogger.LogInfo($"DT Status: {dtRunner.GetStatus()}");
             
             // Manually trigger evaluation
             dtRunner.EvaluateDecisionTree();
         }
         else
         {
-            Debug.Log("Decision Tree Runner: Not found");
+            MyLogger.LogInfo("Decision Tree Runner: Not found");
         }
         
         // Test blackboard
         var blackboard = ServiceLocator.Get<IBlackboard>();
         if (blackboard != null)
         {
-            Debug.Log($"Global Alert: {blackboard.GetValue<bool>(BlackboardKeys.GLOBAL_ALERT)}");
+            MyLogger.LogInfo($"Global Alert: {blackboard.GetValue<bool>(BlackboardKeys.GLOBAL_ALERT)}");
         }
         else
         {
-            Debug.Log("Blackboard: Not available");
+            MyLogger.LogInfo("Blackboard: Not available");
         }
         
-        Debug.Log("=================================");
+        MyLogger.LogInfo("=================================");
     }
 
     [ContextMenu("Toggle Global Alert")]
@@ -90,7 +90,7 @@ public class CivilianDecisionTreeTest : MonoBehaviour
         {
             bool currentAlert = blackboard.GetValue<bool>(BlackboardKeys.GLOBAL_ALERT);
             blackboard.SetValue(BlackboardKeys.GLOBAL_ALERT, !currentAlert);
-            Debug.Log($"Global Alert toggled to: {!currentAlert}");
+            MyLogger.LogInfo($"Global Alert toggled to: {!currentAlert}");
         }
     }
 
@@ -99,7 +99,7 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (dtRunner != null)
         {
-            Debug.Log("Forcing Decision Tree evaluation...");
+            MyLogger.LogInfo("Forcing Decision Tree evaluation...");
             dtRunner.EvaluateDecisionTree();
         }
     }
@@ -109,7 +109,7 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (civilian != null)
         {
-            Debug.Log("Testing state change to Fleeing...");
+            MyLogger.LogInfo("Testing state change to Fleeing...");
             civilian.RequestStateChange("Fleeing");
         }
     }
@@ -119,7 +119,7 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (civilian != null)
         {
-            Debug.Log("Testing state change to Idle...");
+            MyLogger.LogInfo("Testing state change to Idle...");
             civilian.RequestStateChange("Idle");
         }
     }
@@ -129,7 +129,7 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (civilian != null)
         {
-            Debug.Log("Testing state change to Pursue...");
+            MyLogger.LogInfo("Testing state change to Pursue...");
             civilian.RequestStateChange("Pursue");
         }
     }
@@ -139,7 +139,7 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (civilian != null)
         {
-            Debug.Log("Testing state change to Evade...");
+            MyLogger.LogInfo("Testing state change to Evade...");
             civilian.RequestStateChange("Evade");
         }
     }
@@ -149,7 +149,7 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (civilian != null)
         {
-            Debug.Log("Testing state change to Attack...");
+            MyLogger.LogInfo("Testing state change to Attack...");
             civilian.RequestStateChange("Attack");
         }
     }
@@ -159,7 +159,7 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (civilian != null)
         {
-            Debug.Log("Listing available FSM states...");
+            MyLogger.LogInfo("Listing available FSM states...");
             civilian.DebugCivilianStatus(); // This will show available states
         }
     }
@@ -169,7 +169,7 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (dtRunner != null)
         {
-            Debug.Log("Checking DT vs FSM state synchronization...");
+            MyLogger.LogInfo("Checking DT vs FSM state synchronization...");
             dtRunner.DebugDecisionTreeStatus(); // This will show state matching info
         }
     }
@@ -179,9 +179,9 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (civilian != null)
         {
-            Debug.Log("=== TESTING ATTACK CYCLE COMPLETION ===");
+            MyLogger.LogInfo("=== TESTING ATTACK CYCLE COMPLETION ===");
             civilian.OnAttackCycleComplete();
-            Debug.Log("Attack cycle completion test finished");
+            MyLogger.LogInfo("Attack cycle completion test finished");
         }
     }
 
@@ -190,9 +190,9 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (civilian != null)
         {
-            Debug.Log("=== TESTING MELEE DAMAGE EVENT ===");
+            MyLogger.LogInfo("=== TESTING MELEE DAMAGE EVENT ===");
             civilian.DealMeleeAttack();
-            Debug.Log("Melee damage event test finished");
+            MyLogger.LogInfo("Melee damage event test finished");
         }
     }
 
@@ -201,32 +201,32 @@ public class CivilianDecisionTreeTest : MonoBehaviour
     {
         if (dtRunner != null)
         {
-            Debug.Log("=== FORCING DT RE-EVALUATION ===");
+            MyLogger.LogInfo("=== FORCING DT RE-EVALUATION ===");
             dtRunner.EvaluateDecisionTree();
-            Debug.Log("DT re-evaluation completed");
+            MyLogger.LogInfo("DT re-evaluation completed");
         }
     }
 
     [ContextMenu("Test Enhanced Status Logging")]
     public void TestEnhancedStatusLogging()
     {
-        Debug.Log("=== ENHANCED STATUS TEST ===");
+        MyLogger.LogInfo("=== ENHANCED STATUS TEST ===");
         
         if (civilian != null)
         {
-            Debug.Log($"Has LoS: {civilian.HasLoS()}");
-            Debug.Log($"In Melee Range: {civilian.IsPlayerInMeleeRange()}");
-            Debug.Log($"Distance: {civilian.GetDistanceToPlayer():F2}");
-            Debug.Log($"Can Attack: {civilian.CanAttack}");
+            MyLogger.LogInfo($"Has LoS: {civilian.HasLoS()}");
+            MyLogger.LogInfo($"In Melee Range: {civilian.IsPlayerInMeleeRange()}");
+            MyLogger.LogInfo($"Distance: {civilian.GetDistanceToPlayer():F2}");
+            MyLogger.LogInfo($"Can Attack: {civilian.CanAttack}");
         }
 
         if (dtRunner != null)
         {
-            Debug.Log($"Current Suggestion: {dtRunner.CurrentSuggestion}");
-            Debug.Log($"Last Suggestion: {dtRunner.LastSuggestion}");
+            MyLogger.LogInfo($"Current Suggestion: {dtRunner.CurrentSuggestion}");
+            MyLogger.LogInfo($"Last Suggestion: {dtRunner.LastSuggestion}");
             dtRunner.DebugDecisionTreeStatus();
         }
         
-        Debug.Log("Enhanced status logging completed");
+        MyLogger.LogInfo("Enhanced status logging completed");
     }
 }

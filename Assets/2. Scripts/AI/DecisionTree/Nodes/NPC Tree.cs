@@ -92,12 +92,12 @@ public class NPCTree : MonoBehaviour
     }
 
     private void HandleMessage(string message) { }
-    private void Die() { Debug.Log("Die"); }
-    private void Flee() { Debug.Log("Flee"); }
-    private void Attack() { Debug.Log("Attack"); }
-    private void Patrol() { Debug.Log("Patrol"); }
-    private void Idle() { Debug.Log("Idle"); }
-    private void Persuit() { Debug.Log("Persuit"); }
+    private void Die() { MyLogger.LogInfo("Die"); }
+    private void Flee() { MyLogger.LogInfo("Flee"); }
+    private void Attack() { MyLogger.LogInfo("Attack"); }
+    private void Patrol() { MyLogger.LogInfo("Patrol"); }
+    private void Idle() { MyLogger.LogInfo("Idle"); }
+    private void Persuit() { MyLogger.LogInfo("Persuit"); }
 
     private void OnDrawGizmos()
     {

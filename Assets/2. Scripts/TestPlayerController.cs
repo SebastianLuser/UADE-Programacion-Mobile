@@ -26,7 +26,7 @@ public class TestPlayerController : MonoBehaviour
         if (!gameObject.CompareTag("Player"))
         {
             gameObject.tag = "Player";
-            Debug.Log("TestPlayerController: Set tag to 'Player' for AI detection");
+            MyLogger.LogInfo("TestPlayerController: Set tag to 'Player' for AI detection");
         }
     }
 
