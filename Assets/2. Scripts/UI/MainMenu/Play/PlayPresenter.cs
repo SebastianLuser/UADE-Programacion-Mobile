@@ -8,7 +8,7 @@ namespace _2._Scripts.UI.MainMenu.Play
     public class PlayPresenter : UIPresenter
     {
         [SerializeField] private string mainUIName = "Main";
-        [SerializeField] private string gameplaySceneName = "DemoProto";
+        [SerializeField] private string gameplaySceneName = "Gameplay";
         [SerializeField] private string gameplaySceneNameAlt = "Gameplay2";
         [SerializeField] private string loadingSceneName = "Loading";
         

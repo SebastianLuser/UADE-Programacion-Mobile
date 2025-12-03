@@ -1130,7 +1130,7 @@ MonoBehaviour:
   uiModel: {fileID: 299407310}
   uiView: {fileID: 299407311}
   mainUIName: Main
-  gameplaySceneName: DemoProto
+  gameplaySceneName: Gameplay
   gameplaySceneNameAlt: Gameplay 2
   loadingSceneName: Loading
 --- !u!114 &299407310
@@ -1159,7 +1159,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::_2._Scripts.UI.MainMenu.Play.PlayView
   mainPanel: {fileID: 299407312}
   startButton: {fileID: 1420117525}
-  startButtonAlt: {fileID: 0}
+  startButtonAlt: {fileID: 1080150015}
   backButton: {fileID: 2026259487}
 --- !u!225 &299407312
 CanvasGroup:
