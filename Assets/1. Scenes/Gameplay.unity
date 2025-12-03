@@ -25879,12 +25879,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 87ab916f2a4d4fec94c54088ba41cfe2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollowController
---- !u!20 &1070624495 stripped
-Camera:
-  m_CorrespondingSourceObject: {fileID: 3773348054285786154, guid: 8437307c228d058458f4d680bddd4f14,
-    type: 3}
-  m_PrefabInstance: {fileID: 5628550748963707598}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1070624500
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25897,20 +25891,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ee00e5bcfd31fe409573d859f046310, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraLineFader
-  mainCamera: {fileID: 0}
-  target: {fileID: 0}
-  occluderMask:
-    m_Bits: 0
-  useSphereCast: 1
-  sphereRadius: 0.2
-  maxHits: 16
-  triggerInteraction: 1
-  shaderFloatProperty: _SeeThrough
-  visibleValue: 0
-  hiddenValue: 1
-  fadeOutSpeed: 10
-  fadeInSpeed: 8
-  graceTime: 0.08
 --- !u!114 &1070624501
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25923,20 +25903,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ee00e5bcfd31fe409573d859f046310, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraLineCutout
-  mainCamera: {fileID: 1070624495}
-  target: {fileID: 1689811721}
-  occluderMask:
-    m_Bits: 8192
-  useSphereCast: 1
-  sphereRadius: 0.2
-  maxHits: 16
-  triggerInteraction: 1
-  shaderFloatProperty: _SeeThrough
-  visibleValue: 0
-  hiddenValue: 1
-  fadeOutSpeed: 10
-  fadeInSpeed: 8
-  graceTime: 0.08
 --- !u!1001 &1071143618
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -33273,7 +33239,7 @@ MonoBehaviour:
   uiView: {fileID: 1315594188}
   mainMenuSceneName: MainMenuScene
   pauseGameWhileVisible: 0
-  playerCollector: {fileID: 1689811724}
+  playerCollector: {fileID: 0}
 --- !u!114 &1315594188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -36983,12 +36949,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58999fca6c0fd8d4bb05069b4cbd1ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EscapeZone
-  escapePlaneRender: {fileID: 636056101}
+  escapePlaneRender: {fileID: 1445555558}
   greenMaterial: {fileID: 2100000, guid: b5aa1987dfd7e9f44bbb4e86b14e53ca, type: 2}
   playerCollector: {fileID: 1689811724}
 --- !u!4 &1445555556 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 476350, guid: c413258f59cccc14d83ab0a327fcbc1e,
+    type: 3}
+  m_PrefabInstance: {fileID: 158643241}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &1445555558 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 2393150, guid: c413258f59cccc14d83ab0a327fcbc1e,
     type: 3}
   m_PrefabInstance: {fileID: 158643241}
   m_PrefabAsset: {fileID: 0}
