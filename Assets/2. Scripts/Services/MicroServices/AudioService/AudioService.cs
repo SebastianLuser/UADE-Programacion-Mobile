@@ -6,25 +6,28 @@ using Object = UnityEngine.Object;
 namespace Services.MicroServices.AudioService
 {
     [DefaultExecutionOrder(-10000)]
-    public class AudioService : MonoBehaviour, IAudioService
+    public class AudioService : MonoBehaviour
     {
         const string MASTER = "MasterVolume", MUSIC = "MusicVolume", SFX = "SFXVolume";
         GameObject m_root;
 
-        public AudioConfig Config;
+        [SerializeField] private AudioConfig config;
         
-        private static AudioService _instance;
+        public static AudioService Instance { get; private set; }
         
         [Header("Audio Sources")]
         [SerializeField] private AudioSource m_musicSource;
         [SerializeField] private AudioSource m_sfxSource;
 
-        public void Initialize() { }
-
         private void Awake()
         {
-            if (_instance != null && _instance != this) { Destroy(gameObject); return; }
-            _instance = this;
+            if (Instance != null)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
             DontDestroyOnLoad(gameObject);
             
             if (!m_musicSource)
@@ -47,8 +50,6 @@ namespace Services.MicroServices.AudioService
                 m_sfxSource.spatialBlend = 0f;
             }
             else m_sfxSource.spatialBlend = 0f;
-            
-            ServiceLocator.RegisterInstance<IAudioService>(this);
         }
 
         public void SetAudioSources(AudioSource music, AudioSource sfx)
@@ -56,7 +57,10 @@ namespace Services.MicroServices.AudioService
             if (music)  { Object.DontDestroyOnLoad(music.gameObject);  m_musicSource = music;  m_musicSource.spatialBlend = 0f; }
             if (sfx)    { Object.DontDestroyOnLoad(sfx.gameObject);    m_sfxSource   = sfx;    m_sfxSource.spatialBlend   = 0f; }
         }
-        
+
+        public AudioConfig GetConfig() => config;
+        public void SetConfig(AudioConfig p_newConfig) => config = p_newConfig;
+
         public void PlayMusic(AudioClip clip, bool loop = true)
         {
             if (!clip) return;
@@ -98,7 +102,7 @@ namespace Services.MicroServices.AudioService
 
         public void SetMusicVolume(float p_volume)
         {
-            if (Config?.audioMixer == null)
+            if (config?.audioMixer == null)
             {
                 if (m_musicSource != null)
                     m_musicSource.volume = Mathf.Clamp01(p_volume);
@@ -110,7 +114,7 @@ namespace Services.MicroServices.AudioService
 
         public void SetSFXVolume(float p_volume)
         {
-            if (Config?.audioMixer == null)
+            if (config?.audioMixer == null)
             {
                 if (m_sfxSource != null)
                     m_sfxSource.volume = Mathf.Clamp01(p_volume);
@@ -122,18 +126,18 @@ namespace Services.MicroServices.AudioService
 
         public void SetMasterVolume(float p_volume)
         {
-            if (Config?.audioMixer == null) return;
+            if (config?.audioMixer == null) return;
             SetMixerVolume(MASTER, p_volume);
         }
 
         private void SetMixerVolume(string p_parameterName, float p_normalizedVolume)
         {
-            if (Config?.audioMixer == null) return;
+            if (config?.audioMixer == null) return;
 
             float volume = Mathf.Clamp01(p_normalizedVolume);
             float db = volume > 0.0001f ? 20f * Mathf.Log10(volume) : -80f;
             
-            Config.audioMixer.SetFloat(p_parameterName, db);
+            config.audioMixer.SetFloat(p_parameterName, db);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using Services;
+using Services.MicroServices.AdsService;
 using Services.MicroServices.EventsServices;
 using Services.MicroServices.EventsServices.CustomEvents;
 using Services.MicroServices.GameStateService;
@@ -13,7 +14,7 @@ namespace _2._Scripts.UI.Gameplay.Results
     {
         [SerializeField] private string mainMenuSceneName = "MainMenuScene";
         [SerializeField] private bool pauseGameWhileVisible = true;
-        [SerializeField] private RewardedAd rewardedAdManager;
+        [SerializeField] private PlayerCollector playerCollector;
 
         private ResultsModel m_model;
         private ResultsView m_view;
@@ -162,7 +163,7 @@ namespace _2._Scripts.UI.Gameplay.Results
 
         private void OnRewardedAdPressed()
         {
-            rewardedAdManager.ClickShowAdReward();
+            ServiceLocator.Get<IAdsService>().Show(playerCollector, m_view);
         }
 
     }

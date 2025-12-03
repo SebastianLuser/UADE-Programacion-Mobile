@@ -11,30 +11,29 @@ public class MainCharacter : BaseCharacter, ICombat
 {
     [SerializeField] private MainCharacterDataSO mainCharacterData;
 
-    private float lastShootTime;
     private Rigidbody rb;
     private Vector3 lastMoveDirection;
     private PlayerCollector playerCollector;
     private float currentMagSize;
     private IPlayerUpgradeService m_upgradeService;
-    private IAudioService m_audioService;
+   
     private AudioConfig m_audioConfig;
 
     private float RotationSpeed => mainCharacterData?.rotationSpeed ?? characterData.rotationSpeed;
     private BulletData BulletData => mainCharacterData?.bulletData;
 
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
+    private static AudioService AudioService => AudioService.Instance;
 
-    protected override void Awake()
+    public override void Initialize()
     {
         PrepareRuntimeData();
-        base.Awake();
+        base.Initialize();
         rb = GetComponent<Rigidbody>();
         playerCollector = GetComponent<PlayerCollector>();
         currentMagSize = mainCharacterData != null ? mainCharacterData.magSize : currentMagSize;
 
-        m_audioService = ServiceLocator.Get<IAudioService>();
-        m_audioConfig = (m_audioService as AudioService)?.Config;
+        m_audioConfig = AudioService.GetConfig();
 
         if (rb == null)
         {
@@ -87,25 +86,23 @@ public class MainCharacter : BaseCharacter, ICombat
         CreateBullet(direction);
         currentMagSize--;
 
-        if (m_audioService != null && m_audioConfig != null)
+        if (AudioService != null && m_audioConfig != null)
         {
-            m_audioService.PlaySFX(m_audioConfig.playerPistolSingleShotSFX);
+            AudioService.PlaySFX(m_audioConfig.playerPistolSingleShotSFX);
         }
     }
-    
-    public bool CanShoot()
+
+    public override bool CanShoot()
     {
         if (mainCharacterData.magSize != 0)
         {
             return Time.time >= lastShootTime + characterData.shootCooldown;   
         }
-        else
-        {
-            return Time.time >= lastShootTime + mainCharacterData.reloadTime;
-            StartCoroutine(ReloadGun());
-        }
+
+        StartCoroutine(ReloadGun());
+        return Time.time >= lastShootTime + mainCharacterData.reloadTime;
     }
-    
+
     private IEnumerator ReloadGun()
     {
         yield return new WaitForSeconds(mainCharacterData.reloadTime);

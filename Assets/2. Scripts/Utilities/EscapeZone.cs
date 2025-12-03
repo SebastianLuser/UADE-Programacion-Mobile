@@ -12,94 +12,77 @@ using Services.MicroServices.UserDataService.Wallet;
 public class EscapeZone : MonoBehaviour
 {
     [Header("Zone Settings")]
-    [SerializeField] private GameObject escapePlane;
+    [SerializeField] private Renderer escapePlaneRender;
     [SerializeField] private Material greenMaterial;
+    [SerializeField] private PlayerCollector playerCollector;
 
-    private PlayerCollector _playerCollector;
-    private Renderer _planeRenderer;
-    private Material _originalMaterial;
-    private IAudioService m_audioService;
+    private Material m_originalMaterial;
+    private static AudioService AudioService => AudioService.Instance;
     private AudioConfig m_audioConfig;
 
-    void Start()
+    private bool m_canEscape;
+
+    private void Start()
     {
-        _playerCollector = FindObjectOfType<PlayerCollector>();
+        m_audioConfig = AudioService.GetConfig();
+        
+        m_originalMaterial = escapePlaneRender.material;
 
-        m_audioService = ServiceLocator.Get<IAudioService>();
-        m_audioConfig = (m_audioService as AudioService)?.Config;
-
-        if (escapePlane != null)
-        {
-            _planeRenderer = escapePlane.GetComponent<Renderer>();
-            if (_planeRenderer != null)
-            {
-                _originalMaterial = _planeRenderer.material;
-            }
-        }
-
+        playerCollector.OnChangeCanEscape += OnChangeCanEventHandler;
     }
 
-    void Update()
+    private void OnChangeCanEventHandler(bool p_canEscape)
     {
-        if (_playerCollector != null && _planeRenderer != null)
+        m_canEscape = p_canEscape;
+        if (m_canEscape)
         {
-            if (_playerCollector.CanEscape)
+            if (greenMaterial != null)
             {
-                if (greenMaterial != null)
-                {
-                    _planeRenderer.material = greenMaterial;
-                }
+                escapePlaneRender.material = greenMaterial;
             }
-            else
-            {
-                _planeRenderer.material = _originalMaterial;
-            }
+        }
+        else
+        {
+            escapePlaneRender.material = m_originalMaterial;
         }
     }
 
-    void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider p_other)
     {
-        var playerCollector = other.GetComponent<PlayerCollector>();
-        if (playerCollector != null)
+        if (!p_other.CompareTag("Player")) 
+            return;
+        
+        if (m_canEscape)
         {
-            if (playerCollector.CanEscape)
-            {
-                ShowEscapeUI(playerCollector);
-            }
+            ShowEscapeUI(playerCollector);
         }
     }
 
-    void OnTriggerExit(Collider other)
+    private void ShowEscapeUI(PlayerCollector p_playerCollector)
     {
-        var playerCollector = other.GetComponent<PlayerCollector>();
-        // No-op now that we use global results UI
-    }
-
-    private void ShowEscapeUI(PlayerCollector playerCollector)
-    {
-        var playerMovement = playerCollector.GetComponent<PlayerTouchMovement>();
-        if (playerMovement)
+        var l_playerMovement = p_playerCollector.GetComponent<PlayerTouchMovement>();
+        if (l_playerMovement)
         {
-            playerMovement.enabled = false;
+            l_playerMovement.enabled = false;
         }
 
         if (UGS_Analytics.Instance != null)
         {
-            UGS_Analytics.Instance.LogEscapeZoneReached(playerCollector.TotalPoints, Time.timeSinceLevelLoad);
+            UGS_Analytics.Instance.LogEscapeZoneReached(p_playerCollector.TotalPoints, Time.timeSinceLevelLoad);
         }
 
-        playerCollector.gameObject.SetActive(false);
+        p_playerCollector.gameObject.SetActive(false);
 
-        if (m_audioService != null && m_audioConfig != null)
+        if (AudioService != null && m_audioConfig != null)
         {
-            m_audioService.PlaySFX(m_audioConfig.escapeSFX);
+            AudioService.PlaySFX(m_audioConfig.escapeSFX);
         }
 
         // Credit the run only on victory.
-        ServiceLocator.Get<IWalletService>()?.AddCoins(playerCollector.SessionCoins);
-        ServiceLocator.Get<IWalletService>()?.AddDiamonds(playerCollector.SessionDiamonds);
+        ServiceLocator.Get<IWalletService>()?.AddCoins(p_playerCollector.SessionCoins);
+        ServiceLocator.Get<IWalletService>()?.AddDiamonds(p_playerCollector.SessionDiamonds);
 
-        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(true, playerCollector.TotalPoints, playerCollector.SessionCoins, playerCollector.SessionDiamonds));
+        ServiceLocator.Get<IEventService>().DispatchEvent(new GameResultEvent(true, p_playerCollector.TotalPoints, p_playerCollector.SessionCoins, p_playerCollector.SessionDiamonds));
         ServiceLocator.Get<IGameStateService>().ChangeState(GameState.Victory);
     }
 }

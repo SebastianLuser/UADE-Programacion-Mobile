@@ -44,19 +44,6 @@ public class MobileDynamicResolution : MonoBehaviour
 
     private void Awake()
     {
-        // Nos aseguramos de no tener más de uno
-        if (FindObjectsOfType<MobileDynamicResolution>().Length > 1)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        // Opcional: mantener este objeto entre escenas
-        DontDestroyOnLoad(gameObject);
-    }
-
-    private void Start()
-    {
         _currentScale = Mathf.Clamp(maxScale, minScale, 1.0f);
 
         // Fijar targetFrameRate acorde al objetivo (no obligatorio, pero recomendado)

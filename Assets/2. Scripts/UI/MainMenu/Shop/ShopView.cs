@@ -29,13 +29,12 @@ namespace _2._Scripts.UI.MainMenu.Shop
         public event Action OnBackClicked;
         public event Action<ShopModel.ShopItemDefinition> OnBuyRequested;
 
-        private IAudioService m_audioService;
+        private static AudioService AudioService => AudioService.Instance;
         private AudioConfig m_audioConfig;
 
         private void Awake()
         {
-            m_audioService = ServiceLocator.Get<IAudioService>();
-            m_audioConfig = (m_audioService as AudioService)?.Config;
+            m_audioConfig = AudioService.GetConfig();
 
             for (var i = 0; i < itemSlots.Length; i++)
             {
@@ -58,9 +57,9 @@ namespace _2._Scripts.UI.MainMenu.Shop
             base.Show();
 
             // Play title background music in shop
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlayMusic(m_audioConfig.titleBackground);
+                AudioService.PlayMusic(m_audioConfig.titleBackground);
             }
 
             if (backButton)
@@ -139,9 +138,9 @@ namespace _2._Scripts.UI.MainMenu.Shop
 
         private void HandleCategoryClicked(CategoryTab tab)
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+                AudioService.PlaySFX(m_audioConfig.clickButtonSFX);
             }
 
             OnCategorySelected?.Invoke(tab.category, tab.scrollPosition);
@@ -149,9 +148,9 @@ namespace _2._Scripts.UI.MainMenu.Shop
 
         private void HandleBackClicked()
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.clickButtonSFX);
+                AudioService.PlaySFX(m_audioConfig.clickButtonSFX);
             }
 
             OnBackClicked?.Invoke();
@@ -159,9 +158,9 @@ namespace _2._Scripts.UI.MainMenu.Shop
 
         private void HandleBuyClicked(ShopModel.ShopItemDefinition item)
         {
-            if (m_audioService != null && m_audioConfig != null)
+            if (AudioService != null && m_audioConfig != null)
             {
-                m_audioService.PlaySFX(m_audioConfig.cashRegisterSFX);
+                AudioService.PlaySFX(m_audioConfig.cashRegisterSFX);
             }
 
             OnBuyRequested?.Invoke(item);

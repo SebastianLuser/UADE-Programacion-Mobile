@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using Services;
 using Services.MicroServices.AudioService;
@@ -35,13 +36,12 @@ public class PlayerCollector : MonoBehaviour, ICollector
     private int _totalPoints = 0;
     private int _sessionCoinsCollected = 0;
     private int _sessionDiamondsCollected = 0;
-    private bool _canEscape = false;
+    private bool _canEscape;
     private int _currentHealth;
     private bool _isDead;
     private MainCharacter _mainCharacter;
     private PlayerTouchMovement _playerMovement;
-    private IAudioService m_audioService;
-    private AudioConfig m_audioConfig;
+    private static AudioService AudioService => AudioService.Instance;
     private bool _isHeartbeatPlaying = false;
     
     /// <summary>
@@ -50,17 +50,11 @@ public class PlayerCollector : MonoBehaviour, ICollector
     public int TotalPoints => _totalPoints;
     public int SessionCoins => _sessionCoinsCollected;
     public int SessionDiamonds => _sessionDiamondsCollected;
-
-    /// <summary>
-    /// Whether player can escape (read-only)
-    /// </summary>
-    public bool CanEscape => _canEscape;
+    
+    public event Action<bool> OnChangeCanEscape;
     
     void Start()
     {
-        m_audioService = ServiceLocator.Get<IAudioService>();
-        m_audioConfig = (m_audioService as AudioService)?.Config;
-        
         _mainCharacter = GetComponent<MainCharacter>();
         _playerMovement = GetComponent<PlayerTouchMovement>();
         _isDead = false;
@@ -80,7 +74,7 @@ public class PlayerCollector : MonoBehaviour, ICollector
         UpdateHealthBar();
         UpdatePointsDisplay();
         
-        m_audioService.PlayMusic(m_audioConfig.gameplayBackground);
+        AudioService.PlayMusic(AudioService.GetConfig().gameplayBackground);
     }
 
     /// <summary>
@@ -99,7 +93,8 @@ public class PlayerCollector : MonoBehaviour, ICollector
         if (!_canEscape && _totalPoints >= escapeThreshold)
         {
             _canEscape = true;
-            m_audioService.PlaySFX(m_audioConfig.canEscapeSFX);
+            OnChangeCanEscape?.Invoke(_canEscape);
+            AudioService.PlaySFX(AudioService.GetConfig().canEscapeSFX);
 
             if (UGS_Analytics.Instance != null)
             {
@@ -154,7 +149,7 @@ public class PlayerCollector : MonoBehaviour, ICollector
         if (collectable != null)
         {
             collectable.Collect(this);
-            m_audioService.PlaySFX(m_audioConfig.collectItemSFX);
+            AudioService.PlaySFX(AudioService.GetConfig().collectItemSFX);
         }
     }
 
@@ -169,16 +164,16 @@ public class PlayerCollector : MonoBehaviour, ICollector
 
         if (_currentHealth < previousHealth)
         {
-            m_audioService.PlaySFX(m_audioConfig.maleHurtSFX);
+            AudioService.PlaySFX(AudioService.GetConfig().maleHurtSFX);
         }
 
         // Control heartbeat sound when health is low (below 30%)
         float healthPercentage = (float)_currentHealth / maxHealth;
         if (healthPercentage < 0.3f && healthPercentage > 0f)
         {
-            if (!_isHeartbeatPlaying && heartbeatAudioSource != null && m_audioConfig != null)
+            if (!_isHeartbeatPlaying && heartbeatAudioSource != null)
             {
-                heartbeatAudioSource.clip = m_audioConfig.heartBeatingSFX;
+                heartbeatAudioSource.clip = AudioService.GetConfig().heartBeatingSFX;
                 heartbeatAudioSource.loop = true;
                 heartbeatAudioSource.Play();
                 _isHeartbeatPlaying = true;
@@ -233,7 +228,7 @@ public class PlayerCollector : MonoBehaviour, ICollector
             _isHeartbeatPlaying = false;
         }
 
-        m_audioService.PlaySFX(m_audioConfig.maleDeathSFX);
+        AudioService.PlaySFX(AudioService.GetConfig().maleDeathSFX);
 
         if (UGS_Analytics.Instance != null)
         {

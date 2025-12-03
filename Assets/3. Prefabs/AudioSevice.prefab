@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6f64ba7f61f4175aa83030a72ec4b9c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Services.MicroServices.AudioService.AudioService
-  Config: {fileID: 11400000, guid: 06d8a1f9f6a59cb41a6d0584a92ad58a, type: 2}
+  config: {fileID: 11400000, guid: 06d8a1f9f6a59cb41a6d0584a92ad58a, type: 2}
   m_musicSource: {fileID: 3790146679683170114}
   m_sfxSource: {fileID: 6460388774891146806}
 --- !u!82 &3790146679683170114
