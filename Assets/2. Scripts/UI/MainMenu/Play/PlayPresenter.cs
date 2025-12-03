@@ -2,7 +2,6 @@ using Services;
 using Services.MicroServices.GameStateService;
 using UnityEngine.Assertions;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace _2._Scripts.UI.MainMenu.Play
 {
@@ -10,6 +9,8 @@ namespace _2._Scripts.UI.MainMenu.Play
     {
         [SerializeField] private string mainUIName = "Main";
         [SerializeField] private string gameplaySceneName = "DemoProto";
+        [SerializeField] private string gameplaySceneNameAlt = "Gameplay2";
+        [SerializeField] private string loadingSceneName = "Loading";
         
         private IGameStateService m_gameStateService;
         private PlayView m_playView;
@@ -27,6 +28,7 @@ namespace _2._Scripts.UI.MainMenu.Play
         {
             base.Show();
             m_playView.OnStartClicked += OnStartClickedHandler;
+            m_playView.OnStartAltClicked += OnStartAltClickedHandler;
             m_playView.OnBackClicked += OnBackClickedHandler;
         }
 
@@ -34,6 +36,7 @@ namespace _2._Scripts.UI.MainMenu.Play
         {
             base.Hide();
             m_playView.OnStartClicked -= OnStartClickedHandler;
+            m_playView.OnStartAltClicked -= OnStartAltClickedHandler;
             m_playView.OnBackClicked -= OnBackClickedHandler;
         }
 
@@ -41,14 +44,20 @@ namespace _2._Scripts.UI.MainMenu.Play
         {
             base.Shutdown();
             m_playView.OnStartClicked -= OnStartClickedHandler;
+            m_playView.OnStartAltClicked -= OnStartAltClickedHandler;
             m_playView.OnBackClicked -= OnBackClickedHandler;
         }
 
         private void OnStartClickedHandler()
         {
             m_gameStateService?.ChangeState(GameState.Playing);
-            //SceneManager.LoadScene(gameplaySceneName);
-            SceneLoadManager.LoadWithLoading("Gameplay", "Loading");
+            SceneLoadManager.LoadWithLoading(gameplaySceneName, loadingSceneName);
+        }
+
+        private void OnStartAltClickedHandler()
+        {
+            m_gameStateService?.ChangeState(GameState.Playing);
+            SceneLoadManager.LoadWithLoading(gameplaySceneNameAlt, loadingSceneName);
         }
         
         private void OnBackClickedHandler()
