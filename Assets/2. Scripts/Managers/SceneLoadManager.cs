@@ -16,7 +16,7 @@ public class SceneLoadManager : MonoBehaviour
 
     public static void LoadWithLoading(string gameplayScene, string loadingScene)
     {
-        if (Instance == null)
+        if (!Instance)
         {
             var go = new GameObject("~SceneLoadController");
             Instance = go.AddComponent<SceneLoadManager>();
@@ -28,16 +28,20 @@ public class SceneLoadManager : MonoBehaviour
     IEnumerator Flow(string gameplayScene, string loadingScene)
     {
         var loadLoading = SceneManager.LoadSceneAsync(loadingScene, LoadSceneMode.Single);
-        while (!loadLoading.isDone) yield return null;
+        
+        while (!loadLoading.isDone) 
+            yield return null;
         
         var shownAt = Time.realtimeSinceStartup;
+
+        while (!LoadingUI.Instance)
+            yield return null;
         
-        var ui = FindObjectOfType<LoadingUI>(true);
-        if (ui)
+        if (LoadingUI.Instance)
         {
-            ui.gameObject.SetActive(true);
-            ui.ShowImmediate();
-            ui.SetProgress(0f);
+            LoadingUI.Instance.gameObject.SetActive(true);
+            LoadingUI.Instance.ShowImmediate();
+            LoadingUI.Instance.SetProgress(0f);
         }
         
         var op = SceneManager.LoadSceneAsync(gameplayScene, LoadSceneMode.Additive);
@@ -45,10 +49,10 @@ public class SceneLoadManager : MonoBehaviour
 
         while (op.progress < 0.9f)
         {
-            if (ui) ui.SetProgress(Mathf.Clamp01(op.progress / 0.9f));
+            if (LoadingUI.Instance) LoadingUI.Instance.SetProgress(Mathf.Clamp01(op.progress / 0.9f));
             yield return null;
         }
-        if (ui) ui.SetProgress(1f);
+        if (LoadingUI.Instance) LoadingUI.Instance.SetProgress(1f);
         
         float elapsed = Time.realtimeSinceStartup - shownAt;
         if (elapsed < MinLoadingSeconds)

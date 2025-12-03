@@ -16,7 +16,7 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter, IDamageable
     public float CurrentHealth => currentHealth;
     public float MaxHealth => characterData != null ? characterData.maxHealth : 100f;
     
-    protected virtual void Awake()
+    private void Awake()
     {
         Assert.IsNotNull(characterData);
         Initialize();
@@ -58,7 +58,7 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter, IDamageable
         gameObject.SetActive(false);
     }
     
-    protected bool CanShoot()
+    public virtual bool CanShoot()
     {
         return Time.time >= lastShootTime +  characterData.shootCooldown;
     }
