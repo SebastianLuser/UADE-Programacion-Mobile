@@ -13,6 +13,9 @@ public class AllyGuardLostCondition : StateCondition
             if (target == null) return true;
             if (!target.IsAlive) return true;
 
+            if (ally.IsGuardInAttackRange()) return false;
+            if (Time.time - ally.LastTimeSawGuard <= ally.LoseGuardDelay) return false;
+
             return !ally.CanSeeGuard(target);
         }
 

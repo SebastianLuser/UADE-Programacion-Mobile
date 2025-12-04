@@ -8,17 +8,11 @@ using ScriptableObjects.Bullets;
 using Services.MicroServices.PoolObjectsService;
 using System.Collections.Generic;
 
-/// <summary>
-/// Ally character that follows the player and attacks Guards.
-/// Inherits only from BaseCharacter for independence from Guard implementation.
-/// Uses IUpdateListener for consistent update system integration.
-/// </summary>
 public class Ally : BaseCharacter, IUseFsm, IUpdateListener
 {
     [Header("Ally Configuration")]
     [SerializeField] private AllyDataSO allyData;
 
-    // Auto-detected by 'Player' tag
     private Transform playerToFollow;
 
     [Header("Guard Detection")]
@@ -26,7 +20,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private string guardTag = "Guard";
 
     [Tooltip("Layer mask for Guard detection")]
-    [SerializeField] private LayerMask guardLayerMask = 1 << 7; // Layer 7 = Enemies
+    [SerializeField] private LayerMask guardLayerMask = 1 << 7;
 
     [Header("State Machine Configuration")]
     [SerializeField] private List<StateData> stateDataList = new List<StateData>();
@@ -77,6 +71,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private ObstacleAvoidance obstacleAvoidance;
     private FlockingSystem.FlockingEntity flockingEntity;
     private Vector3 lastKnownGuardPosition;
+    private float lastTimeSawGuard = Mathf.NegativeInfinity;
+    [SerializeField] private float loseGuardDelay = 0.6f;
     private Vector3 coverPoint;
     private bool hasCoverPoint;
     private Collider lastCoverCollider;
@@ -98,7 +94,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private Vector3 leaderOverrideTarget;
     private float leaderOverrideExpiresAt;
     private string leaderOverrideRole;
-    private UnityEngine.Object leaderOverrideOwner;
+    private Object leaderOverrideOwner;
     private int leaderOverridePriority;
     [SerializeField] private bool showStateLabel = true;
 
@@ -211,6 +207,11 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         if (!isAlive) return;
 
         UpdatePlayerVelocity();
+
+        if (currentTarget != null && CanSeeGuard(currentTarget))
+        {
+            lastTimeSawGuard = Time.time;
+        }
 
         if (HandleLeaderOverride())
         {
@@ -386,26 +387,32 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         if (nearest != null)
         {
             lastKnownGuardPosition = nearest.transform.position;
+            lastTimeSawGuard = Time.time;
         }
         return nearest;
     }
-
-    public bool TryAcquireGuardTarget()
-    {
-        return AcquireGuardTarget() != null;
-    }
-
+    
     public bool CanSeeGuard(Guard guard)
     {
         if (guard == null) return false;
 
         if (playerDetector != null)
         {
-            return playerDetector.CanSeePlayer(guard.transform);
+            bool canSee = playerDetector.CanSeePlayer(guard.transform);
+            if (canSee)
+            {
+                lastTimeSawGuard = Time.time;
+            }
+            return canSee;
         }
 
         float distance = Vector3.Distance(transform.position, guard.transform.position);
-        return distance <= detectionRange;
+        bool inRange = distance <= detectionRange;
+        if (inRange)
+        {
+            lastTimeSawGuard = Time.time;
+        }
+        return inRange;
     }
 
     public bool IsGuardInAttackRange()
@@ -477,9 +484,10 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public Vector3 InvestigationTarget => investigationTarget;
     public bool InvestigationComplete => investigationComplete;
     public bool InvestigationAtLocation => investigationAtLocation;
-    public float InvestigationRotateSpeed => investigationRotateSpeed;
     public float InvestigationMoveSpeedFactor => investigationMoveSpeedFactor;
     public float InvestigationArrivalTolerance => investigationArrivalTolerance;
+    public float LastTimeSawGuard => lastTimeSawGuard;
+    public float LoseGuardDelay => loseGuardDelay;
     public float SearchDuration => searchDuration;
 
     public void BeginInvestigation(Vector3 targetPosition)
@@ -564,8 +572,6 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public float CoverProbeDistance => coverProbeDistance;
     public float CoverRepositionCooldown => coverRepositionCooldown;
     public float CoverArrivalTolerance => coverArrivalTolerance;
-    public Collider LastCoverCollider => lastCoverCollider;
-
     public void SetCoverPoint(Vector3 point)
     {
         coverPoint = point;
@@ -831,7 +837,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     /// <summary>
     /// Clear the current leader override, returning to normal behavior.
     /// </summary>
-    public void ClearLeaderOverride(UnityEngine.Object requester = null, bool force = false)
+    public void ClearLeaderOverride(Object requester = null, bool force = false)
     {
         if (leaderOverrideOwner != null && requester != null && requester != leaderOverrideOwner && !force)
         {
@@ -950,23 +956,14 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public Guard GetCurrentTarget() => currentTarget;
     public Transform GetPlayerToFollow() => playerToFollow;
     public void SetPlayerToFollow(Transform player) => playerToFollow = player;
-    public Vector3 CurrentVelocity => velocity;
     public float AttackRange => attackRange;
-    public float FollowDistance => followDistance;
     public float FollowSpeed => followSpeed;
-    public float ChaseSpeed => chaseSpeed;
-    public float DetectionRange => detectionRange;
-    public float MaxSpeed => maxSpeed;
-    public float MaxForce => maxForce;
-    public float Mass => mass;
-    public float SlowingDistance => slowingDistance;
     public LayerMask ObstaclesMask => obstaclesMask;
     public float StateTimer
     {
         get => stateTimer;
         set => stateTimer = value;
     }
-    public string CurrentStateName => stateMachine?.GetCurrentState()?.State?.StateName ?? "None";
     public bool LeaderOverrideActive => leaderOverrideActive;
 
     #endregion

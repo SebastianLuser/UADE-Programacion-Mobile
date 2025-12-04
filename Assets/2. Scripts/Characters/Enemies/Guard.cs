@@ -28,8 +28,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private BulletData bulletData;
 
     [Header("Targeting")]
-    [SerializeField] protected string[] targetTags = new[] { "Player" };
-    [SerializeField] protected LayerMask targetLayerMask = ~0;
+    [SerializeField] protected string[] targetTags = new[] { "Player", "Ally" };
 
     [Header("FSM Patrol Settings")]
     [SerializeField] private int loopsToIdle = 3;
@@ -94,10 +93,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField, Range(0f, 1f)] private float recoveredHealthThreshold = 0.8f;
     
     private Transform player;
+    private BaseCharacter targetCharacter;
     private Vector3 lastKnownPlayerPosition;
     private int currentPatrolIndex;
     private float stateTimer;
-    private bool isActivelyPatrolling = false;  // Track patrol state independently
+    private bool isActivelyPatrolling;  // Track patrol state independently
 
     // FSM patrol tracking
     private int currentPatrolLoops = 0;
@@ -149,12 +149,10 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private int leaderOverridePriority;
     
     // Callbacks
-    public System.Action OnMovementComplete { get; set; }
-    public System.Action OnMovementBlocked { get; set; }
+    public Action OnMovementComplete { get; set; }
+    public Action OnMovementBlocked { get; set; }
     
-    public float DetectionRange => detectionRange;
     public float AttackRange => attackRange;
-    public float FieldOfView => fieldOfView;
     public float PatrolSpeed => patrolSpeed;
     public float ChaseSpeed => chaseSpeed;
     public float IdleTime => idleTime;
@@ -200,14 +198,10 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public bool IsActive => isAlive && gameObject.activeInHierarchy;
     
     // AI System access
-    public AIContext AIContext => aiContext;
     public IBlackboardService BlackboardService => m_blackboardService;
-    public AIPersonalityType PersonalityType => personalityType;
 
     // Steering Physics access
-    public float Mass => mass;
     public float MaxForce => maxForce;
-    public float MaxSpeed => maxSpeed;
     public float SlowingDistance => slowingDistance;
     public Vector3 CurrentVelocity => _vel;
     public LayerMask ObstaclesMask => obstaclesMask;
@@ -245,9 +239,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         set => investigationTarget = value;
     }
     public bool TookDamageRecently(float window) => Time.time - lastDamageTime <= window;
-    public bool IsSmokeActive => smokeInstance != null && Time.time < smokeEndTime;
     public bool LeaderOverrideActive => leaderOverrideActive;
-    public UnityEngine.Object LeaderOverrideOwner => leaderOverrideOwner;
 
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
 
@@ -560,11 +552,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         }
     }
     
-    public void OnUpdate(float deltaTime)
-    {
-        
-    }
-    
     private void UpdateMovementSystem(float deltaTime)
     {
         // Only log movement system updates when there are issues or state changes
@@ -654,13 +641,17 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             MyLogger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Movement constrained at position {transform.position}");
             currentMovementStatus = MovementStatus.Constrained;
             OnMovementBlocked?.Invoke();
-            return;
         }
     }
     
     private void UpdateAISystem()
     {
-        bool hasPlayer = player != null;
+        if (!HasValidTarget())
+        {
+            ClearTargetTransform();
+        }
+
+        bool hasPlayer = HasValidTarget();
         bool canSeePlayerNow = hasPlayer && CanSeePlayer();
 
         if (canSeePlayerNow)
@@ -766,17 +757,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         
         MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Patrol started successfully");
     }
-    
-    public void StopPatrol()
-    {
-        if (isActivelyPatrolling)
-        {
-            isActivelyPatrolling = false;
-            currentMovementStatus = MovementStatus.Idle;
-            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Patrol stopped");
-        }
-    }
-    
     
     #region Steering Physics
 
@@ -926,32 +906,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         // Fallback heuristic: flock while patrolling or when seeing player (group chase)
         return isActivelyPatrolling || CanSeePlayer();
     }
-
-    /// <summary>
-    /// Configure steering physics parameters at runtime
-    /// </summary>
-    public void ConfigureSteering(float newMass, float newMaxForce, float newMaxSpeed, float newSlowingDistance)
-    {
-        mass = newMass;
-        maxForce = newMaxForce;
-        maxSpeed = newMaxSpeed;
-        slowingDistance = newSlowingDistance;
-    }
-
-    /// <summary>
-    /// Configure obstacle avoidance parameters at runtime
-    /// </summary>
-    public void ConfigureObstacleAvoidance(float radius, float angle, float p_personalArea, LayerMask obstacleMask)
-    {
-        avoidRadius = radius;
-        avoidAngle = angle;
-        personalArea = p_personalArea;
-        obstaclesMask = obstacleMask;
-
-        // Recreate obstacle avoidance with new parameters
-        obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, p_personalArea, obstaclesMask);
-    }
-
+    
     #endregion
 
     public override void Move(Vector3 direction)
@@ -974,6 +929,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     public override void Shoot(Vector3 direction)
     {
+        if (!HasValidTarget()) return;
         if (!isAlive || !CanShoot()) return;
         
         lastShootTime = Time.time;
@@ -1017,6 +973,13 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public void SetTargetTransform(Transform p_target)
     {
         player = p_target;
+        targetCharacter = p_target != null ? p_target.GetComponentInParent<BaseCharacter>() : null;
+
+        if (!HasValidTarget())
+        {
+            ClearTargetTransform();
+            return;
+        }
         
         // Update AI system when target changes
         if (enableNewAISystem && m_blackboardService != null && player != null)
@@ -1030,53 +993,35 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         return player;
     }
+
+    private bool HasValidTarget()
+    {
+        if (player != null && targetCharacter == null)
+        {
+            targetCharacter = player.GetComponentInParent<BaseCharacter>();
+        }
+
+        if (player == null) return false;
+        if (!player.gameObject.activeInHierarchy) return false;
+        if (targetCharacter != null && !targetCharacter.IsAlive) return false;
+        return true;
+    }
+
+    private void ClearTargetTransform()
+    {
+        player = null;
+        targetCharacter = null;
+
+        if (enableNewAISystem && m_blackboardService != null)
+        {
+            m_blackboardService.SetValue<Transform>(BlackboardKeys.PLAYER_TRANSFORM, null);
+            m_blackboardService.SetValue<Vector3>(BlackboardKeys.PLAYER_POSITION, Vector3.zero);
+        }
+    }
     
     #endregion
     
     #region IAIMovementController Implementation
-    
-    public Vector3 GetCurrentVelocity()
-    {
-        return _vel;
-    }
-    
-    public Vector3 GetCurrentDirection()
-    {
-        return currentMovementDirection;
-    }
-    
-    public float GetCurrentSpeed()
-    {
-        return currentMovementSpeed;
-    }
-    
-    public bool IsMoving()
-    {
-        return currentMovementSpeed > 0.1f && !isMovementPaused;
-    }
-    
-    public void SetMovementSpeed(float speed)
-    {
-        currentMovementSpeed = speed;
-    }
-    
-    public void SetMovementDirection(Vector3 direction)
-    {
-        currentMovementDirection = direction.normalized;
-    }
-    
-    public void StopMovement()
-    {
-        currentMovementDirection = Vector3.zero;
-        currentMovementSpeed = 0f;
-        currentMovementStatus = MovementStatus.Idle;
-        currentDestination = transform.position;
-    }
-    
-    public float GetMaxSpeed()
-    {
-        return characterData.moveSpeed;
-    }
     
     public bool CanMove()
     {
@@ -1128,42 +1073,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: MoveTo using steering - Destination: {currentDestination}, Status: {currentMovementStatus}");
     }
     
-    public void Flee(Vector3 fromPosition, float speed)
-    {
-        if (!CanMove()) return;
-
-        currentMovementSpeed = speed;
-        currentMovementStatus = MovementStatus.Fleeing;
-
-        // Use steering behavior for fleeing
-        Vector3 steering = Steering.Flee(transform.position, fromPosition, _vel, speed);
-        ApplySteering(steering);
-
-        // Set destination for debugging/tracking purposes
-        Vector3 fleeDirection = (transform.position - fromPosition).normalized;
-        currentDestination = transform.position + fleeDirection * 10f;
-    }
-    
-    public void Patrol(Transform[] waypoints, float speed)
-    {
-        if (!CanMove() || waypoints == null || waypoints.Length == 0) return;
-        
-        patrolPoints = waypoints;
-        currentMovementSpeed = speed;
-        currentMovementStatus = MovementStatus.Patrolling;
-        
-        // Move to current patrol point
-        if (currentPatrolIndex < patrolPoints.Length)
-        {
-            MoveTo(patrolPoints[currentPatrolIndex].position, speed);
-        }
-    }
-    
-    public void Stop()
-    {
-        StopMovement();
-    }
-    
     public bool HasReachedDestination()
     {
         if (currentMovementStatus == MovementStatus.Idle) 
@@ -1196,50 +1105,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         return reached;
     }
     
-    public void SetSteeringTarget(Transform target)
-    {
-        steeringTarget = target;
-        currentMovementStatus = MovementStatus.Following;
-    }
-    
-    public void SetMovementMode(MovementMode mode)
-    {
-        currentMovementMode = mode;
-        
-        // Adjust speed based on mode
-        float speedMultiplier = mode switch
-        {
-            MovementMode.Sneak => 0.5f,
-            MovementMode.Walk => 1f,
-            MovementMode.Run => 1.5f,
-            MovementMode.Sprint => 2f,
-            _ => 1f
-        };
-        
-        currentMovementSpeed = GetContextualSpeed() * speedMultiplier;
-    }
-    
-    public void SetMovementConstraints(Bounds allowedArea)
-    {
-        movementConstraints = allowedArea;
-        hasMovementConstraints = true;
-    }
-    
-    public void ClearMovementConstraints()
-    {
-        hasMovementConstraints = false;
-    }
-    
-    public MovementStatus GetMovementStatus()
-    {
-        return currentMovementStatus;
-    }
-    
-    public Vector3 GetCurrentDestination()
-    {
-        return currentDestination;
-    }
-    
     public void FaceDirection(Vector3 direction, float rotationSpeed = -1f)
     {
         if (!CanMove()) return;
@@ -1252,18 +1117,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         }
     }
     
-    public void PauseMovement()
-    {
-        isMovementPaused = true;
-    }
-    
-    public void ResumeMovement()
-    {
-        isMovementPaused = false;
-    }
-    
-    public bool IsMovementPaused => isMovementPaused;
-    
     #endregion
     
     #region MEJORA: Advanced AI Methods
@@ -1273,6 +1126,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public float GetThreatLevel()
     {
+        if (!HasValidTarget()) return 0f;
+
         if (aiContext != null)
         {
             return aiContext.GetThreatLevel();
@@ -1322,6 +1177,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public bool ShouldAttack()
     {
+        if (!HasValidTarget()) return false;
+
         var detectionResult = GetDetectionResult();
         float distance = Vector3.Distance(transform.position, player.position);
 
@@ -1342,7 +1199,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public void PursuePlayer()
     {
-        if (player == null) return;
+        if (!HasValidTarget()) return;
 
         Vector3 playerVel = Vector3.zero;
         var playerRb = player.GetComponent<Rigidbody>();
@@ -1363,7 +1220,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public void EvadePlayer()
     {
-        if (player == null) return;
+        if (!HasValidTarget()) return;
 
         Vector3 playerVel = Vector3.zero;
         var playerRb = player.GetComponent<Rigidbody>();
@@ -1615,57 +1472,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     #region Configuration Methods for Subclasses and External Systems
 
     /// <summary>
-    /// Configure FSM usage. Protected for subclasses like Ally to disable FSM.
-    /// </summary>
-    protected void SetUseFSM(bool value)
-    {
-        useFSM = value;
-    }
-
-    /// <summary>
-    /// Configure flocking parameters. Protected for subclasses like Ally.
-    /// </summary>
-    protected void SetFlockingConfiguration(bool useFlockingValue, float baseWeight, float flockWeight)
-    {
-        useFlocking = useFlockingValue;
-        baseForceWeight = baseWeight;
-        flockForceWeight = flockWeight;
-    }
-
-    /// <summary>
-    /// Configure AI personality type. Protected for subclasses.
-    /// </summary>
-    protected void SetPersonalityType(AIPersonalityType personality)
-    {
-        personalityType = personality;
-        if (aiContext != null)
-        {
-            aiContext.SetPersonalityType(personality);
-        }
-    }
-
-    /// <summary>
     /// Set patrol points for this guard. Public because it's used by external spawners.
     /// </summary>
     public void SetPatrolPoints(Transform[] points)
     {
         patrolPoints = points;
-    }
-
-    /// <summary>
-    /// Configure player detector settings. Protected for subclasses like Ally to detect Guards instead of Player.
-    /// </summary>
-    protected void ConfigurePlayerDetector(string targetTag, LayerMask targetLayerMask)
-    {
-        if (playerDetector != null)
-        {
-            var detectorType = playerDetector.GetType();
-            var tagField = detectorType.GetField("playerTag", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var layerField = detectorType.GetField("playerLayerMask", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            tagField?.SetValue(playerDetector, targetTag);
-            layerField?.SetValue(playerDetector, targetLayerMask);
-        }
     }
 
     #endregion
@@ -1730,6 +1541,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public void MyUpdate()
     {
         if (!isAlive) return;
+
+        if (!HasValidTarget())
+        {
+            ClearTargetTransform();
+        }
 
         // Add debug log with reduced frequency to avoid spam
         if (Time.frameCount % 60 == 0) // Log every 60 frames (about once per second at 60fps)
