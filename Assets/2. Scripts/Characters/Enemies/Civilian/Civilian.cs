@@ -110,7 +110,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
     private Material originalMaterial;
     private Color originalColor;
     private CivilianDecisionTreeRunner decisionTreeRunner;
-    private IAudioService m_audioService;
+    private AudioService m_audioService;
     private AudioConfig m_audioConfig;
 
     // Steering components (identical to Guard)
@@ -225,8 +225,9 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
 
     private void InitializeComponents()
     {
-        m_audioService = ServiceLocator.Get<IAudioService>();
-        m_audioConfig = (m_audioService as AudioService)?.Config;
+        // Audio now lives as a singleton MonoBehaviour instead of a registered service
+        m_audioService = AudioService.Instance;
+        m_audioConfig = m_audioService?.GetConfig();
 
         // Get or add PlayerDetector
         playerDetector = GetComponent<IPlayerDetector>();

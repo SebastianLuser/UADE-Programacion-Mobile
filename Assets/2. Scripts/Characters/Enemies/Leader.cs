@@ -4,10 +4,6 @@ using Services;
 using Services.MicroServices.BlackboardService;
 using UnityEngine;
 
-/// <summary>
-/// Leader inherits Guard to keep combat/patrol behavior,
-/// and adds a second FSM for coordination/orchestration.
-/// </summary>
 public class Leader : Guard
 {
     [Header("Leader FSM")]
@@ -33,6 +29,9 @@ public class Leader : Guard
     [SerializeField] private float coverFireDuration = 4f;
     [SerializeField] private float coverFireFireRate = 0.25f;
     [SerializeField] private float coverFireDistanceThreshold = 3f;
+    [Header("Debug")]
+    [SerializeField] private bool showLeaderStateLabel = true;
+    protected string LeaderStateName => leaderStateMachine?.GetCurrentState()?.State?.StateName ?? "None";
 
     private StateMachine leaderStateMachine;
     private IBlackboardService blackboard;
@@ -211,17 +210,68 @@ public class Leader : Guard
         }
     }
 
+    public virtual void ResetLeaderFromPool()
+    {
+        ClearAllOverrides();
+        hasPendingRequest = false;
+        pendingRequestPos = Vector3.zero;
+        pendingPlayerPos = Vector3.zero;
+        lastHoldCenter = Vector3.zero;
+        holdEndTime = 0f;
+        leaderStateTimer = 0f;
+        nextTargetScanTime = 0f;
+        leaderStateMachine?.ResetStateMachine();
+    }
+    
+    public void SetManagedGuards(List<Guard> guards)
+    {
+        managedGuards = guards ?? new List<Guard>();
+        Debug.Log($"[Leader] {name} assigned {managedGuards.Count} Guards");
+    }
+
     private void EnsurePlayerTarget()
     {
         if (Player != null) return;
         if (Time.time < nextTargetScanTime) return;
         nextTargetScanTime = Time.time + targetRescanInterval;
 
-        var playerGO = GameObject.FindGameObjectWithTag("Player");
-        if (playerGO != null)
+        GameObject closest = null;
+        float minDist = float.MaxValue;
+
+        foreach (var tag in targetTags)
         {
-            SetTargetTransform(playerGO.transform);
-            MyLogger.LogInfo($"[Leader] Player target assigned automatically: {playerGO.name}");
+            if (string.IsNullOrEmpty(tag)) continue;
+            GameObject[] candidates = GameObject.FindGameObjectsWithTag(tag);
+            if (candidates == null) continue;
+
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                float d = Vector3.Distance(transform.position, candidates[i].transform.position);
+                if (d < minDist)
+                {
+                    minDist = d;
+                    closest = candidates[i];
+                }
+            }
+        }
+
+        if (closest != null)
+        {
+            SetTargetTransform(closest.transform);
         }
     }
+
+#if UNITY_EDITOR
+    protected override void OnDrawGizmosSelected()
+    {
+        base.OnDrawGizmosSelected();
+
+        if (!showLeaderStateLabel) return;
+
+        string guardState = CurrentStateName;
+        string leaderState = LeaderStateName;
+        FsmGizmoHelper.DrawStateLabel(transform, $"Guard:{guardState} | Leader:{leaderState}", Color.yellow, 3f);
+    }
+#endif
+
 }

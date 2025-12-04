@@ -16,7 +16,7 @@ public abstract class BaseCharacter : MonoBehaviour, ICharacter, IDamageable
     public float CurrentHealth => currentHealth;
     public float MaxHealth => characterData != null ? characterData.maxHealth : 100f;
     
-    private void Awake()
+    protected virtual void Awake()
     {
         Assert.IsNotNull(characterData);
         Initialize();

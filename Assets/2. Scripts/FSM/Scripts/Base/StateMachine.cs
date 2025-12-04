@@ -126,6 +126,24 @@ namespace Scripts.FSM.Base.StateMachine
         public void AddState(StateData p_data) => m_allStatesData.Add(p_data);
         
         /// <summary>
+        /// Reset the FSM to its initial state (first element) and re-enter it.
+        /// </summary>
+        public void ResetStateMachine()
+        {
+            if (m_allStatesData == null || m_allStatesData.Count == 0 || m_model == null)
+                return;
+
+            if (m_currentState != null)
+            {
+                m_currentState.State.ExitState(m_model);
+            }
+
+            m_currentState = m_allStatesData[0];
+            m_currentState.State.EnterState(m_model);
+            m_currentStateConditionsAmount = m_currentState.StateConditions.Count;
+        }
+        
+        /// <summary>
         /// Change state by state name (for external requests like Decision Tree)
         /// </summary>
         /// <param name="stateName">Name of the state to change to</param>
