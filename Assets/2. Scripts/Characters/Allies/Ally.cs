@@ -73,6 +73,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private Vector3 lastKnownGuardPosition;
     private float lastTimeSawGuard = Mathf.NegativeInfinity;
     [SerializeField] private float loseGuardDelay = 0.6f;
+    [SerializeField] private float coverReenterCooldown = 1.5f;
+    private float lastTimeTookCover = Mathf.NegativeInfinity;
     private Vector3 coverPoint;
     private bool hasCoverPoint;
     private Collider lastCoverCollider;
@@ -488,6 +490,12 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public float InvestigationArrivalTolerance => investigationArrivalTolerance;
     public float LastTimeSawGuard => lastTimeSawGuard;
     public float LoseGuardDelay => loseGuardDelay;
+    public float CoverReenterCooldown => coverReenterCooldown;
+    public float LastTimeTookCover
+    {
+        get => lastTimeTookCover;
+        set => lastTimeTookCover = value;
+    }
     public float SearchDuration => searchDuration;
 
     public void BeginInvestigation(Vector3 targetPosition)

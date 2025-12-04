@@ -6,6 +6,7 @@ using UnityEngine;
 public class AllyNeedsCoverCondition : StateCondition
 {
     [SerializeField, Range(0f, 1f)] private float healthThreshold = 0.35f;
+    [SerializeField] private float minTimeBetweenCovers = 1.0f;
 
     public override bool CompleteCondition(IUseFsm p_model)
     {
@@ -14,7 +15,12 @@ public class AllyNeedsCoverCondition : StateCondition
             float maxHealth = Mathf.Max(ally.MaxHealth, 0.01f);
             float healthPercent = ally.CurrentHealth / maxHealth;
 
-            return healthPercent <= healthThreshold && ally.GetCurrentTarget() != null;
+            if (healthPercent > healthThreshold) return false;
+            if (ally.GetCurrentTarget() == null) return false;
+            if (Time.time - ally.LastTimeTookCover < Mathf.Max(minTimeBetweenCovers, ally.CoverReenterCooldown))
+                return false;
+
+            return true;
         }
 
         return false;

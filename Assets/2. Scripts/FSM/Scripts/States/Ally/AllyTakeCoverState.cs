@@ -23,6 +23,7 @@ namespace Scripts.FSM.Base.StateMachine
                 ally.StateTimer = 0f;
                 m_nextSuppressFireTime = 0f;
                 m_lastThreatPosition = Vector3.zero;
+                ally.LastTimeTookCover = Time.time;
                 ally.ClearCoverPoint();
 
                 Vector3 threat = GetThreatPosition(ally);
