@@ -1675,6 +1675,13 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         if (!leaderOverrideActive)
             return false;
 
+        // Si vemos al jugador, liberamos la orden para volver a la FSM de combate
+        if (CanSeePlayer())
+        {
+            ClearLeaderOverride();
+            return false;
+        }
+
         if (Time.time >= leaderOverrideExpiresAt)
         {
             ClearLeaderOverride();
