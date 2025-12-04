@@ -4130,6 +4130,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 70ef33ffd413cf544a0c878655c3590a, type: 2}
   - {fileID: 11400000, guid: c87c0fd0f1eecbc4580b66c3606eb4a6, type: 2}
   useFSM: 1
+  followDistanceBuffer: 2
   investigationRotateSpeed: 180
   investigationMoveSpeedFactor: 0.7
   investigationArrivalTolerance: 1.2
