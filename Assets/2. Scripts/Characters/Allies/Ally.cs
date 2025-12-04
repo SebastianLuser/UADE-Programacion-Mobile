@@ -32,6 +32,19 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private List<StateData> stateDataList = new List<StateData>();
     [SerializeField] private bool useFSM = true;
 
+    [Header("Investigation / Search")]
+    [SerializeField] private float investigationRotateSpeed = 180f;
+    [SerializeField] private float investigationMoveSpeedFactor = 0.7f;
+    [SerializeField] private float investigationArrivalTolerance = 1.2f;
+    [SerializeField] private float searchDuration = 4f;
+
+    [Header("Cover Behavior")]
+    [SerializeField] private float coverProbeRadius = 0.9f;
+    [SerializeField] private float coverProbeDistance = 4f;
+    [SerializeField] private float coverOffsetFromObstacle = 1.25f;
+    [SerializeField] private float coverRepositionCooldown = 1.2f;
+    [SerializeField] private float coverArrivalTolerance = 0.9f;
+
     // Configuration from AllyDataSO
     private float followDistance;
     private float followSpeed;
@@ -61,6 +74,14 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private Vector3 playerVelocity;
     private ObstacleAvoidance obstacleAvoidance;
     private FlockingSystem.FlockingEntity flockingEntity;
+    private Vector3 lastKnownGuardPosition;
+    private Vector3 coverPoint;
+    private bool hasCoverPoint;
+    private Collider lastCoverCollider;
+    private Vector3 investigationTarget;
+    private bool investigationComplete;
+    private float investigationRotationRemaining;
+    private bool investigationAtLocation;
     [Header("AI Components (assign via Inspector if possible)")]
     [SerializeField] private AIContext aiContext;
     [SerializeField] private PlayerDetector playerDetectorComponent;
@@ -237,6 +258,12 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         stateTimer = 0f;
         isAlive = true;
         lastShootTime = 0f;
+        lastKnownGuardPosition = Vector3.zero;
+        ClearCoverPoint();
+        investigationTarget = Vector3.zero;
+        investigationComplete = false;
+        investigationAtLocation = false;
+        investigationRotationRemaining = 0f;
         stateMachine?.ResetStateMachine();
     }
 
@@ -287,6 +314,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     {
         if (target == null || !target.IsAlive) return;
 
+        lastKnownGuardPosition = target.transform.position;
         float distance = Vector3.Distance(transform.position, target.transform.position);
 
         // Movement: Pursue if far, brake if close
@@ -353,6 +381,10 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         }
 
         currentTarget = nearest;
+        if (nearest != null)
+        {
+            lastKnownGuardPosition = nearest.transform.position;
+        }
         return nearest;
     }
 
@@ -428,6 +460,126 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         
         tagField?.SetValue(playerDetector, guardTag);
         layerField?.SetValue(playerDetector, guardLayerMask);
+    }
+
+    #endregion
+
+    #region Investigation / Search Helpers
+
+    public Vector3 LastKnownGuardPosition
+    {
+        get => lastKnownGuardPosition;
+        set => lastKnownGuardPosition = value;
+    }
+
+    public Vector3 InvestigationTarget => investigationTarget;
+    public bool InvestigationComplete => investigationComplete;
+    public bool InvestigationAtLocation => investigationAtLocation;
+    public float InvestigationRotateSpeed => investigationRotateSpeed;
+    public float InvestigationMoveSpeedFactor => investigationMoveSpeedFactor;
+    public float InvestigationArrivalTolerance => investigationArrivalTolerance;
+    public float SearchDuration => searchDuration;
+
+    public void BeginInvestigation(Vector3 targetPosition)
+    {
+        investigationTarget = targetPosition;
+        investigationComplete = false;
+        investigationAtLocation = false;
+        investigationRotationRemaining = 360f;
+        stateTimer = 0f;
+        if (targetPosition != Vector3.zero)
+        {
+            lastKnownGuardPosition = targetPosition;
+        }
+    }
+
+    public void MarkInvestigationArrived()
+    {
+        investigationAtLocation = true;
+    }
+
+    public void CompleteInvestigation()
+    {
+        investigationComplete = true;
+        investigationAtLocation = false;
+        investigationRotationRemaining = 0f;
+    }
+
+    public void StepInvestigationScan()
+    {
+        if (investigationComplete) return;
+
+        float rotateAmount = investigationRotateSpeed * Time.deltaTime;
+        investigationRotationRemaining -= rotateAmount;
+
+        transform.Rotate(0f, rotateAmount, 0f);
+
+        if (investigationRotationRemaining <= 0f)
+        {
+            CompleteInvestigation();
+        }
+    }
+
+    public void MoveTowardsPoint(Vector3 target, float speed, float arrivalTolerance)
+    {
+        if (target == Vector3.zero) return;
+
+        Vector3 steering = Steering.Arrive(
+            transform.position,
+            target,
+            velocity,
+            speed,
+            slowingDistance);
+
+        float distance = Vector3.Distance(transform.position, target);
+        if (distance <= arrivalTolerance)
+        {
+            velocity = Vector3.zero;
+            return;
+        }
+
+        ApplySteering(steering);
+    }
+
+    public void StopMovement()
+    {
+        velocity = Vector3.zero;
+    }
+
+    public void FaceDirectionTowards(Vector3 direction)
+    {
+        FaceDirection(direction);
+    }
+
+    #endregion
+
+    #region Cover Helpers
+
+    public bool HasCoverPoint => hasCoverPoint;
+    public Vector3 CoverPoint => coverPoint;
+    public float CoverOffsetFromObstacle => coverOffsetFromObstacle;
+    public float CoverProbeRadius => coverProbeRadius;
+    public float CoverProbeDistance => coverProbeDistance;
+    public float CoverRepositionCooldown => coverRepositionCooldown;
+    public float CoverArrivalTolerance => coverArrivalTolerance;
+    public Collider LastCoverCollider => lastCoverCollider;
+
+    public void SetCoverPoint(Vector3 point)
+    {
+        coverPoint = point;
+        hasCoverPoint = true;
+    }
+
+    public void ClearCoverPoint()
+    {
+        hasCoverPoint = false;
+        coverPoint = Vector3.zero;
+        lastCoverCollider = null;
+    }
+
+    public void SetCoverDebug(Collider collider, Vector3 hitPoint, Vector3 hitNormal)
+    {
+        lastCoverCollider = collider;
     }
 
     #endregion
@@ -799,6 +951,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public float MaxForce => maxForce;
     public float Mass => mass;
     public float SlowingDistance => slowingDistance;
+    public LayerMask ObstaclesMask => obstaclesMask;
     public float StateTimer
     {
         get => stateTimer;

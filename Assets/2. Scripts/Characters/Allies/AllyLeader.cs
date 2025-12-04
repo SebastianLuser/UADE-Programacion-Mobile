@@ -17,6 +17,10 @@ public class AllyLeader : Ally
     [Header("Ally Leadership")] [Tooltip("Allies managed by this leader")] [SerializeField]
     private List<Ally> managedAllies = new List<Ally>();
 
+    [Header("Tactical Commands")]
+    [SerializeField] private float coverFireFireRate = 0.3f;
+    [SerializeField] private float holdPerimeterDuration = 8f;
+
     private IBlackboardService blackboard;
     private StateMachine leaderStateMachine;
     private float nextTacticsUpdateTime;
@@ -35,6 +39,8 @@ public class AllyLeader : Ally
     {
         leaderData = data;
     }
+    public float CoverFireFireRate => coverFireFireRate;
+    public float HoldPerimeterDuration => holdPerimeterDuration;
 
     protected override void Awake()
     {
@@ -246,6 +252,39 @@ public class AllyLeader : Ally
         }
 
         Debug.Log($"[AllyLeader] Regroup order issued to {l_validAllies} allies");
+    }
+
+    public void IssueHoldPerimeter(Vector3 center, string role = "HOLD")
+    {
+        if (managedAllies == null || managedAllies.Count == 0)
+        {
+            Debug.LogWarning("[AllyLeader] No allies to command in hold perimeter");
+            return;
+        }
+
+        int l_validAllies = 0;
+        for (int i = 0; i < managedAllies.Count; i++)
+        {
+            if (managedAllies[i] == null || !managedAllies[i].IsAlive) continue;
+
+            float l_angle = (360f / managedAllies.Count) * i * Mathf.Deg2Rad;
+            Vector3 l_offset = new Vector3(
+                Mathf.Cos(l_angle) * leaderData.DefensiveRadius,
+                0f,
+                Mathf.Sin(l_angle) * leaderData.DefensiveRadius
+            );
+
+            Vector3 l_pos = center + l_offset;
+            managedAllies[i].SetLeaderOverride(l_pos, holdPerimeterDuration, role, this, 2);
+            l_validAllies++;
+        }
+
+        if (l_validAllies > 0 && blackboard != null)
+        {
+            blackboard.SetValue("ALLY_LEADER_POSITION", center);
+        }
+
+        Debug.Log($"[AllyLeader] Issued hold perimeter to {l_validAllies} allies at {center}");
     }
 
     public void IssueAttackCommandOnTarget(Transform p_target)

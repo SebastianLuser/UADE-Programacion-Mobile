@@ -3925,7 +3925,7 @@ Transform:
   m_GameObject: {fileID: 7720983636413093424}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 23.01, y: 0.13, z: 10.389999}
+  m_LocalPosition: {x: 9.88568, y: 1.1005999, z: 12.67028}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -4126,7 +4126,19 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7029e79b0fbd84b44967a68c06cc85c3, type: 2}
   - {fileID: 11400000, guid: e4024ef49519dd745b5954882a8367a8, type: 2}
   - {fileID: 11400000, guid: 5425c7367cd837245a8b547f1f04c94d, type: 2}
+  - {fileID: 11400000, guid: c7a9c75ed9cc413479e8f41b5277527f, type: 2}
+  - {fileID: 11400000, guid: 70ef33ffd413cf544a0c878655c3590a, type: 2}
+  - {fileID: 11400000, guid: c87c0fd0f1eecbc4580b66c3606eb4a6, type: 2}
   useFSM: 1
+  investigationRotateSpeed: 180
+  investigationMoveSpeedFactor: 0.7
+  investigationArrivalTolerance: 1.2
+  searchDuration: 4
+  coverProbeRadius: 0.9
+  coverProbeDistance: 4
+  coverOffsetFromObstacle: 1.25
+  coverRepositionCooldown: 1.2
+  coverArrivalTolerance: 0.9
   aiContext: {fileID: 2543485301521033733}
   playerDetectorComponent: {fileID: 1194437483627491595}
   showStateLabel: 1
