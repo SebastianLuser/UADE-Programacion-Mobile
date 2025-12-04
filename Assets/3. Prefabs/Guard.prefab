@@ -4019,6 +4019,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 07256c893c662c84d8bceee1c995bf7f, type: 2}
   - {fileID: 11400000, guid: 308719cd0c5e89c4c86feab25b7f4792, type: 2}
   - {fileID: 11400000, guid: 32d791651b079434caf615d162c89c31, type: 2}
+  - {fileID: 11400000, guid: accda6c9352b8e944ac788ca1888ff49, type: 2}
+  - {fileID: 11400000, guid: 13e292a3fdbce5f49a8a533ea35fe664, type: 2}
   useFSM: 1
   personalityType: 0
   enableNewAISystem: 1
