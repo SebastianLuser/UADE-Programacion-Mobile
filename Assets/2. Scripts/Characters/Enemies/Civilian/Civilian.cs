@@ -209,6 +209,7 @@ public class Civilian : BaseCharacter, IUseFsm, IUpdateListener
         RecalculateDyingWeight();
         InitializeComponents();
         SubscribeUpdateService();
+        //TryInitFleePathfinding();
     }
 
     private void Start()
