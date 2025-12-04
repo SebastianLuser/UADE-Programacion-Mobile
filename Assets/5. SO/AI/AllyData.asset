@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AllyDataSO
   maxHealth: 100
   moveSpeed: 6
-  shootCooldown: 0.25
+  shootCooldown: 0.8
   rotationSpeed: 10
   characterName: Character
   characterColor: {r: 1, g: 1, b: 1, a: 1}
@@ -58,6 +58,7 @@ MonoBehaviour:
   <coverArrivalTolerance>k__BackingField: 0.9
   <coverHealthRegenPerSecond>k__BackingField: 10
   <coverExitHealthPercent>k__BackingField: 0.958
+  <coverMinDuration>k__BackingField: 1.5
   <smokePrefab>k__BackingField: {fileID: 127842, guid: a98a28f48fb0baf49a6f4b5cbf708902,
     type: 3}
   <smokeLifetime>k__BackingField: 5

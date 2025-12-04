@@ -48087,6 +48087,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2787530440254539783, guid: 728c239681890b644978130b242e17da,
         type: 3}
+      propertyPath: autoConfigureFromPersonality
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2787530440254539783, guid: 728c239681890b644978130b242e17da,
+        type: 3}
       propertyPath: config.obstacleLayerMask.m_Bits
       value: 8192
       objectReference: {fileID: 0}

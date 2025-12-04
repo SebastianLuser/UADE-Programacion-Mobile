@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7939b2235a9602244a2033f4ad4f2f03, type: 3}
   m_Name: MainCharacterData
   m_EditorClassIdentifier: Assembly-CSharp::MainCharacterDataSO
-  maxHealth: 2000
+  maxHealth: 200
   moveSpeed: 5
   shootCooldown: 0.2
   rotationSpeed: 10

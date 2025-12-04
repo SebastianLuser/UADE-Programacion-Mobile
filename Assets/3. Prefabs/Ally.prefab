@@ -4129,17 +4129,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c7a9c75ed9cc413479e8f41b5277527f, type: 2}
   - {fileID: 11400000, guid: 70ef33ffd413cf544a0c878655c3590a, type: 2}
   - {fileID: 11400000, guid: c87c0fd0f1eecbc4580b66c3606eb4a6, type: 2}
+  - {fileID: 11400000, guid: a60d5012de86c2943947eb57c1237b1c, type: 2}
   useFSM: 1
-  followDistanceBuffer: 2
-  investigationRotateSpeed: 180
-  investigationMoveSpeedFactor: 0.7
-  investigationArrivalTolerance: 1.2
-  searchDuration: 4
-  coverProbeRadius: 0.9
-  coverProbeDistance: 4
-  coverOffsetFromObstacle: 1.25
-  coverRepositionCooldown: 1.2
-  coverArrivalTolerance: 0.9
+  loseGuardDelay: 0.6
+  coverReenterCooldown: 1.5
   aiContext: {fileID: 2543485301521033733}
   playerDetectorComponent: {fileID: 1194437483627491595}
   showStateLabel: 1
