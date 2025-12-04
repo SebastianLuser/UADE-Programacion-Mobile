@@ -31,7 +31,9 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     [Header("State Machine Configuration")]
     [SerializeField] private List<StateData> stateDataList = new List<StateData>();
     [SerializeField] private bool useFSM = true;
-
+    [Tooltip("Margen extra para no pegarse al player (histeresis follow).")]
+    [SerializeField] private float followDistanceBuffer = 2f;
+    
     [Header("Investigation / Search")]
     [SerializeField] private float investigationRotateSpeed = 180f;
     [SerializeField] private float investigationMoveSpeedFactor = 0.7f;
@@ -604,9 +606,11 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         }
 
         float distance = Vector3.Distance(transform.position, playerToFollow.position);
+        float outerResume = followDistance + followDistanceBuffer;
+        float innerStop = Mathf.Max(0f, followDistance - followDistanceBuffer);
 
         // Movement: Pursue if far, brake if close
-        if (distance > followDistance)
+        if (distance > outerResume)
         {
             Vector3 steeringForce = Steering.Pursuit(
                 transform.position,
@@ -617,12 +621,17 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
             );
             ApplySteering(steeringForce);
         }
-        else
+        else if (distance < innerStop)
         {
             // Brake gently
             Vector3 brakeForce = -velocity * 0.3f;
             ApplySteering(brakeForce);
         }
+
+        Vector3 lookDir = velocity.sqrMagnitude > 0.01f
+            ? velocity
+            : (playerToFollow.position - transform.position);
+        FaceDirection(lookDir);
 
         // Debug
         if (Time.frameCount % 60 == 0)

@@ -37,12 +37,12 @@ MonoBehaviour:
   <followPlayerWeight>k__BackingField: 0.6
   <flockingWeight>k__BackingField: 0.4
   <mass>k__BackingField: 1
-  <maxForce>k__BackingField: 20
-  <maxSpeed>k__BackingField: 6
+  <maxForce>k__BackingField: 10
+  <maxSpeed>k__BackingField: 3
   <slowingDistance>k__BackingField: 2
   <obstaclesMask>k__BackingField:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 8192
   <avoidRadius>k__BackingField: 2
-  <avoidAngle>k__BackingField: 90
-  <personalArea>k__BackingField: 0.5
+  <avoidAngle>k__BackingField: 180
+  <personalArea>k__BackingField: 0.2
