@@ -25,6 +25,8 @@ public class AllyDataSO : NPCDataSO
 
     [Tooltip("Speed when following player")]
     [field: SerializeField] public float followSpeed { get; private set; } = 4f;
+    [Tooltip("Margen extra para no pegarse al player (histeresis follow).")]
+    [field: SerializeField] public float followDistanceBuffer { get; private set; } = 2f;
 
     [Header("Flocking Configuration")]
     [Tooltip("Enable flocking behavior for group movement")]
@@ -50,4 +52,26 @@ public class AllyDataSO : NPCDataSO
     [field: SerializeField] public float avoidRadius { get; set; } = 2f;
     [field: SerializeField] public float avoidAngle { get; set; } = 90f;
     [field: SerializeField] public float personalArea { get; set; } = 0.5f;
+
+    [Header("Investigation / Search")]
+    [field: SerializeField] public float investigationRotateSpeed { get; private set; } = 180f;
+    [field: SerializeField] public float investigationMoveSpeedFactor { get; private set; } = 0.7f;
+    [field: SerializeField] public float investigationArrivalTolerance { get; private set; } = 1.2f;
+    [field: SerializeField] public float searchDuration { get; private set; } = 4f;
+
+    [Header("Cover Behavior")]
+    [field: SerializeField] public float coverProbeRadius { get; private set; } = 0.9f;
+    [field: SerializeField] public float coverProbeDistance { get; private set; } = 4f;
+    [field: SerializeField] public float coverOffsetFromObstacle { get; private set; } = 1.25f;
+    [field: SerializeField] public float coverRepositionCooldown { get; private set; } = 1.2f;
+    [field: SerializeField] public float coverArrivalTolerance { get; private set; } = 0.9f;
+    [field: SerializeField] public float coverHealthRegenPerSecond { get; private set; } = 10f;
+    [field: SerializeField, Range(0f, 1f)] public float coverExitHealthPercent { get; private set; } = 0.75f;
+
+    [Header("Smoke / Utility")]
+    [field: SerializeField] public GameObject smokePrefab { get; private set; }
+    [field: SerializeField] public float smokeLifetime { get; private set; } = 5f;
+    [field: SerializeField] public float smokeScale { get; private set; } = 3f;
+    [field: SerializeField] public float smokeCooldown { get; private set; } = 6f;
+    [field: SerializeField] public string smokeObstacleLayerName { get; private set; } = "ObstacleAI";
 }

@@ -12,7 +12,11 @@ public class AllyCoverSecuredCondition : StateCondition
             if (!ally.HasCoverPoint) return false;
 
             float distance = Vector3.Distance(ally.transform.position, ally.CoverPoint);
-            return distance <= ally.CoverArrivalTolerance;
+            if (distance > ally.CoverArrivalTolerance) return false;
+
+            float maxHealth = Mathf.Max(ally.MaxHealth, 0.01f);
+            float healthPercent = ally.CurrentHealth / maxHealth;
+            return healthPercent >= ally.CoverExitHealthPercent;
         }
 
         return false;

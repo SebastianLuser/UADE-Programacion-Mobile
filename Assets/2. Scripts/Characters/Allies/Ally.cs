@@ -25,21 +25,6 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     [Header("State Machine Configuration")]
     [SerializeField] private List<StateData> stateDataList = new List<StateData>();
     [SerializeField] private bool useFSM = true;
-    [Tooltip("Margen extra para no pegarse al player (histeresis follow).")]
-    [SerializeField] private float followDistanceBuffer = 2f;
-    
-    [Header("Investigation / Search")]
-    [SerializeField] private float investigationRotateSpeed = 180f;
-    [SerializeField] private float investigationMoveSpeedFactor = 0.7f;
-    [SerializeField] private float investigationArrivalTolerance = 1.2f;
-    [SerializeField] private float searchDuration = 4f;
-
-    [Header("Cover Behavior")]
-    [SerializeField] private float coverProbeRadius = 0.9f;
-    [SerializeField] private float coverProbeDistance = 4f;
-    [SerializeField] private float coverOffsetFromObstacle = 1.25f;
-    [SerializeField] private float coverRepositionCooldown = 1.2f;
-    [SerializeField] private float coverArrivalTolerance = 0.9f;
 
     // Configuration from AllyDataSO
     private float followDistance;
@@ -82,6 +67,9 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private bool investigationComplete;
     private float investigationRotationRemaining;
     private bool investigationAtLocation;
+    private GameObject smokeInstance;
+    private float smokeEndTime;
+    private float lastSmokeTime = Mathf.NegativeInfinity;
     [Header("AI Components (assign via Inspector if possible)")]
     [SerializeField] private AIContext aiContext;
     [SerializeField] private PlayerDetector playerDetectorComponent;
@@ -194,6 +182,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private void OnDisable()
     {
         UnsubscribeUpdateService();
+        ClearSmoke();
     }
 
     private void OnEnable()
@@ -269,6 +258,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         investigationComplete = false;
         investigationAtLocation = false;
         investigationRotationRemaining = 0f;
+        ClearSmoke();
         stateMachine?.ResetStateMachine();
     }
 
@@ -486,8 +476,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public Vector3 InvestigationTarget => investigationTarget;
     public bool InvestigationComplete => investigationComplete;
     public bool InvestigationAtLocation => investigationAtLocation;
-    public float InvestigationMoveSpeedFactor => investigationMoveSpeedFactor;
-    public float InvestigationArrivalTolerance => investigationArrivalTolerance;
+    public float InvestigationMoveSpeedFactor => allyData != null ? allyData.investigationMoveSpeedFactor : 0.7f;
+    public float InvestigationArrivalTolerance => allyData != null ? allyData.investigationArrivalTolerance : 1.2f;
     public float LastTimeSawGuard => lastTimeSawGuard;
     public float LoseGuardDelay => loseGuardDelay;
     public float CoverReenterCooldown => coverReenterCooldown;
@@ -496,7 +486,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         get => lastTimeTookCover;
         set => lastTimeTookCover = value;
     }
-    public float SearchDuration => searchDuration;
+    public float SearchDuration => allyData != null ? allyData.searchDuration : 4f;
 
     public void BeginInvestigation(Vector3 targetPosition)
     {
@@ -527,7 +517,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     {
         if (investigationComplete) return;
 
-        float rotateAmount = investigationRotateSpeed * Time.deltaTime;
+        float rotateAmount = (allyData != null ? allyData.investigationRotateSpeed : 180f) * Time.deltaTime;
         investigationRotationRemaining -= rotateAmount;
 
         transform.Rotate(0f, rotateAmount, 0f);
@@ -575,11 +565,13 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
 
     public bool HasCoverPoint => hasCoverPoint;
     public Vector3 CoverPoint => coverPoint;
-    public float CoverOffsetFromObstacle => coverOffsetFromObstacle;
-    public float CoverProbeRadius => coverProbeRadius;
-    public float CoverProbeDistance => coverProbeDistance;
-    public float CoverRepositionCooldown => coverRepositionCooldown;
-    public float CoverArrivalTolerance => coverArrivalTolerance;
+    public float CoverOffsetFromObstacle => allyData != null ? allyData.coverOffsetFromObstacle : 1.25f;
+    public float CoverProbeRadius => allyData != null ? allyData.coverProbeRadius : 0.9f;
+    public float CoverProbeDistance => allyData != null ? allyData.coverProbeDistance : 4f;
+    public float CoverRepositionCooldown => allyData != null ? allyData.coverRepositionCooldown : 1.2f;
+    public float CoverArrivalTolerance => allyData != null ? allyData.coverArrivalTolerance : 0.9f;
+    public float CoverHealthRegenPerSecond => allyData != null ? allyData.coverHealthRegenPerSecond : 10f;
+    public float CoverExitHealthPercent => allyData != null ? allyData.coverExitHealthPercent : 0.75f;
     public void SetCoverPoint(Vector3 point)
     {
         coverPoint = point;
@@ -596,6 +588,13 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public void SetCoverDebug(Collider collider, Vector3 hitPoint, Vector3 hitNormal)
     {
         lastCoverCollider = collider;
+    }
+
+    public void RegenerateHealth(float amount)
+    {
+        if (!isAlive || amount <= 0f) return;
+
+        currentHealth = Mathf.Min(MaxHealth, currentHealth + amount);
     }
 
     #endregion
@@ -620,8 +619,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         }
 
         float distance = Vector3.Distance(transform.position, playerToFollow.position);
-        float outerResume = followDistance + followDistanceBuffer;
-        float innerStop = Mathf.Max(0f, followDistance - followDistanceBuffer);
+        float outerResume = followDistance + FollowDistanceBuffer;
+        float innerStop = Mathf.Max(0f, followDistance - FollowDistanceBuffer);
 
         // Movement: Pursue if far, brake if close
         if (distance > outerResume)
@@ -962,6 +961,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         currentTarget = target != null ? target.GetComponent<Guard>() : null;
     }
     public Guard GetCurrentTarget() => currentTarget;
+    public float CurrentHealthPercent => MaxHealth > 0.01f ? CurrentHealth / MaxHealth : 0f;
+    public bool IsLowHealth(float threshold) => CurrentHealthPercent <= Mathf.Clamp01(threshold);
     public Transform GetPlayerToFollow() => playerToFollow;
     public void SetPlayerToFollow(Transform player) => playerToFollow = player;
     public float AttackRange => attackRange;
@@ -973,6 +974,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         set => stateTimer = value;
     }
     public bool LeaderOverrideActive => leaderOverrideActive;
+    public float FollowDistanceBuffer => allyData != null ? allyData.followDistanceBuffer : 2f;
 
     #endregion
 
@@ -1024,6 +1026,78 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
             );
             #endif
         }
+    }
+
+    #endregion
+
+    #region Smoke
+
+    public void TryDeploySmoke(Vector3 position)
+    {
+        var prefab = allyData != null ? allyData.smokePrefab : null;
+        float lifetime = allyData != null ? allyData.smokeLifetime : 5f;
+        float scale = allyData != null ? allyData.smokeScale : 3f;
+        float cooldown = allyData != null ? allyData.smokeCooldown : 6f;
+        string obstacleLayerName = allyData != null ? allyData.smokeObstacleLayerName : "ObstacleAI";
+
+        // keep cooldown consistent with SO even si cambia en runtime
+        if (Time.time < lastSmokeTime + cooldown)
+            return;
+
+        lastSmokeTime = Time.time;
+
+        int obstacleLayer = LayerMask.NameToLayer(obstacleLayerName);
+        if (smokeInstance != null)
+        {
+            Destroy(smokeInstance);
+        }
+
+        if (prefab != null)
+        {
+            smokeInstance = Instantiate(prefab, position, Quaternion.identity);
+            smokeInstance.transform.localScale *= scale;
+        }
+        else
+        {
+            smokeInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            smokeInstance.transform.position = position;
+            smokeInstance.transform.localScale = Vector3.one * scale;
+
+            var renderer = smokeInstance.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.material.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            }
+        }
+
+        smokeInstance.layer = obstacleLayer;
+
+        var collider = smokeInstance.GetComponent<Collider>();
+        if (collider != null)
+        {
+            collider.isTrigger = false;
+            var selfColliders = GetComponentsInChildren<Collider>();
+            foreach (var selfCol in selfColliders)
+            {
+                if (selfCol != null && selfCol != collider)
+                {
+                    Physics.IgnoreCollision(collider, selfCol, true);
+                }
+            }
+        }
+
+        smokeEndTime = Time.time + lifetime;
+        Destroy(smokeInstance, lifetime);
+    }
+
+    public void ClearSmoke()
+    {
+        if (smokeInstance != null)
+        {
+            Destroy(smokeInstance);
+            smokeInstance = null;
+        }
+        smokeEndTime = 0f;
     }
 
     #endregion

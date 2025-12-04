@@ -25,6 +25,7 @@ namespace Scripts.FSM.Base.StateMachine
                 m_lastThreatPosition = Vector3.zero;
                 ally.LastTimeTookCover = Time.time;
                 ally.ClearCoverPoint();
+                ally.TryDeploySmoke(ally.transform.position);
 
                 Vector3 threat = GetThreatPosition(ally);
                 if (threat != Vector3.zero)
@@ -55,6 +56,7 @@ namespace Scripts.FSM.Base.StateMachine
             }
 
             MoveToCover(ally);
+            RegenerateIfSafe(ally);
             AimAndSuppress(ally, threat);
         }
 
@@ -155,6 +157,16 @@ namespace Scripts.FSM.Base.StateMachine
                 ally.CoverPoint,
                 ally.FollowSpeed,
                 ally.CoverArrivalTolerance);
+        }
+
+        private void RegenerateIfSafe(Ally ally)
+        {
+            if (!ally.HasCoverPoint) return;
+
+            float distance = Vector3.Distance(ally.transform.position, ally.CoverPoint);
+            if (distance > ally.CoverArrivalTolerance * 1.05f) return;
+
+            ally.RegenerateHealth(ally.CoverHealthRegenPerSecond * Time.deltaTime);
         }
 
         private void AimAndSuppress(Ally ally, Vector3 threat)

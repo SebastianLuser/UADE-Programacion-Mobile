@@ -13,10 +13,16 @@ public class AllyGuardLostCondition : StateCondition
             if (target == null) return true;
             if (!target.IsAlive) return true;
 
-            if (ally.IsGuardInAttackRange()) return false;
-            if (Time.time - ally.LastTimeSawGuard <= ally.LoseGuardDelay) return false;
+            bool lostLineOfSight = !ally.CanSeeGuard(target);
+            bool timeExpired = Time.time - ally.LastTimeSawGuard > ally.LoseGuardDelay;
 
-            return !ally.CanSeeGuard(target);
+            // Si perdimos LoS por un tiempo, gatillamos Investigate/Search aunque estemos cerca.
+            if (lostLineOfSight && timeExpired) return true;
+
+            // Si está fuera de rango de ataque y pasó el delay, también lo consideramos perdido.
+            if (!ally.IsGuardInAttackRange() && timeExpired) return true;
+
+            return false;
         }
 
         return false;
