@@ -5083,7 +5083,7 @@ PrefabInstance:
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: stateDataList.Array.size
-      value: 6
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -5111,6 +5111,12 @@ PrefabInstance:
       propertyPath: 'stateDataList.Array.data[5]'
       value: 
       objectReference: {fileID: 11400000, guid: 13e292a3fdbce5f49a8a533ea35fe664,
+        type: 2}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: 'stateDataList.Array.data[6]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 445fb6bbc1119834a90e7fbbdcf6d96e,
         type: 2}
     - target: {fileID: 2502322239598372139, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -11756,6 +11762,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: detainRange
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: smokePrefab
       value: 
       objectReference: {fileID: 193902, guid: 9b967c5de3c01184889d94aa4f20fd19, type: 3}
@@ -11771,13 +11782,28 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: detainMoveSpeedFactor
+      value: 1.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: detainDamageMultiplier
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: patrolPoints.Array.size
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
+      propertyPath: ignoreLeaderDuringDetain
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
       propertyPath: stateDataList.Array.size
-      value: 6
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -11811,6 +11837,12 @@ PrefabInstance:
       propertyPath: 'stateDataList.Array.data[5]'
       value: 
       objectReference: {fileID: 11400000, guid: 13e292a3fdbce5f49a8a533ea35fe664,
+        type: 2}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: 'stateDataList.Array.data[6]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 445fb6bbc1119834a90e7fbbdcf6d96e,
         type: 2}
     - target: {fileID: 2502322239598372139, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -21693,6 +21725,11 @@ PrefabInstance:
       propertyPath: m_CastShadows
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 65977130236540148, guid: 79504f842e033824782142d5329ce7e9,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -30280,7 +30317,7 @@ PrefabInstance:
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
       propertyPath: stateDataList.Array.size
-      value: 6
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -30314,6 +30351,12 @@ PrefabInstance:
       propertyPath: 'stateDataList.Array.data[5]'
       value: 
       objectReference: {fileID: 11400000, guid: 13e292a3fdbce5f49a8a533ea35fe664,
+        type: 2}
+    - target: {fileID: 1417949685972596360, guid: f9184d8cc36f6b244a622a479ed31918,
+        type: 3}
+      propertyPath: 'stateDataList.Array.data[6]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 445fb6bbc1119834a90e7fbbdcf6d96e,
         type: 2}
     - target: {fileID: 1863482741409487511, guid: f9184d8cc36f6b244a622a479ed31918,
         type: 3}
@@ -31920,6 +31963,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 32d791651b079434caf615d162c89c31, type: 2}
   - {fileID: 11400000, guid: accda6c9352b8e944ac788ca1888ff49, type: 2}
   - {fileID: 11400000, guid: 13e292a3fdbce5f49a8a533ea35fe664, type: 2}
+  - {fileID: 11400000, guid: 445fb6bbc1119834a90e7fbbdcf6d96e, type: 2}
   useFSM: 1
   personalityType: 0
   enableNewAISystem: 1
@@ -31952,6 +31996,12 @@ MonoBehaviour:
   overrideArrivalTolerance: 1.5
   overrideDuration: 8
   overrideDwellTime: 2
+  knockoutRecoverTime: 3
+  detainRange: 2.5
+  detainBackAngle: 120
+  detainDamageMultiplier: 2
+  ignoreLeaderDuringDetain: 1
+  detainMoveSpeedFactor: 0.6
   showStateLabel: 1
   enableHealthRegen: 1
   regenDelay: 3

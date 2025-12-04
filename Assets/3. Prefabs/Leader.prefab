@@ -63,6 +63,9 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   bulletData: {fileID: 11400000, guid: 6756e0916d9dd8a439d2c586d44476db, type: 2}
+  targetTags:
+  - Player
+  - Ally
   loopsToIdle: 3
   idleSeconds: 5
   stateDataList:
@@ -72,6 +75,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 32d791651b079434caf615d162c89c31, type: 2}
   - {fileID: 11400000, guid: accda6c9352b8e944ac788ca1888ff49, type: 2}
   - {fileID: 11400000, guid: 13e292a3fdbce5f49a8a533ea35fe664, type: 2}
+  - {fileID: 11400000, guid: 445fb6bbc1119834a90e7fbbdcf6d96e, type: 2}
   useFSM: 1
   personalityType: 0
   enableNewAISystem: 1
@@ -104,6 +108,12 @@ MonoBehaviour:
   overrideArrivalTolerance: 1.5
   overrideDuration: 8
   overrideDwellTime: 2
+  knockoutRecoverTime: 3
+  detainRange: 2.5
+  detainBackAngle: 120
+  detainDamageMultiplier: 2
+  ignoreLeaderDuringDetain: 1
+  detainMoveSpeedFactor: 0.6
   showStateLabel: 1
   enableHealthRegen: 1
   regenDelay: 3

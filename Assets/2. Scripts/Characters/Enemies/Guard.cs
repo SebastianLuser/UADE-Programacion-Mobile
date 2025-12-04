@@ -82,6 +82,14 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float overrideArrivalTolerance = 1.5f;
     [SerializeField] private float overrideDuration = 8f;
     [SerializeField] private float overrideDwellTime = 2f;
+
+    [Header("Detain/Knockout")]
+    [SerializeField] private float knockoutRecoverTime = 3f;
+    [SerializeField] private float detainRange = 2.5f;
+    [SerializeField] private float detainBackAngle = 120f;
+    [SerializeField] private float detainDamageMultiplier = 2f;
+    [SerializeField] private bool ignoreLeaderDuringDetain = true;
+    [SerializeField] private float detainMoveSpeedFactor = 0.6f;
     [Header("Debug")]
     [SerializeField] protected bool showStateLabel = true;
 
@@ -145,6 +153,12 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private float leaderOverrideExpiresAt;
     private float leaderOverrideReachedAt;
     private string leaderOverrideRole;
+    private bool isKnockedOut;
+    private float knockoutTimer;
+    private bool isDetaining;
+    private Transform detainTarget;
+    private float detainTimer;
+    private float detainMaxDuration = 5f;
     private UnityEngine.Object leaderOverrideOwner;
     private int leaderOverridePriority;
     
@@ -240,7 +254,14 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     }
     public bool TookDamageRecently(float window) => Time.time - lastDamageTime <= window;
     public bool LeaderOverrideActive => leaderOverrideActive;
-
+    public bool IsKnockedOut => isKnockedOut;
+    public bool IsDetaining => isDetaining;
+    public Transform DetainTarget => detainTarget;
+    public float KnockoutRecoverTime => knockoutRecoverTime;
+    public float DetainRange => detainRange;
+    public float DetainBackAngle => detainBackAngle;
+    public float DetainMoveSpeedFactor => detainMoveSpeedFactor;
+    
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
 
     public void SetCoverPoint(Vector3 coverPoint)
@@ -263,6 +284,66 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         lastCoverCollider = collider;
         lastCoverHitPoint = hitPoint;
         lastCoverHitNormal = hitNormal;
+    }
+
+    public void TriggerKnockout(Transform attacker = null)
+    {
+        if (isKnockedOut || !isAlive) return;
+
+        // Only allow knockout if attacker is behind and guard is in Idle/Patrol
+        if (attacker != null)
+        {
+            Vector3 toGuard = (transform.position - attacker.position).normalized;
+            float angle = Vector3.Angle(attacker.forward, toGuard);
+            if (angle > detainBackAngle * 0.5f) return;
+        }
+
+        if (stateMachine != null)
+        {
+            var currState = stateMachine.GetCurrentState()?.State?.StateName;
+            if (currState != null && currState != "Idle" && currState != "Patrol")
+                return;
+        }
+
+        isKnockedOut = true;
+        knockoutTimer = knockoutRecoverTime;
+        ClearLeaderOverride();
+        Debug.Log($"[Detain] {name} knocked out");
+    }
+
+    public void SetDetainTarget(Transform target)
+    {
+        if (target == null || !isAlive) return;
+        detainTarget = target;
+        isDetaining = true;
+        detainTimer = detainMaxDuration;
+        ClearLeaderOverride();
+        Debug.Log($"[Detain] {name} detaining target {target.name}");
+    }
+
+    public void RecoverFromKnockout()
+    {
+        isKnockedOut = false;
+        knockoutTimer = 0f;
+    }
+
+    public void StopDetaining()
+    {
+        isDetaining = false;
+        detainTarget = null;
+        detainTimer = 0f;
+    }
+
+    public void ApplyDetainDamage()
+    {
+        if (detainTarget == null) return;
+        var victim = detainTarget.GetComponent<BaseCharacter>();
+        if (victim != null)
+        {
+            float dmg = victim.MaxHealth * detainDamageMultiplier;
+            victim.TakeDamage(dmg);
+            Debug.Log($"[Detain] {name} applied detain damage {dmg} to {victim.name}");
+        }
     }
 
     public void BeginInvestigation(Vector3 targetPosition)
@@ -676,6 +757,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_DetectionLevel", detectionResult.level);
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.level > PlayerDetectionLevel.None);
         }
+
+        TryAssignDetainTargetFromPlayer(canSeePlayerNow);
     }
 
     private void HandleHealthRegen()
@@ -961,6 +1044,27 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         base.TakeDamage(damage);
         lastDamageTime = Time.time;
+    }
+
+    private void TryAssignDetainTargetFromPlayer(bool canSeePlayerNow)
+    {
+        if (isDetaining || detainTarget != null || player == null || !isAlive)
+            return;
+
+        if (!canSeePlayerNow)
+            return;
+
+        Vector3 toGuard = (transform.position - player.position);
+        toGuard.y = 0f;
+        if (player.forward.sqrMagnitude < 0.001f)
+            return;
+
+        float angle = Vector3.Angle(player.forward, toGuard.normalized);
+        // We only detain if we are behind the player: angle should be close to 180
+        if (angle < 180f - detainBackAngle * 0.5f)
+            return;
+
+        SetDetainTarget(player);
     }
 
     #region AI System Integration
@@ -1484,6 +1588,9 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private bool HandleLeaderOverride()
     {
         if (!leaderOverrideActive)
+            return false;
+
+        if (ignoreLeaderDuringDetain && (isDetaining || isKnockedOut))
             return false;
 
         // Si vemos al jugador, liberamos la orden para volver a la FSM de combate

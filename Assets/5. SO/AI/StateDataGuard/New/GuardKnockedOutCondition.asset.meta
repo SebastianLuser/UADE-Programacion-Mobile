@@ -1,9 +1,8 @@
 fileFormatVersion: 2
-guid: e776230601db4ffbbbd4e1266bdcdc23
-labels:
-- gvh
-DefaultImporter:
+guid: fb093fed52d7b9641af6f9b02d500832
+NativeFormatImporter:
   externalObjects: {}
+  mainObjectFileID: 11400000
   userData: 
   assetBundleName: 
   assetBundleVariant: 
