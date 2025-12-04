@@ -9,6 +9,8 @@ public class AllyGuardLostCondition : StateCondition
     {
         if (p_model is Ally ally)
         {
+            if (ally.CoverLockActive) return false;
+
             var target = ally.GetCurrentTarget();
             if (target == null) return true;
             if (!target.IsAlive) return true;

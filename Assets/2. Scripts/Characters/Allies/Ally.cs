@@ -70,6 +70,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private GameObject smokeInstance;
     private float smokeEndTime;
     private float lastSmokeTime = Mathf.NegativeInfinity;
+    private float coverLockUntil = Mathf.NegativeInfinity;
     [Header("AI Components (assign via Inspector if possible)")]
     [SerializeField] private AIContext aiContext;
     [SerializeField] private PlayerDetector playerDetectorComponent;
@@ -572,6 +573,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public float CoverArrivalTolerance => allyData != null ? allyData.coverArrivalTolerance : 0.9f;
     public float CoverHealthRegenPerSecond => allyData != null ? allyData.coverHealthRegenPerSecond : 10f;
     public float CoverExitHealthPercent => allyData != null ? allyData.coverExitHealthPercent : 0.75f;
+    public float CoverMinDuration => allyData != null ? allyData.coverMinDuration : 1.5f;
+    public Collider LastCoverCollider => lastCoverCollider;
     public void SetCoverPoint(Vector3 point)
     {
         coverPoint = point;
@@ -583,6 +586,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         hasCoverPoint = false;
         coverPoint = Vector3.zero;
         lastCoverCollider = null;
+        coverLockUntil = Mathf.NegativeInfinity;
     }
 
     public void SetCoverDebug(Collider collider, Vector3 hitPoint, Vector3 hitNormal)
@@ -1031,6 +1035,13 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     #endregion
 
     #region Smoke
+
+    public bool CoverLockActive => Time.time < coverLockUntil;
+
+    public void StartCoverLock(float duration)
+    {
+        coverLockUntil = Time.time + Mathf.Max(0f, duration);
+    }
 
     public void TryDeploySmoke(Vector3 position)
     {

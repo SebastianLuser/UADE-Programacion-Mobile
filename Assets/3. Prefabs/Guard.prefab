@@ -4045,7 +4045,7 @@ MonoBehaviour:
   investigationMoveSpeedFactor: 0.7
   investigationArrivalTolerance: 3.25
   damageRecentWindow: 3
-  smokePrefab: {fileID: 0}
+  smokePrefab: {fileID: 193902, guid: 9b967c5de3c01184889d94aa4f20fd19, type: 3}
   smokeLifetime: 5
   smokeScale: 3
   obstacleLayerName: ObstacleAI

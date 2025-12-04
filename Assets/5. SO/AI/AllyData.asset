@@ -33,6 +33,7 @@ MonoBehaviour:
     type: 2}
   <followDistance>k__BackingField: 1
   <followSpeed>k__BackingField: 6
+  <followDistanceBuffer>k__BackingField: 2
   <useFlocking>k__BackingField: 1
   <followPlayerWeight>k__BackingField: 0.6
   <flockingWeight>k__BackingField: 0.4
@@ -46,3 +47,20 @@ MonoBehaviour:
   <avoidRadius>k__BackingField: 2
   <avoidAngle>k__BackingField: 180
   <personalArea>k__BackingField: 0.2
+  <investigationRotateSpeed>k__BackingField: 180
+  <investigationMoveSpeedFactor>k__BackingField: 0.7
+  <investigationArrivalTolerance>k__BackingField: 1.2
+  <searchDuration>k__BackingField: 4
+  <coverProbeRadius>k__BackingField: 0.9
+  <coverProbeDistance>k__BackingField: 4
+  <coverOffsetFromObstacle>k__BackingField: 1.25
+  <coverRepositionCooldown>k__BackingField: 1.2
+  <coverArrivalTolerance>k__BackingField: 0.9
+  <coverHealthRegenPerSecond>k__BackingField: 10
+  <coverExitHealthPercent>k__BackingField: 0.958
+  <smokePrefab>k__BackingField: {fileID: 127842, guid: a98a28f48fb0baf49a6f4b5cbf708902,
+    type: 3}
+  <smokeLifetime>k__BackingField: 5
+  <smokeScale>k__BackingField: 3
+  <smokeCooldown>k__BackingField: 6
+  <smokeObstacleLayerName>k__BackingField: ObstacleAI

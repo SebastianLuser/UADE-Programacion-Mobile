@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ScriptableObjects.Bullets.BulletData
   prefab: {fileID: 3499885524630990997, guid: 05dba19c08d7e7b4aa7bbf69e8ac5a4a, type: 3}
   speed: 10
-  damage: 25
+  damage: 1
   lifetime: 5
   color: {r: 1, g: 1, b: 1, a: 1}
   useGravity: 0

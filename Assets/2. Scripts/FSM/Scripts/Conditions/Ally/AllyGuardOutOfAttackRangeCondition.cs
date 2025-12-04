@@ -13,6 +13,7 @@ public class AllyGuardOutOfAttackRangeCondition : StateCondition
     {
         if (p_model is Ally ally)
         {
+            if (ally.CoverLockActive) return false;
             // Si está bajo de vida preferimos evaluar el estado de cover antes que seguir persiguiendo.
             if (ally.IsLowHealth(lowHealthOverride))
                 return false;

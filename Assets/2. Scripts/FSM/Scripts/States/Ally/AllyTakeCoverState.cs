@@ -11,6 +11,8 @@ namespace Scripts.FSM.Base.StateMachine
         [SerializeField] private float threatMoveThreshold = 1.75f;
         [SerializeField] private float coverProbeHeightOffset = 0.5f;
         [SerializeField] private float fallbackCoverDistance = 2f;
+        [SerializeField] private float occlusionCheckStep = 0.5f;
+        [SerializeField] private int occlusionMaxSteps = 4;
 
         private readonly RaycastHit[] m_coverHits = new RaycastHit[6];
         private float m_nextSuppressFireTime;
@@ -25,6 +27,7 @@ namespace Scripts.FSM.Base.StateMachine
                 m_lastThreatPosition = Vector3.zero;
                 ally.LastTimeTookCover = Time.time;
                 ally.ClearCoverPoint();
+                ally.StartCoverLock(ally.CoverMinDuration);
                 ally.TryDeploySmoke(ally.transform.position);
 
                 Vector3 threat = GetThreatPosition(ally);
@@ -86,8 +89,9 @@ namespace Scripts.FSM.Base.StateMachine
 
             bool timeElapsed = ally.StateTimer >= ally.CoverRepositionCooldown;
             bool threatMoved = (reference - m_lastThreatPosition).sqrMagnitude >= threatMoveThreshold * threatMoveThreshold;
+            bool exposed = !IsOccludedByCover(ally, reference, ally.CoverPoint);
 
-            return timeElapsed && threatMoved;
+            return timeElapsed && (threatMoved || exposed);
         }
 
         private void AcquireCover(Ally ally, bool force, Vector3 referencePosition)
@@ -121,21 +125,30 @@ namespace Scripts.FSM.Base.StateMachine
                     }
                 }
 
-                Vector3 impactPoint = bestHit.point != Vector3.zero
-                    ? bestHit.point
-                    : bestHit.collider.bounds.ClosestPoint(ally.transform.position);
+                Vector3 impactPoint = bestHit.point;
+                Vector3 normal = bestHit.normal;
+                if (impactPoint == Vector3.zero)
+                {
+                    impactPoint = bestHit.collider.bounds.ClosestPoint(ally.transform.position);
+                }
+                if (normal == Vector3.zero)
+                {
+                    normal = (impactPoint - bestHit.collider.bounds.center).normalized;
+                }
 
                 Vector3 threatDir = referencePosition != Vector3.zero
-                    ? (referencePosition - impactPoint).normalized
+                    ? (referencePosition - impactPoint)
                     : ally.transform.forward;
                 threatDir.y = 0f;
                 if (threatDir.sqrMagnitude < 0.01f) threatDir = ally.transform.forward;
+                threatDir.Normalize();
 
                 Vector3 coverPoint = impactPoint - threatDir * ally.CoverOffsetFromObstacle;
+                coverPoint = EnsureOccludedFromThreat(ally, referencePosition, coverPoint, normal, threatDir, bestHit.collider);
                 coverPoint.y = ally.transform.position.y;
 
                 ally.SetCoverPoint(coverPoint);
-                ally.SetCoverDebug(bestHit.collider, impactPoint, bestHit.normal);
+                ally.SetCoverDebug(bestHit.collider, impactPoint, normal);
             }
             else
             {
@@ -185,11 +198,57 @@ namespace Scripts.FSM.Base.StateMachine
                 ? Vector3.Distance(ally.transform.position, lookTarget)
                 : Mathf.Infinity;
 
-            if (distance <= ally.AttackRange + 1.5f && ally.CanShoot())
+            bool threatLikelyThere = (ally.GetCurrentTarget() != null && ally.CanSeeGuard(ally.GetCurrentTarget()))
+                                     || (threat != Vector3.zero && Time.time - ally.LastTimeSawGuard <= ally.LoseGuardDelay);
+
+            if (threatLikelyThere && distance <= ally.AttackRange + 1.5f && ally.CanShoot())
             {
                 ally.Shoot(aimDir.normalized);
                 m_nextSuppressFireTime = Time.time + suppressFireCooldown;
             }
+        }
+
+        private bool IsOccludedByCover(Ally ally, Vector3 threatPos, Vector3 coverPoint)
+        {
+            if (threatPos == Vector3.zero) return true;
+            Vector3 origin = threatPos + Vector3.up * 0.5f;
+            Vector3 target = coverPoint + Vector3.up * 0.5f;
+            if (Physics.Raycast(origin, (target - origin).normalized, out var hit, Mathf.Infinity, ally.ObstaclesMask))
+            {
+                return hit.collider != null && hit.collider == ally.LastCoverCollider;
+            }
+            return false;
+        }
+
+        private Vector3 EnsureOccludedFromThreat(Ally ally, Vector3 threatPos, Vector3 coverPoint, Vector3 coverNormal, Vector3 threatDir, Collider coverCollider)
+        {
+            if (threatPos == Vector3.zero) return coverPoint;
+
+            Vector3 origin = threatPos + Vector3.up * 0.5f;
+            Vector3 target = coverPoint + Vector3.up * 0.5f;
+
+            // If already blocked by obstacle, keep
+            if (Physics.Raycast(origin, (target - origin).normalized, out var hit, Mathf.Infinity, ally.ObstaclesMask))
+            {
+                if (hit.collider == coverCollider)
+                    return coverPoint;
+            }
+
+            Vector3 adjusted = coverPoint;
+            for (int i = 0; i < occlusionMaxSteps; i++)
+            {
+                adjusted -= threatDir * occlusionCheckStep;
+                Vector3 adjTarget = adjusted + Vector3.up * 0.5f;
+                if (Physics.Raycast(origin, (adjTarget - origin).normalized, out var adjHit, Mathf.Infinity, ally.ObstaclesMask))
+                {
+                    if (adjHit.collider == coverCollider)
+                    {
+                        return adjusted;
+                    }
+                }
+            }
+
+            return adjusted;
         }
     }
 }

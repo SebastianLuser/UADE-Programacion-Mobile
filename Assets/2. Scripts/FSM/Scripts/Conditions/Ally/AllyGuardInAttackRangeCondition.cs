@@ -9,6 +9,7 @@ public class AllyGuardInAttackRangeCondition : StateCondition
     {
         if (p_model is Ally ally)
         {
+            if (ally.CoverLockActive) return false;
             return ally.IsGuardInAttackRange();
         }
 

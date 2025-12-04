@@ -67,6 +67,7 @@ public class AllyDataSO : NPCDataSO
     [field: SerializeField] public float coverArrivalTolerance { get; private set; } = 0.9f;
     [field: SerializeField] public float coverHealthRegenPerSecond { get; private set; } = 10f;
     [field: SerializeField, Range(0f, 1f)] public float coverExitHealthPercent { get; private set; } = 0.75f;
+    [field: SerializeField] public float coverMinDuration { get; private set; } = 1.5f;
 
     [Header("Smoke / Utility")]
     [field: SerializeField] public GameObject smokePrefab { get; private set; }

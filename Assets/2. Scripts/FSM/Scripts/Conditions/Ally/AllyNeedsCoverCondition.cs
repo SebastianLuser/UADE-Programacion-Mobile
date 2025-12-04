@@ -12,6 +12,7 @@ public class AllyNeedsCoverCondition : StateCondition
     {
         if (p_model is Ally ally)
         {
+            if (ally.CoverLockActive) return false;
             float maxHealth = Mathf.Max(ally.MaxHealth, 0.01f);
             float healthPercent = ally.CurrentHealth / maxHealth;
 
