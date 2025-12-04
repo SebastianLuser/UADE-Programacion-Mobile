@@ -430,12 +430,17 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         SubscribeUpdateService();
         
         // Start patrolling after a frame to ensure everything is initialized
-        StartCoroutine(StartPatrolAfterFrame());
+        if (isActiveAndEnabled)
+        {
+            StartCoroutine(StartPatrolAfterFrame());
+        }
     }
 
     private System.Collections.IEnumerator StartPatrolAfterFrame()
     {
         yield return null; // Wait one frame
+
+        if (!isActiveAndEnabled) yield break;
         
         StartPatrol();
     }
@@ -506,12 +511,17 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     private void Start()
     {
-        StartCoroutine(DelayedStart());
+        if (isActiveAndEnabled)
+        {
+            StartCoroutine(DelayedStart());
+        }
     }
     
     private System.Collections.IEnumerator DelayedStart()
     {
         yield return null;
+
+        if (!isActiveAndEnabled) yield break;
         
         // Ensure blackboard connection is established
         if (enableNewAISystem && m_blackboardService == null)
