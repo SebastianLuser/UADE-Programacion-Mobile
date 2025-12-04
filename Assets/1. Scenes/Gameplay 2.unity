@@ -10915,6 +10915,17 @@ PrefabInstance:
       propertyPath: followDistanceBuffer
       value: 2
       objectReference: {fileID: 0}
+    - target: {fileID: -7338884498464132857, guid: 195d7de90d490c64888ca67d1bfc0d9d,
+        type: 3}
+      propertyPath: stateDataList.Array.size
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: -7338884498464132857, guid: 195d7de90d490c64888ca67d1bfc0d9d,
+        type: 3}
+      propertyPath: 'stateDataList.Array.data[6]'
+      value: 
+      objectReference: {fileID: 11400000, guid: a60d5012de86c2943947eb57c1237b1c,
+        type: 2}
     - target: {fileID: 2569304985652421769, guid: 195d7de90d490c64888ca67d1bfc0d9d,
         type: 3}
       propertyPath: m_LocalPosition.x

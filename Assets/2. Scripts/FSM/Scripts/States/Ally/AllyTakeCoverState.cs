@@ -28,7 +28,6 @@ namespace Scripts.FSM.Base.StateMachine
                 ally.LastTimeTookCover = Time.time;
                 ally.ClearCoverPoint();
                 ally.StartCoverLock(ally.CoverMinDuration);
-                ally.TryDeploySmoke(ally.transform.position);
 
                 Vector3 threat = GetThreatPosition(ally);
                 if (threat != Vector3.zero)

@@ -10,20 +10,20 @@ using System.Collections.Generic;
 
 public class Ally : BaseCharacter, IUseFsm, IUpdateListener
 {
-    [Header("Ally Configuration")]
-    [SerializeField] private AllyDataSO allyData;
+    [Header("Ally Configuration")] [SerializeField]
+    private AllyDataSO allyData;
 
     private Transform playerToFollow;
 
-    [Header("Guard Detection")]
-    [Tooltip("Tag used to identify Guards")]
-    [SerializeField] private string guardTag = "Guard";
+    [Header("Guard Detection")] [Tooltip("Tag used to identify Guards")] [SerializeField]
+    private string guardTag = "Guard";
 
-    [Tooltip("Layer mask for Guard detection")]
-    [SerializeField] private LayerMask guardLayerMask = 1 << 7;
+    [Tooltip("Layer mask for Guard detection")] [SerializeField]
+    private LayerMask guardLayerMask = 1 << 7;
 
-    [Header("State Machine Configuration")]
-    [SerializeField] private List<StateData> stateDataList = new List<StateData>();
+    [Header("State Machine Configuration")] [SerializeField]
+    private List<StateData> stateDataList = new List<StateData>();
+
     [SerializeField] private bool useFSM = true;
 
     // Configuration from AllyDataSO
@@ -71,8 +71,10 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private float smokeEndTime;
     private float lastSmokeTime = Mathf.NegativeInfinity;
     private float coverLockUntil = Mathf.NegativeInfinity;
-    [Header("AI Components (assign via Inspector if possible)")]
-    [SerializeField] private AIContext aiContext;
+
+    [Header("AI Components (assign via Inspector if possible)")] [SerializeField]
+    private AIContext aiContext;
+
     [SerializeField] private PlayerDetector playerDetectorComponent;
 
     private IPlayerDetector playerDetector;
@@ -183,7 +185,6 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private void OnDisable()
     {
         UnsubscribeUpdateService();
-        ClearSmoke();
     }
 
     private void OnEnable()
@@ -259,7 +260,6 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         investigationComplete = false;
         investigationAtLocation = false;
         investigationRotationRemaining = 0f;
-        ClearSmoke();
         stateMachine?.ResetStateMachine();
     }
 
@@ -382,9 +382,10 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
             lastKnownGuardPosition = nearest.transform.position;
             lastTimeSawGuard = Time.time;
         }
+
         return nearest;
     }
-    
+
     public bool CanSeeGuard(Guard guard)
     {
         if (guard == null) return false;
@@ -396,6 +397,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
             {
                 lastTimeSawGuard = Time.time;
             }
+
             return canSee;
         }
 
@@ -405,6 +407,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         {
             lastTimeSawGuard = Time.time;
         }
+
         return inRange;
     }
 
@@ -457,9 +460,13 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     private void ConfigureDetectorForGuards()
     {
         var detectorType = playerDetector.GetType();
-        var tagField = detectorType.GetField("playerTag", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var layerField = detectorType.GetField("playerLayerMask", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        
+        var tagField = detectorType.GetField("playerTag",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance);
+        var layerField = detectorType.GetField("playerLayerMask",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance);
+
         tagField?.SetValue(playerDetector, guardTag);
         layerField?.SetValue(playerDetector, guardLayerMask);
     }
@@ -482,11 +489,13 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public float LastTimeSawGuard => lastTimeSawGuard;
     public float LoseGuardDelay => loseGuardDelay;
     public float CoverReenterCooldown => coverReenterCooldown;
+
     public float LastTimeTookCover
     {
         get => lastTimeTookCover;
         set => lastTimeTookCover = value;
     }
+
     public float SearchDuration => allyData != null ? allyData.searchDuration : 4f;
 
     public void BeginInvestigation(Vector3 targetPosition)
@@ -575,6 +584,27 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public float CoverExitHealthPercent => allyData != null ? allyData.coverExitHealthPercent : 0.75f;
     public float CoverMinDuration => allyData != null ? allyData.coverMinDuration : 1.5f;
     public Collider LastCoverCollider => lastCoverCollider;
+    public AllyDataSO AllyData => allyData;
+
+    public float LastSmokeTime
+    {
+        get => lastSmokeTime;
+        set => lastSmokeTime = value;
+    }
+
+    public GameObject SmokeInstance
+    {
+        get => smokeInstance;
+        set => smokeInstance = value;
+    }
+
+    public bool CoverLockActive => Time.time < coverLockUntil;
+
+    public void StartCoverLock(float duration)
+    {
+        coverLockUntil = Time.time + Mathf.Max(0f, duration);
+    }
+
     public void SetCoverPoint(Vector3 point)
     {
         coverPoint = point;
@@ -700,6 +730,7 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
             float weightBoost = Mathf.Lerp(0f, 0.75f, oppositeFactor);
             avoidWeight += weightBoost;
         }
+
         avoidWeight = Mathf.Clamp(avoidWeight, 0f, 1f);
 
         float avoidScale = Mathf.Max(desiredSpeed, 0.1f);
@@ -717,7 +748,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
 
             if (totalMag > maxSpeed)
             {
-                float scale = Mathf.Sqrt(Mathf.Max(0, maxSpeed * maxSpeed - pathMag * pathMag)) / Mathf.Max(avoidMag, 1e-5f);
+                float scale = Mathf.Sqrt(Mathf.Max(0, maxSpeed * maxSpeed - pathMag * pathMag)) /
+                              Mathf.Max(avoidMag, 1e-5f);
                 avoidComponent *= Mathf.Min(scale, 1f);
                 blendedVelocity = pathComponent + avoidComponent;
             }
@@ -823,7 +855,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     /// Set a leader override command that takes priority over normal behavior.
     /// Used by AllyLeader to coordinate defensive formations and tactics.
     /// </summary>
-    public void SetLeaderOverride(Vector3 target, float duration, string role = "", UnityEngine.Object owner = null, int priority = 0)
+    public void SetLeaderOverride(Vector3 target, float duration, string role = "", UnityEngine.Object owner = null,
+        int priority = 0)
     {
         if (leaderOverrideActive
             && leaderOverrideOwner != null
@@ -831,7 +864,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
             && owner != leaderOverrideOwner
             && priority < leaderOverridePriority)
         {
-            Debug.Log($"[Ally] {name} override rejected by {owner} (prio {priority}) because active owner {leaderOverrideOwner} has prio {leaderOverridePriority}");
+            Debug.Log(
+                $"[Ally] {name} override rejected by {owner} (prio {priority}) because active owner {leaderOverrideOwner} has prio {leaderOverridePriority}");
             return;
         }
 
@@ -842,7 +876,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         leaderOverrideOwner = owner;
         leaderOverridePriority = priority;
 
-        Debug.Log($"[Ally] {name} received leader override: {role} at {target} for {duration}s (owner {owner}, prio {priority})");
+        Debug.Log(
+            $"[Ally] {name} received leader override: {role} at {target} for {duration}s (owner {owner}, prio {priority})");
     }
 
     /// <summary>
@@ -944,7 +979,8 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
         }
         else
         {
-            MyLogger.LogWarning($"[Ally] {name}: FSM no inicializada - useFSM: {useFSM}, states: {stateDataList?.Count ?? 0}");
+            MyLogger.LogWarning(
+                $"[Ally] {name}: FSM no inicializada - useFSM: {useFSM}, states: {stateDataList?.Count ?? 0}");
         }
     }
 
@@ -960,10 +996,12 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     protected string GetCurrentStateName() => stateMachine?.GetCurrentState()?.State?.StateName ?? "None";
     public Transform GetModelTransform() => transform;
     public Transform GetTargetTransform() => currentTarget != null ? currentTarget.transform : null;
+
     public void SetTargetTransform(Transform target)
     {
         currentTarget = target != null ? target.GetComponent<Guard>() : null;
     }
+
     public Guard GetCurrentTarget() => currentTarget;
     public float CurrentHealthPercent => MaxHealth > 0.01f ? CurrentHealth / MaxHealth : 0f;
     public bool IsLowHealth(float threshold) => CurrentHealthPercent <= Mathf.Clamp01(threshold);
@@ -972,11 +1010,13 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
     public float AttackRange => attackRange;
     public float FollowSpeed => followSpeed;
     public LayerMask ObstaclesMask => obstaclesMask;
+
     public float StateTimer
     {
         get => stateTimer;
         set => stateTimer = value;
     }
+
     public bool LeaderOverrideActive => leaderOverrideActive;
     public float FollowDistanceBuffer => allyData != null ? allyData.followDistanceBuffer : 2f;
 
@@ -1021,95 +1061,16 @@ public class Ally : BaseCharacter, IUseFsm, IUpdateListener
             Gizmos.DrawWireSphere(leaderOverrideTarget, 1.5f);
             Gizmos.DrawLine(transform.position, leaderOverrideTarget);
 
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             // Draw role text in editor
             UnityEditor.Handles.Label(
                 leaderOverrideTarget + Vector3.up * 2f,
                 $"Override: {leaderOverrideRole}",
                 new GUIStyle { normal = new GUIStyleState { textColor = Color.cyan } }
             );
-            #endif
+#endif
         }
     }
+} 
 
-    #endregion
-
-    #region Smoke
-
-    public bool CoverLockActive => Time.time < coverLockUntil;
-
-    public void StartCoverLock(float duration)
-    {
-        coverLockUntil = Time.time + Mathf.Max(0f, duration);
-    }
-
-    public void TryDeploySmoke(Vector3 position)
-    {
-        var prefab = allyData != null ? allyData.smokePrefab : null;
-        float lifetime = allyData != null ? allyData.smokeLifetime : 5f;
-        float scale = allyData != null ? allyData.smokeScale : 3f;
-        float cooldown = allyData != null ? allyData.smokeCooldown : 6f;
-        string obstacleLayerName = allyData != null ? allyData.smokeObstacleLayerName : "ObstacleAI";
-
-        // keep cooldown consistent with SO even si cambia en runtime
-        if (Time.time < lastSmokeTime + cooldown)
-            return;
-
-        lastSmokeTime = Time.time;
-
-        int obstacleLayer = LayerMask.NameToLayer(obstacleLayerName);
-        if (smokeInstance != null)
-        {
-            Destroy(smokeInstance);
-        }
-
-        if (prefab != null)
-        {
-            smokeInstance = Instantiate(prefab, position, Quaternion.identity);
-            smokeInstance.transform.localScale *= scale;
-        }
-        else
-        {
-            smokeInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            smokeInstance.transform.position = position;
-            smokeInstance.transform.localScale = Vector3.one * scale;
-
-            var renderer = smokeInstance.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                renderer.material.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
-            }
-        }
-
-        smokeInstance.layer = obstacleLayer;
-
-        var collider = smokeInstance.GetComponent<Collider>();
-        if (collider != null)
-        {
-            collider.isTrigger = false;
-            var selfColliders = GetComponentsInChildren<Collider>();
-            foreach (var selfCol in selfColliders)
-            {
-                if (selfCol != null && selfCol != collider)
-                {
-                    Physics.IgnoreCollision(collider, selfCol, true);
-                }
-            }
-        }
-
-        smokeEndTime = Time.time + lifetime;
-        Destroy(smokeInstance, lifetime);
-    }
-
-    public void ClearSmoke()
-    {
-        if (smokeInstance != null)
-        {
-            Destroy(smokeInstance);
-            smokeInstance = null;
-        }
-        smokeEndTime = 0f;
-    }
-
-    #endregion
-}
+#endregion
