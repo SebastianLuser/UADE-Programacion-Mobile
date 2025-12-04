@@ -3925,7 +3925,7 @@ Transform:
   m_GameObject: {fileID: 2447479155139023508}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -1, z: -0, w: 0}
-  m_LocalPosition: {x: 1.1680326, y: -0.24934924, z: 5.3046074}
+  m_LocalPosition: {x: 1.1680326, y: -0.728, z: 5.3046074}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -4137,12 +4137,14 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   stateDataList:
-  - {fileID: 11400000, guid: 5425c7367cd837245a8b547f1f04c94d, type: 2}
-  - {fileID: 11400000, guid: e4024ef49519dd745b5954882a8367a8, type: 2}
   - {fileID: 11400000, guid: 7029e79b0fbd84b44967a68c06cc85c3, type: 2}
-  - {fileID: 11400000, guid: d16cb1fafacb67a41ba310f977a4e09f, type: 2}
-  - {fileID: 11400000, guid: ff51a6c37ab2dbd4a8408b0dbbc57bde, type: 2}
+  - {fileID: 11400000, guid: e4024ef49519dd745b5954882a8367a8, type: 2}
+  - {fileID: 11400000, guid: 5425c7367cd837245a8b547f1f04c94d, type: 2}
+  - {fileID: 11400000, guid: c7a9c75ed9cc413479e8f41b5277527f, type: 2}
+  - {fileID: 11400000, guid: 70ef33ffd413cf544a0c878655c3590a, type: 2}
+  - {fileID: 11400000, guid: c87c0fd0f1eecbc4580b66c3606eb4a6, type: 2}
   useFSM: 1
+  followDistanceBuffer: 2
   investigationRotateSpeed: 180
   investigationMoveSpeedFactor: 0.7
   investigationArrivalTolerance: 1.2
@@ -4158,10 +4160,12 @@ MonoBehaviour:
   leaderData: {fileID: 11400000, guid: db0060ccebd57494abbab3f0392c33c5, type: 2}
   <LeaderStateDataList>k__BackingField:
   - {fileID: 11400000, guid: 0a7f0e9f8827fda47aa0ac71f2c50a72, type: 2}
-  - {fileID: 11400000, guid: c5afe50edc5fcc945a562aed873c4ad4, type: 2}
   - {fileID: 11400000, guid: dc91f20d7f81fc645b5ca1d177f19bc7, type: 2}
+  - {fileID: 11400000, guid: c5afe50edc5fcc945a562aed873c4ad4, type: 2}
+  - {fileID: 11400000, guid: d16cb1fafacb67a41ba310f977a4e09f, type: 2}
   - {fileID: 11400000, guid: d526e9ad09fea514f9bc13d421e40c03, type: 2}
   - {fileID: 11400000, guid: aea4c3f2ba7a5a844a0e6ee5d8d45681, type: 2}
+  - {fileID: 11400000, guid: ff51a6c37ab2dbd4a8408b0dbbc57bde, type: 2}
   managedAllies:
   - {fileID: 0}
   coverFireFireRate: 0.3
