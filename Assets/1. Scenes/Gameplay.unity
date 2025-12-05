@@ -34352,7 +34352,7 @@ MonoBehaviour:
   uiView: {fileID: 1315594188}
   mainMenuSceneName: MainMenuScene
   pauseGameWhileVisible: 0
-  playerCollector: {fileID: 0}
+  playerCollector: {fileID: 1689811724}
 --- !u!114 &1315594188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -37814,7 +37814,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 437760, guid: 3b07c06d4f626c34896163d5fab059a3, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.6
+      value: 0.99
       objectReference: {fileID: 0}
     - target: {fileID: 437760, guid: 3b07c06d4f626c34896163d5fab059a3, type: 3}
       propertyPath: m_LocalPosition.z
@@ -50653,7 +50653,7 @@ MonoBehaviour:
   m_Center: {x: 0, y: 2, z: 0}
   m_LayerMask:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 7927
   m_UseGeometry: 1
   m_DefaultArea: 0
   m_GenerateLinks: 1
@@ -50661,8 +50661,8 @@ MonoBehaviour:
   m_IgnoreNavMeshObstacle: 1
   m_OverrideTileSize: 1
   m_TileSize: 256
-  m_OverrideVoxelSize: 1
-  m_VoxelSize: 0.07
+  m_OverrideVoxelSize: 0
+  m_VoxelSize: 0.16666667
   m_MinRegionArea: 0.05
   m_NavMeshData: {fileID: 23800000, guid: 4fa046ebeebc6f44982698effb193c53, type: 2}
   m_BuildHeightMesh: 0
