@@ -66,6 +66,9 @@ public class EscapeZone : MonoBehaviour
             l_playerMovement.enabled = false;
         }
 
+        // Hide collector HUD once player reaches the escape point.
+        p_playerCollector.HideUIForEscape();
+
         if (UGS_Analytics.Instance != null)
         {
             UGS_Analytics.Instance.LogEscapeZoneReached(p_playerCollector.TotalPoints, Time.timeSinceLevelLoad);

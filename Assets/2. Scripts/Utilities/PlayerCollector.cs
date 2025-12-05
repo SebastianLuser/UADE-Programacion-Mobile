@@ -116,6 +116,27 @@ public class PlayerCollector : MonoBehaviour, ICollector
     }
 
     /// <summary>
+    /// Hide HUD elements when player reaches the escape point.
+    /// </summary>
+    public void HideUIForEscape()
+    {
+        if (pointsText)
+        {
+            pointsText.gameObject.SetActive(false);
+        }
+
+        if (escapeText)
+        {
+            escapeText.gameObject.SetActive(false);
+        }
+
+        if (healthBar)
+        {
+            healthBar.gameObject.SetActive(false);
+        }
+    }
+
+    /// <summary>
     /// Update the points display text
     /// </summary>
     private void UpdatePointsDisplay()
