@@ -14,6 +14,7 @@ namespace Scripts.FSM.Base.StateMachine
             {
                 leader.LeaderStateTimer = 0f;
                 m_nextBurstTime = 0f;
+                leader.PauseMovement(true);
 
                 Vector3 targetPos = leader.LastKnownPlayerPosition;
                 if (targetPos == Vector3.zero && leader.GetTargetTransform() != null)
@@ -47,7 +48,8 @@ namespace Scripts.FSM.Base.StateMachine
         {
             if (p_model is Leader leader)
             {
-                // Limpia órdenes si sale de cover fire
+                // Limpia órdenes si sale de cover fire y vuelve a habilitar movimiento.
+                leader.PauseMovement(false);
                 leader.ClearAllOverrides();
                 MyLogger.LogInfo("[Leader] CoverFire exit - cleared overrides");
             }
@@ -58,14 +60,24 @@ namespace Scripts.FSM.Base.StateMachine
             if (targetPos == Vector3.zero) return;
             if (Time.time < m_nextBurstTime) return;
 
-            Vector3 dir = (targetPos - leader.transform.position);
+            Vector3 dir = targetPos - leader.transform.position;
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.1f) return;
 
             leader.FaceDirection(dir.normalized, leader.BaseRotationSpeed * 2f);
-            leader.Shoot(dir.normalized);
+            FireFan(leader, dir.normalized);
 
             m_nextBurstTime = Time.time + leader.CoverFireFireRate;
+        }
+
+        private void FireFan(Leader leader, Vector3 forward)
+        {
+            float[] angles = { 0f, -12f, 12f };
+            for (int i = 0; i < angles.Length; i++)
+            {
+                Vector3 dir = Quaternion.Euler(0f, angles[i], 0f) * forward;
+                leader.Shoot(dir);
+            }
         }
     }
 }

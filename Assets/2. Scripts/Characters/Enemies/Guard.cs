@@ -874,6 +874,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public void ApplySteering(Vector3 steering)
     {
         if (!isAlive) return;
+        if (isMovementPaused) return;
 
         Vector3 finalSteering = steering;
 
@@ -988,6 +989,16 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 
         // Fallback heuristic: flock while patrolling or when seeing player (group chase)
         return isActivelyPatrolling || CanSeePlayer();
+    }
+
+    public void PauseMovement(bool pause)
+    {
+        isMovementPaused = pause;
+        if (pause)
+        {
+            _vel = Vector3.zero;
+            currentMovementStatus = MovementStatus.Idle;
+        }
     }
     
     #endregion
