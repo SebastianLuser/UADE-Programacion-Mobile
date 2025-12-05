@@ -6,6 +6,7 @@ using Services.MicroServices.AudioService;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem.EnhancedTouch;
+using UnityEngine.InputSystem;
 using ETouch = UnityEngine.InputSystem.EnhancedTouch;
 
 public class PlayerTouchMovement : MonoBehaviour
@@ -44,6 +45,7 @@ public class PlayerTouchMovement : MonoBehaviour
     private bool hasBurstFired = false;
     int _speedHash;
     private Coroutine continuousShootingCoroutine;
+    private InputAction moveAction;
 
     [Header("Shooting Settings")]
     [SerializeField] private FloatingJoystick ShootingJoystick;
@@ -68,6 +70,8 @@ public class PlayerTouchMovement : MonoBehaviour
 
     private void Awake()
     {
+        SetupMoveAction();
+
         if (TutorialSeenService.HasSeen())
         {
             dragTutorial.SetActive(false);
@@ -90,6 +94,7 @@ public class PlayerTouchMovement : MonoBehaviour
         ETouch.Touch.onFingerDown += HandleFingerDown;
         ETouch.Touch.onFingerUp += HandleLoseFinger;
         ETouch.Touch.onFingerMove += HandleFingerMove;
+        moveAction?.Enable();
     }
 
     private void OnDisable()
@@ -98,6 +103,7 @@ public class PlayerTouchMovement : MonoBehaviour
         ETouch.Touch.onFingerUp -= HandleLoseFinger;
         ETouch.Touch.onFingerMove -= HandleFingerMove;
         EnhancedTouchSupport.Disable();
+        moveAction?.Disable();
     }
 
     private void HandleFingerMove(Finger MovedFinger)
@@ -296,10 +302,21 @@ public class PlayerTouchMovement : MonoBehaviour
 
     private void Update()
     {
-        
         if (!Player || !Player.enabled || !Player.isOnNavMesh) return;
-        
-        
+
+        if (MovementFinger == null && moveAction != null)
+        {
+            var keyboardInput = moveAction.ReadValue<Vector2>();
+            if (keyboardInput.sqrMagnitude > 0.01f)
+            {
+                MovementAmount = Vector2.ClampMagnitude(keyboardInput, 1f);
+            }
+            else
+            {
+                MovementAmount = Vector2.zero;
+            }
+        }
+
         Vector3 scaledMovement = Player.speed * Time.deltaTime * new Vector3(
             MovementAmount.x,
             0,
@@ -479,5 +496,23 @@ public class PlayerTouchMovement : MonoBehaviour
             isContinuousShooting = true;
             continuousShootingCoroutine = StartCoroutine(ShootContinuously());
         }
+    }
+
+    private void SetupMoveAction()
+    {
+        if (moveAction != null)
+            return;
+
+        moveAction = new InputAction("Move", InputActionType.Value);
+        moveAction.AddCompositeBinding("2DVector")
+            .With("Up", "<Keyboard>/w")
+            .With("Up", "<Keyboard>/upArrow")
+            .With("Down", "<Keyboard>/s")
+            .With("Down", "<Keyboard>/downArrow")
+            .With("Left", "<Keyboard>/a")
+            .With("Left", "<Keyboard>/leftArrow")
+            .With("Right", "<Keyboard>/d")
+            .With("Right", "<Keyboard>/rightArrow");
+        moveAction.AddBinding("<Gamepad>/leftStick");
     }
 }

@@ -3,8 +3,8 @@ using UnityEngine;
 public class PathFollowerAgent
 {
     // Tunings
-    public float waypointReachDist = 0.6f;   // subí un poco el reach (0.6–0.8 ayuda mucho)
-    public float slowingDistance = 1.2f;   // 1.0–1.5 típico
+    public float waypointReachDist = 0.6f;   // subi un poco el reach (0.6–0.8 ayuda mucho)
+    public float slowingDistance = 1.2f;   // 1.0–1.5 tipico
     public int stuckFrameThreshold = 60;//20;   // frames sin mejorar -> avanzar de todas formas
     public float progressEpsilon = 0.001f; // tolerancia para detectar “no mejora”
 
@@ -43,12 +43,12 @@ public class PathFollowerAgent
         toWp.y = 0f;
         float sqDist = toWp.sqrMagnitude;
 
-        // REACH DINÁMICO: más tolerante si vamos rápido, más estricto si vamos lento
+        // REACH DINAMICO: mas tolerante si vamos rapido, mas estricto si vamos lento
         float speedFactor = Mathf.Clamp01(vel.magnitude / maxSpeed);
         float dynamicReach = waypointReachDist * (1.0f + speedFactor * 0.5f); // 1.0x a 1.5x reach
         float reachR2 = dynamicReach * dynamicReach;
 
-        // 1) ¿Llegué al waypoint?
+        // 1) ¿Llegue al waypoint?
         if (sqDist <= reachR2)
         {
             if (_cursor < _len - 1)
@@ -76,7 +76,7 @@ public class PathFollowerAgent
         if (_cursor < _len - 1 &&
             sqDist < overshootSqDist &&
             vel.sqrMagnitude > 1.0f && // Velocidad significativa
-            Vector3.Dot(toWp, vel) < -0.5f) // MUY claramente hacia atrás
+            Vector3.Dot(toWp, vel) < -0.5f) // MUY claramente hacia atras
         {
             _cursor++;
             _lastSqDist = float.PositiveInfinity;

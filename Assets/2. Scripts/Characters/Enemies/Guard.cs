@@ -27,6 +27,9 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private Transform[] patrolPoints;
     [SerializeField] private BulletData bulletData;
 
+    [Header("Targeting")]
+    [SerializeField] protected string[] targetTags = new[] { "Player", "Ally" };
+
     [Header("FSM Patrol Settings")]
     [SerializeField] private int loopsToIdle = 3;
     [SerializeField] private float idleSeconds = 5f;
@@ -80,6 +83,16 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField] private float overrideDuration = 8f;
     [SerializeField] private float overrideDwellTime = 2f;
 
+    [Header("Detain/Knockout")]
+    [SerializeField] private float knockoutRecoverTime = 3f;
+    [SerializeField] private float detainRange = 2.5f;
+    [SerializeField] private float detainBackAngle = 120f;
+    [SerializeField] private float detainDamageMultiplier = 2f;
+    [SerializeField] private bool ignoreLeaderDuringDetain = true;
+    [SerializeField] private float detainMoveSpeedFactor = 0.6f;
+    [Header("Debug")]
+    [SerializeField] protected bool showStateLabel = true;
+
     [Header("Health Regeneration")]
     [SerializeField] private bool enableHealthRegen = true;
     [SerializeField] private float regenDelay = 3f;
@@ -88,10 +101,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     [SerializeField, Range(0f, 1f)] private float recoveredHealthThreshold = 0.8f;
     
     private Transform player;
+    private BaseCharacter targetCharacter;
     private Vector3 lastKnownPlayerPosition;
     private int currentPatrolIndex;
     private float stateTimer;
-    private bool isActivelyPatrolling = false;  // Track patrol state independently
+    private bool isActivelyPatrolling;  // Track patrol state independently
 
     // FSM patrol tracking
     private int currentPatrolLoops = 0;
@@ -139,14 +153,20 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private float leaderOverrideExpiresAt;
     private float leaderOverrideReachedAt;
     private string leaderOverrideRole;
+    private bool isKnockedOut;
+    private float knockoutTimer;
+    private bool isDetaining;
+    private Transform detainTarget;
+    private float detainTimer;
+    private float detainMaxDuration = 5f;
+    private UnityEngine.Object leaderOverrideOwner;
+    private int leaderOverridePriority;
     
     // Callbacks
-    public System.Action OnMovementComplete { get; set; }
-    public System.Action OnMovementBlocked { get; set; }
+    public Action OnMovementComplete { get; set; }
+    public Action OnMovementBlocked { get; set; }
     
-    public float DetectionRange => detectionRange;
     public float AttackRange => attackRange;
-    public float FieldOfView => fieldOfView;
     public float PatrolSpeed => patrolSpeed;
     public float ChaseSpeed => chaseSpeed;
     public float IdleTime => idleTime;
@@ -192,14 +212,10 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public bool IsActive => isAlive && gameObject.activeInHierarchy;
     
     // AI System access
-    public AIContext AIContext => aiContext;
     public IBlackboardService BlackboardService => m_blackboardService;
-    public AIPersonalityType PersonalityType => personalityType;
 
     // Steering Physics access
-    public float Mass => mass;
     public float MaxForce => maxForce;
-    public float MaxSpeed => maxSpeed;
     public float SlowingDistance => slowingDistance;
     public Vector3 CurrentVelocity => _vel;
     public LayerMask ObstaclesMask => obstaclesMask;
@@ -237,8 +253,14 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         set => investigationTarget = value;
     }
     public bool TookDamageRecently(float window) => Time.time - lastDamageTime <= window;
-    public bool IsSmokeActive => smokeInstance != null && Time.time < smokeEndTime;
     public bool LeaderOverrideActive => leaderOverrideActive;
+    public bool IsKnockedOut => isKnockedOut;
+    public bool IsDetaining => isDetaining;
+    public Transform DetainTarget => detainTarget;
+    public float KnockoutRecoverTime => knockoutRecoverTime;
+    public float DetainRange => detainRange;
+    public float DetainBackAngle => detainBackAngle;
+    public float DetainMoveSpeedFactor => detainMoveSpeedFactor;
     
     private static IPoolObjectsService PoolObjectsService => ServiceLocator.Get<IPoolObjectsService>();
 
@@ -262,6 +284,66 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         lastCoverCollider = collider;
         lastCoverHitPoint = hitPoint;
         lastCoverHitNormal = hitNormal;
+    }
+
+    public void TriggerKnockout(Transform attacker = null)
+    {
+        if (isKnockedOut || !isAlive) return;
+
+        // Only allow knockout if attacker is behind and guard is in Idle/Patrol
+        if (attacker != null)
+        {
+            Vector3 toGuard = (transform.position - attacker.position).normalized;
+            float angle = Vector3.Angle(attacker.forward, toGuard);
+            if (angle > detainBackAngle * 0.5f) return;
+        }
+
+        if (stateMachine != null)
+        {
+            var currState = stateMachine.GetCurrentState()?.State?.StateName;
+            if (currState != null && currState != "Idle" && currState != "Patrol")
+                return;
+        }
+
+        isKnockedOut = true;
+        knockoutTimer = knockoutRecoverTime;
+        ClearLeaderOverride();
+        Debug.Log($"[Detain] {name} knocked out");
+    }
+
+    public void SetDetainTarget(Transform target)
+    {
+        if (target == null || !isAlive) return;
+        detainTarget = target;
+        isDetaining = true;
+        detainTimer = detainMaxDuration;
+        ClearLeaderOverride();
+        Debug.Log($"[Detain] {name} detaining target {target.name}");
+    }
+
+    public void RecoverFromKnockout()
+    {
+        isKnockedOut = false;
+        knockoutTimer = 0f;
+    }
+
+    public void StopDetaining()
+    {
+        isDetaining = false;
+        detainTarget = null;
+        detainTimer = 0f;
+    }
+
+    public void ApplyDetainDamage()
+    {
+        if (detainTarget == null) return;
+        var victim = detainTarget.GetComponent<BaseCharacter>();
+        if (victim != null)
+        {
+            float dmg = victim.MaxHealth * detainDamageMultiplier;
+            victim.TakeDamage(dmg);
+            Debug.Log($"[Detain] {name} applied detain damage {dmg} to {victim.name}");
+        }
     }
 
     public void BeginInvestigation(Vector3 targetPosition)
@@ -331,24 +413,46 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         Destroy(smokeInstance, smokeLifetime);
     }
 
-    public void SetLeaderOverride(Vector3 target, float duration, string role = "")
+    public void SetLeaderOverride(Vector3 target, float duration, string role = "", UnityEngine.Object owner = null, int priority = 0)
     {
+        // Reject if another owner with higher priority is active
+        if (leaderOverrideActive
+            && leaderOverrideOwner != null
+            && owner != null
+            && owner != leaderOverrideOwner
+            && priority < leaderOverridePriority)
+        {
+            Debug.Log($"[LeaderOverride] {name} override rejected by {owner} (prio {priority}) because active owner {leaderOverrideOwner} has prio {leaderOverridePriority}");
+            return;
+        }
+        
         leaderOverrideActive = true;
         leaderOverrideTarget = target;
         leaderOverrideExpiresAt = Time.time + (duration > 0f ? duration : overrideDuration);
         leaderOverrideReachedAt = -1f;
         leaderOverrideRole = role;
-
+        leaderOverrideOwner = owner;
+        leaderOverridePriority = priority;
+        
         MyLogger.LogInfo($"[LeaderOverride] {name} override set -> target {target}, duration {duration}, role {role}");
     }
 
-    public void ClearLeaderOverride()
+    public void ClearLeaderOverride(UnityEngine.Object requester = null, bool force = false)
     {
+        if (leaderOverrideOwner != null && requester != null && requester != leaderOverrideOwner && !force)
+        {
+            Debug.Log($"[LeaderOverride] {name} clear ignored by {requester} (owner {leaderOverrideOwner})");
+            return;
+        }
+        
         leaderOverrideActive = false;
         leaderOverrideTarget = Vector3.zero;
         leaderOverrideRole = string.Empty;
         leaderOverrideExpiresAt = 0f;
         leaderOverrideReachedAt = -1f;
+        leaderOverrideOwner = null;
+        leaderOverridePriority = 0;
+        
         MyLogger.LogInfo($"[LeaderOverride] {name} override cleared");
     }
     
@@ -399,12 +503,17 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         SubscribeUpdateService();
         
         // Start patrolling after a frame to ensure everything is initialized
-        StartCoroutine(StartPatrolAfterFrame());
+        if (isActiveAndEnabled)
+        {
+            StartCoroutine(StartPatrolAfterFrame());
+        }
     }
 
     private System.Collections.IEnumerator StartPatrolAfterFrame()
     {
         yield return null; // Wait one frame
+
+        if (!isActiveAndEnabled) yield break;
         
         StartPatrol();
     }
@@ -475,12 +584,17 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     private void Start()
     {
-        StartCoroutine(DelayedStart());
+        if (isActiveAndEnabled)
+        {
+            StartCoroutine(DelayedStart());
+        }
     }
     
     private System.Collections.IEnumerator DelayedStart()
     {
         yield return null;
+
+        if (!isActiveAndEnabled) yield break;
         
         // Ensure blackboard connection is established
         if (enableNewAISystem && m_blackboardService == null)
@@ -488,20 +602,35 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             m_blackboardService = ServiceLocator.Get<IBlackboardService>();
         }
         
-        // Find player if not set
+        // Find player/target if not set
         if (player == null)
         {
-            var playerGO = GameObject.FindGameObjectWithTag("Player");
-            if (playerGO != null)
+            GameObject closest = null;
+            float minDist = float.MaxValue;
+
+            foreach (var tag in targetTags)
             {
-                SetTargetTransform(playerGO.transform);
+                if (string.IsNullOrEmpty(tag)) continue;
+                GameObject[] candidates = GameObject.FindGameObjectsWithTag(tag);
+                if (candidates == null) continue;
+
+                for (int i = 0; i < candidates.Length; i++)
+                {
+                    float d = Vector3.Distance(transform.position, candidates[i].transform.position);
+                    if (d < minDist)
+                    {
+                        minDist = d;
+                        closest = candidates[i];
+                    }
+                }
+            }
+
+            if (closest != null)
+            {
+                SetTargetTransform(closest.transform);
+                MyLogger.LogInfo($"[Guard] Target assigned automatically by tags [{string.Join(",", targetTags)}]: {closest.name}");
             }
         }
-    }
-    
-    public void OnUpdate(float deltaTime)
-    {
-        
     }
     
     private void UpdateMovementSystem(float deltaTime)
@@ -593,13 +722,17 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             MyLogger.LogWarning($"[PATROL DEBUG] {gameObject.name}: Movement constrained at position {transform.position}");
             currentMovementStatus = MovementStatus.Constrained;
             OnMovementBlocked?.Invoke();
-            return;
         }
     }
     
     private void UpdateAISystem()
     {
-        bool hasPlayer = player != null;
+        if (!HasValidTarget())
+        {
+            ClearTargetTransform();
+        }
+
+        bool hasPlayer = HasValidTarget();
         bool canSeePlayerNow = hasPlayer && CanSeePlayer();
 
         if (canSeePlayerNow)
@@ -624,6 +757,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_DetectionLevel", detectionResult.level);
             m_blackboardService.SetValue($"Guard_{gameObject.GetInstanceID()}_CanSeePlayer", detectionResult.level > PlayerDetectionLevel.None);
         }
+
+        TryAssignDetainTargetFromPlayer(canSeePlayerNow);
     }
 
     private void HandleHealthRegen()
@@ -638,6 +773,12 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     private void OnDisable()
     {
         UnsubscribeUpdateService();
+    }
+
+    private void OnEnable()
+    {
+        // When coming back from pool the listener may be unsubscribed; re-add it.
+        SubscribeUpdateService();
     }
 
     private void SetupPatrolPoints()
@@ -699,17 +840,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         
         MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Patrol started successfully");
     }
-    
-    public void StopPatrol()
-    {
-        if (isActivelyPatrolling)
-        {
-            isActivelyPatrolling = false;
-            currentMovementStatus = MovementStatus.Idle;
-            MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: Patrol stopped");
-        }
-    }
-    
     
     #region Steering Physics
 
@@ -859,32 +989,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         // Fallback heuristic: flock while patrolling or when seeing player (group chase)
         return isActivelyPatrolling || CanSeePlayer();
     }
-
-    /// <summary>
-    /// Configure steering physics parameters at runtime
-    /// </summary>
-    public void ConfigureSteering(float newMass, float newMaxForce, float newMaxSpeed, float newSlowingDistance)
-    {
-        mass = newMass;
-        maxForce = newMaxForce;
-        maxSpeed = newMaxSpeed;
-        slowingDistance = newSlowingDistance;
-    }
-
-    /// <summary>
-    /// Configure obstacle avoidance parameters at runtime
-    /// </summary>
-    public void ConfigureObstacleAvoidance(float radius, float angle, float p_personalArea, LayerMask obstacleMask)
-    {
-        avoidRadius = radius;
-        avoidAngle = angle;
-        personalArea = p_personalArea;
-        obstaclesMask = obstacleMask;
-
-        // Recreate obstacle avoidance with new parameters
-        obstacleAvoidance = new ObstacleAvoidance(transform, avoidRadius, avoidAngle, p_personalArea, obstaclesMask);
-    }
-
+    
     #endregion
 
     public override void Move(Vector3 direction)
@@ -907,6 +1012,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     
     public override void Shoot(Vector3 direction)
     {
+        if (!HasValidTarget()) return;
         if (!isAlive || !CanShoot()) return;
         
         lastShootTime = Time.time;
@@ -940,6 +1046,27 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         lastDamageTime = Time.time;
     }
 
+    private void TryAssignDetainTargetFromPlayer(bool canSeePlayerNow)
+    {
+        if (isDetaining || detainTarget != null || player == null || !isAlive)
+            return;
+
+        if (!canSeePlayerNow)
+            return;
+
+        Vector3 toGuard = (transform.position - player.position);
+        toGuard.y = 0f;
+        if (player.forward.sqrMagnitude < 0.001f)
+            return;
+
+        float angle = Vector3.Angle(player.forward, toGuard.normalized);
+        // We only detain if we are behind the player: angle should be close to 180
+        if (angle < 180f - detainBackAngle * 0.5f)
+            return;
+
+        SetDetainTarget(player);
+    }
+
     #region AI System Integration
     
     public Transform GetModelTransform()
@@ -950,6 +1077,13 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     public void SetTargetTransform(Transform p_target)
     {
         player = p_target;
+        targetCharacter = p_target != null ? p_target.GetComponentInParent<BaseCharacter>() : null;
+
+        if (!HasValidTarget())
+        {
+            ClearTargetTransform();
+            return;
+        }
         
         // Update AI system when target changes
         if (enableNewAISystem && m_blackboardService != null && player != null)
@@ -963,53 +1097,35 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         return player;
     }
+
+    private bool HasValidTarget()
+    {
+        if (player != null && targetCharacter == null)
+        {
+            targetCharacter = player.GetComponentInParent<BaseCharacter>();
+        }
+
+        if (player == null) return false;
+        if (!player.gameObject.activeInHierarchy) return false;
+        if (targetCharacter != null && !targetCharacter.IsAlive) return false;
+        return true;
+    }
+
+    private void ClearTargetTransform()
+    {
+        player = null;
+        targetCharacter = null;
+
+        if (enableNewAISystem && m_blackboardService != null)
+        {
+            m_blackboardService.SetValue<Transform>(BlackboardKeys.PLAYER_TRANSFORM, null);
+            m_blackboardService.SetValue<Vector3>(BlackboardKeys.PLAYER_POSITION, Vector3.zero);
+        }
+    }
     
     #endregion
     
     #region IAIMovementController Implementation
-    
-    public Vector3 GetCurrentVelocity()
-    {
-        return _vel;
-    }
-    
-    public Vector3 GetCurrentDirection()
-    {
-        return currentMovementDirection;
-    }
-    
-    public float GetCurrentSpeed()
-    {
-        return currentMovementSpeed;
-    }
-    
-    public bool IsMoving()
-    {
-        return currentMovementSpeed > 0.1f && !isMovementPaused;
-    }
-    
-    public void SetMovementSpeed(float speed)
-    {
-        currentMovementSpeed = speed;
-    }
-    
-    public void SetMovementDirection(Vector3 direction)
-    {
-        currentMovementDirection = direction.normalized;
-    }
-    
-    public void StopMovement()
-    {
-        currentMovementDirection = Vector3.zero;
-        currentMovementSpeed = 0f;
-        currentMovementStatus = MovementStatus.Idle;
-        currentDestination = transform.position;
-    }
-    
-    public float GetMaxSpeed()
-    {
-        return characterData.moveSpeed;
-    }
     
     public bool CanMove()
     {
@@ -1061,42 +1177,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         MyLogger.LogInfo($"[PATROL DEBUG] {gameObject.name}: MoveTo using steering - Destination: {currentDestination}, Status: {currentMovementStatus}");
     }
     
-    public void Flee(Vector3 fromPosition, float speed)
-    {
-        if (!CanMove()) return;
-
-        currentMovementSpeed = speed;
-        currentMovementStatus = MovementStatus.Fleeing;
-
-        // Use steering behavior for fleeing
-        Vector3 steering = Steering.Flee(transform.position, fromPosition, _vel, speed);
-        ApplySteering(steering);
-
-        // Set destination for debugging/tracking purposes
-        Vector3 fleeDirection = (transform.position - fromPosition).normalized;
-        currentDestination = transform.position + fleeDirection * 10f;
-    }
-    
-    public void Patrol(Transform[] waypoints, float speed)
-    {
-        if (!CanMove() || waypoints == null || waypoints.Length == 0) return;
-        
-        patrolPoints = waypoints;
-        currentMovementSpeed = speed;
-        currentMovementStatus = MovementStatus.Patrolling;
-        
-        // Move to current patrol point
-        if (currentPatrolIndex < patrolPoints.Length)
-        {
-            MoveTo(patrolPoints[currentPatrolIndex].position, speed);
-        }
-    }
-    
-    public void Stop()
-    {
-        StopMovement();
-    }
-    
     public bool HasReachedDestination()
     {
         if (currentMovementStatus == MovementStatus.Idle) 
@@ -1129,50 +1209,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         return reached;
     }
     
-    public void SetSteeringTarget(Transform target)
-    {
-        steeringTarget = target;
-        currentMovementStatus = MovementStatus.Following;
-    }
-    
-    public void SetMovementMode(MovementMode mode)
-    {
-        currentMovementMode = mode;
-        
-        // Adjust speed based on mode
-        float speedMultiplier = mode switch
-        {
-            MovementMode.Sneak => 0.5f,
-            MovementMode.Walk => 1f,
-            MovementMode.Run => 1.5f,
-            MovementMode.Sprint => 2f,
-            _ => 1f
-        };
-        
-        currentMovementSpeed = GetContextualSpeed() * speedMultiplier;
-    }
-    
-    public void SetMovementConstraints(Bounds allowedArea)
-    {
-        movementConstraints = allowedArea;
-        hasMovementConstraints = true;
-    }
-    
-    public void ClearMovementConstraints()
-    {
-        hasMovementConstraints = false;
-    }
-    
-    public MovementStatus GetMovementStatus()
-    {
-        return currentMovementStatus;
-    }
-    
-    public Vector3 GetCurrentDestination()
-    {
-        return currentDestination;
-    }
-    
     public void FaceDirection(Vector3 direction, float rotationSpeed = -1f)
     {
         if (!CanMove()) return;
@@ -1185,18 +1221,6 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         }
     }
     
-    public void PauseMovement()
-    {
-        isMovementPaused = true;
-    }
-    
-    public void ResumeMovement()
-    {
-        isMovementPaused = false;
-    }
-    
-    public bool IsMovementPaused => isMovementPaused;
-    
     #endregion
     
     #region MEJORA: Advanced AI Methods
@@ -1206,6 +1230,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public float GetThreatLevel()
     {
+        if (!HasValidTarget()) return 0f;
+
         if (aiContext != null)
         {
             return aiContext.GetThreatLevel();
@@ -1255,6 +1281,8 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public bool ShouldAttack()
     {
+        if (!HasValidTarget()) return false;
+
         var detectionResult = GetDetectionResult();
         float distance = Vector3.Distance(transform.position, player.position);
 
@@ -1275,7 +1303,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public void PursuePlayer()
     {
-        if (player == null) return;
+        if (!HasValidTarget()) return;
 
         Vector3 playerVel = Vector3.zero;
         var playerRb = player.GetComponent<Rigidbody>();
@@ -1296,7 +1324,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     /// </summary>
     public void EvadePlayer()
     {
-        if (player == null) return;
+        if (!HasValidTarget()) return;
 
         Vector3 playerVel = Vector3.zero;
         var playerRb = player.GetComponent<Rigidbody>();
@@ -1545,10 +1573,32 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
 
     #endregion
 
+    #region Configuration Methods for Subclasses and External Systems
+
+    /// <summary>
+    /// Set patrol points for this guard. Public because it's used by external spawners.
+    /// </summary>
+    public void SetPatrolPoints(Transform[] points)
+    {
+        patrolPoints = points;
+    }
+
+    #endregion
+
     private bool HandleLeaderOverride()
     {
         if (!leaderOverrideActive)
             return false;
+
+        if (ignoreLeaderDuringDetain && (isDetaining || isKnockedOut))
+            return false;
+
+        // Si vemos al jugador, liberamos la orden para volver a la FSM de combate
+        if (CanSeePlayer())
+        {
+            ClearLeaderOverride();
+            return false;
+        }
 
         if (Time.time >= leaderOverrideExpiresAt)
         {
@@ -1599,6 +1649,11 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
     {
         if (!isAlive) return;
 
+        if (!HasValidTarget())
+        {
+            ClearTargetTransform();
+        }
+
         // Add debug log with reduced frequency to avoid spam
         if (Time.frameCount % 60 == 0) // Log every 60 frames (about once per second at 60fps)
         {
@@ -1635,16 +1690,21 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
         ServiceLocator.Get<IUpdateService>().RemoveUpdateListener(this);
     }
 
-#if UNITY_EDITOR
-    private void OnDrawGizmosSelected()
+    public virtual void ResetFromPool()
     {
-        // Visual debug of current FSM state above the guard in the Scene view
-        var style = new UnityEngine.GUIStyle(UnityEditor.EditorStyles.boldLabel)
-        {
-            normal = { textColor = Color.cyan }
-        };
+        ClearLeaderOverride(null, true);
+        ClearCoverPoint();
+        steeringTarget = null;
+        currentMovementStatus = MovementStatus.Idle;
+        isMovementPaused = false;
+    }
 
-        UnityEditor.Handles.Label(transform.position + Vector3.up * 2f, $"State: {CurrentStateName}", style);
+#if UNITY_EDITOR
+    protected virtual void OnDrawGizmosSelected()
+    {
+        if (!showStateLabel) return;
+
+        FsmGizmoHelper.DrawStateLabel(transform, $"State: {CurrentStateName}", Color.cyan, 2f);
 
         // Cover point debug
         if (HasCoverPoint)
@@ -1654,7 +1714,7 @@ public class Guard : BaseCharacter, IUseFsm, IUpdateListener
             Gizmos.DrawLine(transform.position, CoverPoint);
         }
 
-        // Obstacle collider debug for cover
+        // Obstacle collider debug
         if (LastCoverCollider != null)
         {
             var bounds = LastCoverCollider.bounds;

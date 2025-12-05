@@ -10,6 +10,7 @@ namespace Services.MicroServices.AdsService
     {
         private PlayerCollector m_playerCollector;
         private ResultsView m_resultsPresenter;
+        private bool m_isAdLoaded;
 
         private const string ANALYTICS_PLACEMENT_ID = "duplicate_reward";
         private const string ANALYTICS_SOURCE_PANEL = "Results";
@@ -48,6 +49,7 @@ namespace Services.MicroServices.AdsService
 
         private void Load()
         {
+            m_isAdLoaded = false;
             Advertisement.Load(AD_UNIT_ID, this);
         }
 
@@ -56,11 +58,20 @@ namespace Services.MicroServices.AdsService
             m_playerCollector = p_playerCollector;
             m_resultsPresenter = p_resultsPresenter;
 
+            if (!m_isAdLoaded)
+            {
+                Load();
+                UGS_Analytics.Instance?.LogRewardAdAborted(ANALYTICS_PLACEMENT_ID, ANALYTICS_SOURCE_PANEL, "not_loaded");
+                return;
+            }
+
+            m_isAdLoaded = false; // consume the loaded ad
             Advertisement.Show(AD_UNIT_ID, this);
         }
 
         public void OnUnityAdsAdLoaded(string p_adUnitId)
         {
+            m_isAdLoaded = true;
         }
 
         public void OnUnityAdsFailedToLoad(string p_adUnitId, UnityAdsLoadError p_error, string
@@ -68,6 +79,7 @@ namespace Services.MicroServices.AdsService
         {
             UGS_Analytics.Instance?.LogRewardAdAborted(ANALYTICS_PLACEMENT_ID, ANALYTICS_SOURCE_PANEL,
                 $"load_failed: {p_error}");
+            m_isAdLoaded = false;
         }
 
         public void OnUnityAdsShowStart(string p_adUnitId)
@@ -100,6 +112,7 @@ namespace Services.MicroServices.AdsService
         {
             UGS_Analytics.Instance?.LogRewardAdAborted(ANALYTICS_PLACEMENT_ID, ANALYTICS_SOURCE_PANEL,
                 $"display failed: {p_error}");
+            m_isAdLoaded = false;
             Load();
         }
 
@@ -108,23 +121,27 @@ namespace Services.MicroServices.AdsService
             if (m_playerCollector == null || m_resultsPresenter == null)
                 return;
 
-            var l_gameWined = ServiceLocator.Get<IGameStateService>().GetCurrentState() == GameState.Victory;
+            var l_gameWon = ServiceLocator.Get<IGameStateService>().GetCurrentState() == GameState.Victory;
 
             m_resultsPresenter.RewardedAdShowed = true;
 
             var l_walletService = ServiceLocator.Get<IWalletService>();
-            var l_bonusCoins = m_playerCollector.SessionCoins;
-            var l_bonusDiamonds = m_playerCollector.SessionDiamonds;
+            var l_baseCoins = m_playerCollector.SessionCoins;
+            var l_baseDiamonds = m_playerCollector.SessionDiamonds;
+            var l_baseScore = m_playerCollector.TotalPoints;
 
-            // Grant only the bonus once to avoid duplicating the original session rewards.
-            l_walletService?.AddCoins(l_bonusCoins);
-            l_walletService?.AddDiamonds(l_bonusDiamonds);
+            // Duplicate rewards only for winning runs.
+            if (l_gameWon)
+            {
+                l_walletService?.AddCoins(l_baseCoins);
+                l_walletService?.AddDiamonds(l_baseDiamonds);
+            }
 
-            var l_finalScore = m_playerCollector.TotalPoints * 2;
-            var l_finalCoins = m_playerCollector.SessionCoins + l_bonusCoins;
-            var l_finalDiamonds = m_playerCollector.SessionDiamonds + l_bonusDiamonds;
+            var l_finalScore = l_gameWon ? l_baseScore * 2 : l_baseScore;
+            var l_finalCoins = l_gameWon ? l_baseCoins * 2 : l_baseCoins;
+            var l_finalDiamonds = l_gameWon ? l_baseDiamonds * 2 : l_baseDiamonds;
 
-            if (l_gameWined)
+            if (l_gameWon)
             {
                 m_resultsPresenter.DisplayVictory(l_finalScore, l_finalCoins, l_finalDiamonds);
             }
@@ -143,6 +160,7 @@ namespace Services.MicroServices.AdsService
         public void OnInitializationComplete()
         {
             MyLogger.LogDebug($"Unity Ads initialized successfully");
+            Load();
         }
 
         public void OnInitializationFailed(UnityAdsInitializationError p_error, string p_message)

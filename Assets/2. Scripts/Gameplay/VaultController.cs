@@ -17,6 +17,7 @@ namespace _2._Scripts.Gameplay
         private Coroutine m_animationCoroutine;
         private float m_forceOpenTimer;
         private bool m_isDoorOpen;
+        [SerializeField] private GameObject[] uiToHideOnOpen;
         
         private static IEventService EventService => ServiceLocator.Get<IEventService>();
 
@@ -49,6 +50,7 @@ namespace _2._Scripts.Gameplay
             }
             
             EventService.DispatchEvent(EventsDefinition.END_OPEN_VAULT);
+            HideVaultUI();
             m_animationCoroutine = null;
         }
 
@@ -87,6 +89,19 @@ namespace _2._Scripts.Gameplay
             
             m_forceOpenTimer = timeToForceOpen;
             EventService.DispatchEvent(EventsDefinition.END_OPEN_VAULT);
+        }
+
+        private void HideVaultUI()
+        {
+            if (uiToHideOnOpen == null) return;
+
+            for (int i = 0; i < uiToHideOnOpen.Length; i++)
+            {
+                if (uiToHideOnOpen[i])
+                {
+                    uiToHideOnOpen[i].SetActive(false);
+                }
+            }
         }
     }
 
