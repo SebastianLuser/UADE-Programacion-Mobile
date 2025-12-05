@@ -7119,6 +7119,10 @@ MonoBehaviour:
   objectivesText: {fileID: 1338536137}
   dismissButton: {fileID: 930218992}
   defaultTitle: Objetives
+  canvasGroup: {fileID: 268676240}
+  autoDismissDelay: 3
+  fadeDuration: 0.35
+  animatedRoot: {fileID: 1272528836}
 --- !u!225 &268676240
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -7149,7 +7153,7 @@ MonoBehaviour:
   uiView: {fileID: 268676239}
   uiTitle: Objectives
   objectives:
-  - "Roba al menos un botin de \n50$ "
+  - "Roba al menos un botin de \n20$ "
   pauseGameWhileVisible: 0
   showOnStart: 0
 --- !u!114 &268676242
